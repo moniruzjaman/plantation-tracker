@@ -1,0 +1,50 @@
+
+// ── Admin ──
+window.adminLogin=function(){if(document.getElementById("adminPass").value===getAdminPw()){isAdmin=true;document.getElementById("adminLogin").classList.add("hidden");document.getElementById("adminPanel").classList.remove("hidden");document.getElementById("adminLoginErr").classList.add("hidden");renderAdminTable();populateRegionDD(document.getElementById("adminRegion"))}else document.getElementById("adminLoginErr").classList.remove("hidden")};
+window.adminLogout=function(){isAdmin=false;document.getElementById("adminLogin").classList.remove("hidden");document.getElementById("adminPanel").classList.add("hidden");document.getElementById("adminPass").value=""};
+window.changePassword=function(){var np=prompt("নতুন পাসওয়ার্ড দিন:");if(np&&np.trim().length>=4){setAdminPw(np.trim());showBanner("successBanner","পাসওয়ার্ড পরিবর্তন হয়েছে!");setTimeout(function(){hideBanner("successBanner")},3000)}else if(np)showBanner("errorBanner","পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে।")};
+window.renderAdminTable=function(){
+if(!isAdmin)return;var subs=getFiltered("admin"),tb=document.getElementById("adminTableBody"),nd=document.getElementById("adminNoData");
+if(!subs.length){tb.innerHTML="";nd.classList.remove("hidden");return}nd.classList.add("hidden");
+tb.innerHTML=subs.map(function(s,i){var c=countSeedlings(s),t=c.fruit+c.forest+c.medicinal;return '<tr class="border-b"><td class="px-2 py-2">'+(i+1).toLocaleString("bn-BD")+'</td><td class="px-2 py-2">'+s.region+'</td><td class="px-2 py-2">'+s.district+'</td><td class="px-2 py-2">'+s.upazila+'</td><td class="px-2 py-2">'+s.nurseryName+'</td><td class="px-2 py-2">'+s.mobile+'</td><td class="px-2 py-2 font-semibold">'+t+'</td><td class="px-2 py-2 text-gray-400 text-xs">'+new Date(s.submittedAt).toLocaleDateString("bn-BD")+'</td><td class="px-2 py-2 text-center whitespace-nowrap"><button onclick="adminEdit(\''+s.id+'\')" style="background:#dbeafe;color:#1d4ed8;font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;border:none;cursor:pointer;margin-right:4px">✏️</button><button onclick="adminDelete(\''+s.id+'\')" style="background:#fee2e2;color:#b91c1c;font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;border:none;cursor:pointer">🗑️</button></td></tr>'}).join("");
+};
+window.adminEdit=function(id){
+var s=getSubmissions().find(function(x){return x.id===id});if(!s)return;
+document.getElementById("eId").value=s.id;document.getElementById("eRegion").value=s.region;onEditRegionChange();
+setTimeout(function(){document.getElementById("eDistrict").value=s.district;onEditDistrictChange();
+document.getElementById("eUpazila").value=s.upazila||"";
+document.getElementById("eNursery").value=s.nurseryName;document.getElementById("eMobile").value=s.mobile;document.getElementById("eAddress").value=s.address||"";document.getElementById("eGeo").value=s.geoLocation||"";
+document.getElementById("editSeedlingSections").innerHTML=buildSeedlingSections("editSeedlingSections",s);document.getElementById("editModal").classList.remove("hidden")},60);
+};
+window.closeEditModal=function(){document.getElementById("editModal").classList.add("hidden")};
+document.getElementById("editForm").addEventListener("submit",function(e){
+e.preventDefault();var mob=document.getElementById("eMobile").value.trim();
+if(!validateMobile(mob)){alert("মোবাইল নম্বর অবশ্যই ১১ ডিজিট (017XXXXXXXX)");return}
+var upEl=document.getElementById("eUpazila"),upVal=upEl&&upEl.value.trim();
+if(!upVal||!document.getElementById("eRegion").value||!document.getElementById("eDistrict").value||!document.getElementById("eNursery").value){alert("সকল প্রয়োজনীয় তথ্য পূরণ করুন");return}
+var subs=getSubmissions(),idx=subs.findIndex(function(s){return s.id===document.getElementById("eId").value});
+if(idx===-1){closeEditModal();return}
+subs[idx]=Object.assign({},subs[idx],{region:document.getElementById("eRegion").value,district:document.getElementById("eDistrict").value,upazila:upVal,nurseryName:document.getElementById("eNursery").value.trim(),mobile:mob,address:document.getElementById("eAddress").value.trim(),geoLocation:document.getElementById("eGeo").value.trim()},collectSeedlingsFromDOM("editSeedlingSections"));
+saveSubmissions(subs);closeEditModal();renderAdminTable();
+});
+window.adminDelete=function(id){if(!confirm("আপনি কি নিশ্চিত?"))return;saveSubmissions(getSubmissions().filter(function(s){return s.id!==id}));renderAdminTable()};
+document.getElementById("editModal").addEventListener("click",function(e){if(e.target===this)closeEditModal()});
+
+// ── Init ──
+try{
+populateRegionDD(document.getElementById("fRegion"));
+populateRegionDD(document.getElementById("dashRegion"));
+populateRegionDD(document.getElementById("adminRegion"));
+document.getElementById("seedlingSections").innerHTML=buildSeedlingSections("seedlingSections",null);
+fetchGeoLocation();
+}catch(err){
+console.error("Init error:",err);
+// Retry seedling sections build
+setTimeout(function(){
+try{document.getElementById("seedlingSections").innerHTML=buildSeedlingSections("seedlingSections",null)}catch(e2){console.error("Retry error:",e2)}
+},500);
+}
+})();
+</script>
+</body>
+</html>

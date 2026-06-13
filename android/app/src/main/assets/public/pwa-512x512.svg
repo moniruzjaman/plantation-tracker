@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#14532d" />
+      <stop offset="100%" stop-color="#15803d" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  
+  <g filter="url(#shadow)">
+    <!-- Leaves / Plant Graphic -->
+    <path d="M256,120 C256,120 180,140 160,250 C140,360 256,392 256,392 C256,392 372,360 352,250 C332,140 256,120 256,120 Z" fill="#4ade80" />
+    <path d="M256,120 C256,120 180,140 160,250 C140,360 256,392 256,392 L256,120 Z" fill="#22c55e" />
+    
+    <!-- Inner Leaf Details -->
+    <path d="M256,180 C256,180 200,200 190,280 C180,360 256,370 256,370 L256,180 Z" fill="#16a34a" />
+    <path d="M256,180 C256,180 312,200 322,280 C332,360 256,370 256,370 L256,180 Z" fill="#15803d" />
+    
+    <!-- Plant Stem -->
+    <path d="M256,392 C256,392 245,430 256,460" fill="none" stroke="#bbf7d0" stroke-width="16" stroke-linecap="round" />
+  </g>
+</svg>

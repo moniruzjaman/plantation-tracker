@@ -1,0 +1,8 @@
+{
+  "name": "Plantation_kurigram",
+  "description": "To get realtime plantation update information along with the geo location ",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": []
+}
