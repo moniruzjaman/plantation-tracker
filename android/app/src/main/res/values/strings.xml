@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">২৫ কোটি বৃক্ষরোপণ</string>
-    <string name="title_activity_main">২৫ কোটি বৃক্ষরোপণ</string>
+    <string name="app_name">বৃক্ষরোপণ ট্র্যাকার (Plantation Tracker)</string>
+    <string name="title_activity_main">বৃক্ষরোপণ ট্র্যাকার (Plantation Tracker)</string>
     <string name="package_name">com.nursery.app</string>
     <string name="custom_url_scheme">com.nursery.app</string>
 </resources>

@@ -1,4 +1,4 @@
-name: Android PWA & Native Play Store Build
+name: Plantation Tracker Android PWA & Native Build
 
 on:
   push:
@@ -20,7 +20,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-node-version: 20
+          node-version: 20
           cache: 'npm'
 
       # 3. Install NPM dependencies & Build Web Assets
@@ -61,11 +61,11 @@ jobs:
       - name: Upload Release AAB Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: play-store-release-bundle (AAB)
+          name: plantation-tracker-release-bundle (AAB)
           path: android/app/build/outputs/bundle/release/app-release-unsigned.aab
 
       - name: Upload Test APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: installable-test-apk (APK)
+          name: plantation-tracker-test-apk (APK)
           path: android/app/build/outputs/apk/release/app-release-unsigned.apk
