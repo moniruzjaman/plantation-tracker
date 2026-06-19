@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
-    "build": "node download-and-process-logo.js && node map.js && vite build",
+    "build": "node chmod-gradlew.js && node download-and-process-logo.js && node map.js && vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit"
