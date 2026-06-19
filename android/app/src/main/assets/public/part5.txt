@@ -15,7 +15,24 @@ window.buildSeedlingHTML=buildSeedlingHTML;
 
 function collectSeedlingsFromDOM(containerId){
 var result={};
-CATEGORIES.forEach(function(cat,ci){var c=document.getElementById(containerId+"_"+cat.key);if(!c)return;result[cat.key]=Array.from(c.querySelectorAll("[data-type='"+cat.key+"']")).map(function(card){var inp=card.querySelectorAll("input,select");return{name:(inp[0]&&inp[0].value||"").trim(),age:(inp[1]&&inp[1].value||"").trim(),count:(inp[2]&&inp[2].value||"0").trim(),graftingCount:(inp[3]&&inp[3].value||"0").trim()}})});
+CATEGORIES.forEach(function(cat,ci){
+  var c=document.getElementById(containerId+"_"+cat.key);
+  if(!c)return;
+  var items=Array.from(c.querySelectorAll("[data-type='"+cat.key+"']")).map(function(card){
+    var inp=card.querySelectorAll("input,select");
+    return{
+      name:(inp[0]&&inp[0].value||"").trim(),
+      age:(inp[1]&&inp[1].value||"").trim(),
+      count:(inp[2]&&inp[2].value||"0").trim(),
+      graftingCount:(inp[3]&&inp[3].value||"0").trim()
+    };
+  });
+  result[cat.key]=items.filter(function(item){
+    var cnt=parseInt(item.count)||0;
+    var grf=parseInt(item.graftingCount)||0;
+    return item.name!==""||item.age!==""||cnt>0||grf>0;
+  });
+});
 return result;
 }
 
@@ -23,7 +40,7 @@ return result;
 function validateMobile(v){return /^0\d{10}$/.test(v)}
 function validateForm(prefix){
 var ok=true;
-[{id:prefix+"Region",msg:"অঞ্চল আবশ্যক"},{id:prefix+"District",msg:"জেলা আবশ্যক"},{id:prefix+"Nursery",msg:"নার্সারির নাম আবশ্যক"}].forEach(function(r){
+[{id:prefix+"Region",msg:"অঞ্চল আবশ্যক"},{id:prefix+"District",msg:"জেলা আবশ্যক"},{id:prefix+"Nursery",msg:"রোপণকারীর নাম আবশ্যক"}].forEach(function(r){
 var el=document.getElementById(r.id),err=el?el.nextElementSibling:null;
 if(!el||!el.value.trim()){if(el){el.classList.add("shake");el.style.borderColor="#ef4444"}if(err){err.textContent=r.msg;err.classList.remove("hidden")}ok=false;setTimeout(function(){if(el){el.classList.remove("shake");el.style.borderColor="#d1d5db"}},350)}
 else{if(el){el.classList.remove("shake");el.style.borderColor="#d1d5db"}if(err)err.classList.add("hidden")}
@@ -35,12 +52,44 @@ var mobEl=document.getElementById(prefix+"Mobile"),mobErr=mobEl?mobEl.nextElemen
 if(!mobEl||!mobEl.value.trim()){if(mobErr){mobErr.textContent="মোবাইল নম্বর আবশ্যক";mobErr.classList.remove("hidden")}if(mobEl){mobEl.classList.add("shake");mobEl.style.borderColor="#ef4444"}ok=false;setTimeout(function(){if(mobEl){mobEl.classList.remove("shake");mobEl.style.borderColor="#d1d5db"}},350)}
 else if(!validateMobile(mobEl.value.trim())){if(mobErr){mobErr.textContent="মোবাইল নম্বর অবশ্যই ১১ ডিজিট (017XXXXXXXX)";mobErr.classList.remove("hidden")}if(mobEl){mobEl.classList.add("shake");mobEl.style.borderColor="#ef4444"}ok=false;setTimeout(function(){if(mobEl){mobEl.classList.remove("shake");mobEl.style.borderColor="#d1d5db"}},350)}
 else{if(mobErr)mobErr.classList.add("hidden");if(mobEl)mobEl.style.borderColor="#d1d5db"}
+
+var careMobEl=document.getElementById(prefix+"CaretakerMobile"),careMobErr=careMobEl?careMobEl.nextElementSibling:null;
+if(careMobEl && careMobEl.value.trim()){
+  if(!validateMobile(careMobEl.value.trim())){
+    if(careMobErr){careMobErr.textContent="তদারককারীর মোবাইল অবশ্যই ১১ ডিজিট (01XXXXXXXXX)";careMobErr.classList.remove("hidden")}
+    careMobEl.classList.add("shake");careMobEl.style.borderColor="#ef4444";
+    ok=false;
+    setTimeout(function(){careMobEl.classList.remove("shake");careMobEl.style.borderColor="#d1d5db"},350);
+  } else {
+    if(careMobErr)careMobErr.classList.add("hidden");
+    careMobEl.style.borderColor="#d1d5db";
+  }
+} else if(careMobErr) {
+  careMobErr.classList.add("hidden");
+  if(careMobEl) careMobEl.style.borderColor="#d1d5db";
+}
 return ok;
 }
 
 function buildPayload(prefix){
 var upEl=document.getElementById(prefix+"Upazila");
-return{region:document.getElementById(prefix+"Region").value.trim(),district:document.getElementById(prefix+"District").value.trim(),upazila:upEl&&upEl.value.trim(),nurseryName:document.getElementById(prefix+"Nursery").value.trim(),mobile:document.getElementById(prefix+"Mobile").value.trim(),address:(document.getElementById(prefix+"Address")&&document.getElementById(prefix+"Address").value.trim())||"",geoLocation:(document.getElementById(prefix+"Geo")&&document.getElementById(prefix+"Geo").value.trim())||"",submittedAt:new Date().toISOString()};
+var pDateEl=document.getElementById(prefix+"PlantingDate");
+var pDateVal=pDateEl?pDateEl.value.trim():new Date().toISOString().slice(0, 10);
+return{
+region:document.getElementById(prefix+"Region").value.trim(),
+district:document.getElementById(prefix+"District").value.trim(),
+upazila:upEl&&upEl.value.trim(),
+nurseryName:document.getElementById(prefix+"Nursery").value.trim(),
+mobile:document.getElementById(prefix+"Mobile").value.trim(),
+caretakerName:(document.getElementById(prefix+"CaretakerName")&&document.getElementById(prefix+"CaretakerName").value.trim())||"",
+caretakerMobile:(document.getElementById(prefix+"CaretakerMobile")&&document.getElementById(prefix+"CaretakerMobile").value.trim())||"",
+address:(document.getElementById(prefix+"Address")&&document.getElementById(prefix+"Address").value.trim())||"",
+geoLocation:(document.getElementById(prefix+"Geo")&&document.getElementById(prefix+"Geo").value.trim())||"",
+officerName:(document.getElementById(prefix+"CaretakerName")&&document.getElementById(prefix+"CaretakerName").value.trim())||"",
+remarks:(document.getElementById(prefix+"Remarks")&&document.getElementById(prefix+"Remarks").value.trim())||"",
+plantingDate:pDateVal,
+submittedAt:new Date().toISOString()
+};
 }
 function sendToWebhook(p){try{fetch(WEBHOOK_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(p),redirect:"follow"}).catch(function(){})}catch(e){}}
 
@@ -71,5 +120,6 @@ document.getElementById("fUpazila").innerHTML='<option value="">উপজেল�
 document.getElementById("seedlingSections").innerHTML=buildSeedlingSections("seedlingSections",null);
 document.querySelectorAll("[data-error]").forEach(function(el){el.classList.add("hidden")});
 document.getElementById("fGeo").value="";
+var pDateEl=document.getElementById("fPlantingDate"); if(pDateEl){pDateEl.value=new Date().toISOString().slice(0, 10);}
 fetchGeoLocation();
 };

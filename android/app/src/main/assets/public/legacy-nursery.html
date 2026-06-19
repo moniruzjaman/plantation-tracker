@@ -3,8 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>নার্সারির তথ্য সংগ্রহ | কৃষি সম্প্রসারণ অধিদপ্তর</title>
-<link rel="icon" type="image/svg+xml" href="https://upload.wikimedia.org/wikipedia/commons/8/84/Government_Seal_of_Bangladesh.svg">
+<title>বৃক্ষরোপণ তথ্য সংগ্রহ | কৃষি সম্প্রসারণ অধিদপ্তর</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<meta name="description" content="মোবাইলে অফলাইনে সংগৃহীত বৃক্ষরোপণের তথ্য এবং সিঙ্ক সেন্টার। कृषि সম্প্রসারণ অধিদপ্তর।">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
 if(typeof tailwind!=='undefined'){
@@ -21,6 +24,8 @@ document.head.appendChild(s);
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 *{box-sizing:border-box}
 body{font-family:'Noto Sans Bengali','Kalpurush','SolaimanLipi',Arial,sans-serif;padding-bottom:70px;margin:0}
@@ -44,15 +49,15 @@ th{font-size:0.75rem}
 tbody tr{border-bottom:1px solid #e5e7eb}
 </style>
 </head>
-<body class="bg-gray-50 flex flex-col" style="min-height: 100%;">
+<body class="bg-gray-50 min-h-screen flex flex-col">
 
 <!-- ==================== HEADER ==================== -->
 <header class="bg-gradient-to-r from-green-700 via-green-800 to-green-900 text-white py-5 px-4 shadow-lg no-print" style="background:linear-gradient(to right,#15803d,#166534,#14532d)">
 <div class="max-w-6xl mx-auto flex items-center gap-4">
-<img src="https://upload.wikimedia.org/wikipedia/commons/8/84/Government_Seal_of_Bangladesh.svg" alt="বাংলাদেশ সরকার" class="w-12 h-12 sm:w-14 sm:h-14 bg-white rounded-full p-1 shadow flex-shrink-0">
+<img src="/logo.svg" alt="বাংলাদেশ সরকার" class="w-12 h-12 sm:w-14 sm:h-14 bg-white rounded-full p-1 shadow flex-shrink-0">
 <div class="text-center sm:text-left min-w-0">
 <p class="text-green-200 text-xs sm:text-sm" style="color:#bbf7d0">গণপ্রজাতন্ত্রী বাংলাদেশ সরকার</p>
-<h1 class="text-sm sm:text-lg md:text-xl font-bold leading-snug truncate">২০২৬ সালে বৃক্ষরোপণের জন্য বেসরকারি নার্সারির প্রস্তাবিত চারা ও নার্সারির তথ্য</h1>
+<h1 class="text-xs sm:text-sm md:text-base lg:text-lg font-bold leading-snug">“০৫ বছরে ২৫ কোটি বৃক্ষরোপণ” কর্মসূচির আওতাভুক্ত হওয়ার লক্ষ্যে বৃক্ষরোপণের তথ্য</h1>
 <p class="text-green-100 text-xs sm:text-sm mt-0.5 font-medium" style="color:#dcfce7">কৃষি সম্প্রসারণ অধিদপ্তর</p>
 </div>
 </div>
@@ -69,8 +74,12 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <span class="text-lg">📊</span>ড্যাশবোর্ড
 <div class="nav-dot"></div>
 </button>
+<button onclick="switchTab('map')" class="nav-btn flex-1 py-3.5 text-sm font-semibold text-gray-500 hover:text-green-700 hover:bg-green-50 flex flex-col items-center gap-1" data-tab="map">
+<span class="text-lg">🗺️</span>ম্যাপ
+<div class="nav-dot"></div>
+</button>
 <button onclick="switchTab('storedData')" class="nav-btn flex-1 py-3.5 text-sm font-semibold text-gray-500 hover:text-green-700 hover:bg-green-50 flex flex-col items-center gap-1" data-tab="storedData">
-<span class="text-lg">📂</span>রিপোর্ট
+<span class="text-lg">📂</span>రిపోర్ట్
 <div class="nav-dot"></div>
 </button>
 <button onclick="switchTab('admin')" class="nav-btn flex-1 py-3.5 text-sm font-semibold text-gray-500 hover:text-green-700 hover:bg-green-50 flex flex-col items-center gap-1" data-tab="admin">
@@ -90,8 +99,12 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <span class="text-xl">📊</span><span class="text-xs font-semibold" style="font-size:10px">ড্যাশবোর্ড</span>
 <div class="nav-dot mt-0.5"></div>
 </button>
+<button onclick="switchTab('map')" class="nav-btn flex-1 py-2.5 flex flex-col items-center gap-0.5 text-gray-400" data-tab="map">
+<span class="text-xl">🗺️</span><span class="text-xs font-semibold" style="font-size:10px">ম্যাপ</span>
+<div class="nav-dot mt-0.5"></div>
+</button>
 <button onclick="switchTab('storedData')" class="nav-btn flex-1 py-2.5 flex flex-col items-center gap-0.5 text-gray-400" data-tab="storedData">
-<span class="text-xl">📂</span><span class="text-xs font-semibold" style="font-size:10px">রিপোর্ট</span>
+<span class="text-xl">📂</span><span class="text-xs font-semibold" style="font-size:10px">আমার তথ্য</span>
 <div class="nav-dot mt-0.5"></div>
 </button>
 <button onclick="switchTab('admin')" class="nav-btn flex-1 py-2.5 flex flex-col items-center gap-0.5 text-gray-400" data-tab="admin">
@@ -100,9 +113,39 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 </button>
 </nav>
 
+<!-- ==================== PWA INSTALL BANNERS ==================== -->
+<div id="pwaIframeBanner" class="hidden bg-amber-50 border-b border-amber-200 text-amber-800 py-3 px-4 no-print shadow-sm" style="background:#fef3c7;border-bottom:1px solid #fde68a;color:#78350f">
+<div class="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs sm:text-sm">
+<div class="flex items-center gap-2">
+<span class="text-base">📲</span>
+<p class="font-medium">অ্যাপটি সম্পূর্ণ অফলাইনে ব্যবহার এবং সরাসরি মোবাইলে স্ক্রিনে হোম অ্যাপ হিসেবে ইন্সটল করার জন্য নতুন উইন্ডোতে ওপেন করুন।</p>
+</div>
+<div class="flex gap-2">
+<button onclick="window.open(window.location.href, '_blank')" class="bg-amber-600 hover:bg-amber-700 text-white font-semibold py-1.5 px-4 rounded transition text-xs shadow cursor-pointer border-none" style="background:#d97706;border:none;border-radius:4px;padding:6px 12px;color:white;font-weight:600">নতুন উইন্ডোতে ওপেন করুন</button>
+<button onclick="document.getElementById('pwaIframeBanner').classList.add('hidden')" class="text-amber-600 hover:text-amber-800 font-semibold text-xs border-none bg-transparent cursor-pointer" style="border:none;background:transparent;color:#b45309;font-weight:600">বন্ধ করুন</button>
+</div>
+</div>
+</div>
+
+<div id="pwaInstallBanner" class="hidden bg-emerald-50 border-b border-emerald-200 text-emerald-800 py-3.5 px-4 no-print shadow-sm" style="background:#ecfdf5;border-bottom:1px solid #a7f3d0;color:#065f46">
+<div class="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs sm:text-sm">
+<div class="flex items-center gap-2">
+<span class="text-lg">🌴</span>
+<div>
+<p class="font-semibold text-emerald-950" style="color:#022c22">“বৃক্ষরোপণ ট্র্যাকার” সরাসরি মোবাইলে ইনস্টল করুন!</p>
+<p class="text-xs text-emerald-700" style="color:#047857">কোনো ইন্টারনেট ছাড়াই অফলাইনে সম্পূর্ণ নিরাপদ তথ্য সংগ্রহ ও ট্র্যাকিং করুন।</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button onclick="window.triggerPWAInstall()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-5 rounded-lg transition text-xs sm:text-sm shadow-md cursor-pointer border-none" style="background:#059669;border:none;border-radius:8px;padding:8px 16px;color:white;font-weight:700">📲 সরাসরি অ্যাপ ডাউনলোড</button>
+<button onclick="document.getElementById('pwaInstallBanner').classList.add('hidden')" class="text-emerald-600 hover:text-emerald-800 font-semibold text-xs border-none bg-transparent cursor-pointer" style="border:none;background:transparent;color:#047857;font-weight:600">পরে হব</button>
+</div>
+</div>
+</div>
+
 <!-- ==================== BANNERS ==================== -->
 <div id="successBanner" class="hidden bg-green-600 text-white py-3 px-4 text-center anim-in no-print" style="background:#16a34a">
-<p class="font-semibold text-sm sm:text-base">✅ ধন্যবাদ! নার্সারির তথ্য সফলভাবে জমা হয়েছে।</p>
+<p class="font-semibold text-sm sm:text-base">✅ ধন্যবাদ! বৃক্ষরোপণের তথ্য সফলভাবে জমা হয়েছে।</p>
 </div>
 <div id="errorBanner" class="hidden bg-red-600 text-white py-3 px-4 text-center anim-in no-print" style="background:#dc2626">
 <p id="errorText" class="font-semibold text-sm sm:text-base"></p>
@@ -137,9 +180,9 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <p class="text-xs mt-0.5 hidden" data-error="fUpazila" style="color:#ef4444;font-size:0.75rem">উপজেলা আবশ্যক</p>
 </div>
 <div>
-<label class="block text-xs font-semibold text-gray-700 mb-1">নার্সারির নাম <span style="color:#ef4444">*</span></label>
-<input type="text" id="fNursery" placeholder="নার্সারির নাম লিখুন" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
-<p class="text-xs mt-0.5 hidden" data-error="fNursery" style="color:#ef4444;font-size:0.75rem">নার্সারির নাম আবশ্যক</p>
+<label class="block text-xs font-semibold text-gray-700 mb-1">রোপণকারীর নাম <span style="color:#ef4444">*</span></label>
+<input type="text" id="fNursery" placeholder="রোপণকারীর নাম লিখুন" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+<p class="text-xs mt-0.5 hidden" data-error="fNursery" style="color:#ef4444;font-size:0.75rem">রোপণকারীর নাম আবশ্যক</p>
 </div>
 <div>
 <label class="block text-xs font-semibold text-gray-700 mb-1">মোবাইল নম্বর <span style="color:#ef4444">*</span></label>
@@ -147,15 +190,34 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <p class="text-xs mt-0.5 hidden" data-error="fMobile" style="color:#ef4444;font-size:0.75rem"></p>
 </div>
 <div>
+<label class="block text-xs font-semibold text-gray-700 mb-1">মনিটরিং অফিসার / তদারককারীর নাম</label>
+<input type="text" id="fCaretakerName" placeholder="মনিটরিং কর্মকর্তা / তদারককারীর নাম লিখুন" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+</div>
+<div>
+<label class="block text-xs font-semibold text-gray-700 mb-1">মনিটরিং অফিসার / তদারককারীর মোবাইল নম্বর</label>
+<input type="text" id="fCaretakerMobile" maxlength="11" inputmode="numeric" placeholder="01XXXXXXXXX" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+<p class="text-xs mt-0.5 hidden" data-error="fCaretakerMobile" style="color:#ef4444;font-size:0.75rem"></p>
+</div>
+<div>
+<label class="block text-xs font-semibold text-gray-700 mb-1">রোপণের তারিখ</label>
+<input type="date" id="fPlantingDate" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+</div>
+<div>
 <label class="block text-xs font-semibold text-gray-700 mb-1">জিও লোকেশন <button type="button" onclick="fetchGeoLocation()" id="geoBtn" class="ml-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full transition" style="font-size:10px;font-weight:500;color:#15803d;background:#f0fdf4;border:1px solid #bbf7d0" title="লোকেশন আপডেট করুন"><svg id="geoIcon" style="height:12px;width:12px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg><span id="geoBtnText">স্বয়ংক্রিয়</span></button></label>
 <div class="flex gap-2">
-<input type="text" id="fGeo" placeholder="অক্ষাংশ, দ্রাঘিমাংশ" class="flex-1 border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+<input type="text" id="fGeo" placeholder="অক্ষাংশ, দ্রাঘিমাংশ" class="flex-1 border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db" onchange="if(window.onGeoLocationChange){window.onGeoLocationChange(this, 'fAddress')}">
 </div>
 <p id="geoStatus" class="hidden mt-0.5" style="font-size:10px;color:#9ca3af"><span id="geoStatusText"></span></p>
 </div>
 <div class="sm:col-span-2">
-<label class="block text-xs font-semibold text-gray-700 mb-1">ঠিকানা</label>
-<textarea id="fAddress" rows="2" placeholder="সম্পূর্ণ ঠিকানা লিখুন" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"></textarea>
+<label class="block text-xs font-semibold text-gray-700 mb-1">রোপণকৃত বৃক্ষের অবস্থান</label>
+<textarea id="fAddress" rows="2" placeholder="রোপণকৃত বৃক্ষের অবস্থান লিখুন" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"></textarea>
+</div>
+<div class="sm:col-span-2">
+<div>
+<label class="block text-xs font-semibold text-gray-700 mb-1">মন্তব্য</label>
+<input type="text" id="fRemarks" placeholder="মন্তব্য (যদি থাকে)" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+</div>
 </div>
 </div>
 </fieldset>
@@ -176,7 +238,7 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <section id="tab-dashboard" class="tab-content hidden">
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
 <div class="card-stat bg-white rounded-xl shadow p-4" style="border-left:4px solid #22c55e"><p class="text-xs sm:text-sm text-gray-500">মোট জমা</p><p id="statTotal" class="text-2xl sm:text-3xl font-bold text-green-700">0</p></div>
-<div class="card-stat bg-white rounded-xl shadow p-4" style="border-left:4px solid #3b82f6"><p class="text-xs sm:text-sm text-gray-500">নার্সারি সংখ্যা</p><p id="statNurseries" class="text-2xl sm:text-3xl font-bold text-blue-700">0</p></div>
+<div class="card-stat bg-white rounded-xl shadow p-4" style="border-left:4px solid #3b82f6"><p class="text-xs sm:text-sm text-gray-500">মোট রোপণকারী</p><p id="statNurseries" class="text-2xl sm:text-3xl font-bold text-blue-700">0</p></div>
 <div class="card-stat bg-white rounded-xl shadow p-4" style="border-left:4px solid #f97316"><p class="text-xs sm:text-sm text-gray-500">মোট চারা</p><p id="statSeedlings" class="text-2xl sm:text-3xl font-bold text-orange-700">0</p></div>
 <div class="card-stat bg-white rounded-xl shadow p-4" style="border-left:4px solid #a855f7"><p class="text-xs sm:text-sm text-gray-500">মোট কলম</p><p id="statGrafts" class="text-2xl sm:text-3xl font-bold text-purple-700">0</p></div>
 </div>
@@ -192,15 +254,110 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <div class="bg-white rounded-xl shadow p-4"><p class="font-semibold text-gray-700 mb-3 text-sm">চারার ধরন অনুযায়ী</p><canvas id="chartCategory" height="220"></canvas></div>
 </div>
 <div class="bg-white rounded-xl shadow p-4 mb-6 overflow-x-auto">
-<div class="flex items-center justify-between mb-3">
+<div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+<div class="flex items-center gap-2 flex-wrap">
 <p class="font-semibold text-gray-700 text-sm">📋 বিস্তারিত তথ্য</p>
-<button onclick="exportToExcel('dash')" class="text-white text-xs sm:text-sm px-4 py-2 rounded-lg shadow transition font-semibold" style="background:#15803d">📥 Excel ডাউনলোড</button>
+<div class="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5" id="viewModeToggle">
+<button onclick="setDashboardViewMode('gov')" id="btnViewGov" class="px-3 py-1 text-xs font-semibold rounded-md bg-white text-green-700 shadow-sm transition-all focus:outline-none cursor-pointer">🏛️ সরকারি ছক ভিউ</button>
+<button onclick="setDashboardViewMode('gen')" id="btnViewGen" class="px-3 py-1 text-xs font-semibold rounded-md text-gray-600 hover:text-green-700 transition-all focus:outline-none cursor-pointer">📦 সাধারণ ভিউ</button>
+</div>
+</div>
+<div class="flex gap-2">
+<button onclick="exportToGovExcel('dash')" class="text-white text-xs sm:text-sm px-4 py-2 rounded-lg shadow transition font-semibold hover:opacity-90 cursor-pointer" style="background:#0284c7">📥 সরকারি ছকে ডাউনলোড (Official)</button>
+<button onclick="exportToExcel('dash')" class="text-white text-xs sm:text-sm px-4 py-2 rounded-lg shadow transition font-semibold hover:opacity-90 cursor-pointer" style="background:#15803d">📥 সাধারণ Excel ডাউনলোড</button>
+</div>
 </div>
 <div class="overflow-x-auto"><table class="w-full text-sm" id="dashTable">
-<thead><tr style="background:#f0fdf4;color:#166534"><th class="px-2 py-2 text-left whitespace-nowrap">ক্রম</th><th class="px-2 py-2 text-left whitespace-nowrap">অঞ্চল</th><th class="px-2 py-2 text-left whitespace-nowrap">জেলা</th><th class="px-2 py-2 text-left whitespace-nowrap">উপজেলা</th><th class="px-2 py-2 text-left whitespace-nowrap">নার্সারি</th><th class="px-2 py-2 text-left whitespace-nowrap">মোবাইল</th><th class="px-2 py-2 text-left whitespace-nowrap">ফলদ</th><th class="px-2 py-2 text-left whitespace-nowrap">বনজ</th><th class="px-2 py-2 text-left whitespace-nowrap">ঔষধি</th><th class="px-2 py-2 text-left whitespace-nowrap">তারিখ</th></tr></thead>
+<thead id="dashTableHead"></thead>
 <tbody id="dashTableBody"></tbody>
 </table></div>
 <p id="dashNoData" class="hidden text-center text-gray-400 py-8">কোনো তথ্য পাওয়া যায়নি।</p>
+</div>
+
+<!-- === KOBO & SERVER SYNC CENTER === -->
+<div class="bg-white rounded-xl shadow p-5 mb-6">
+  <div class="flex items-center gap-3 mb-4">
+    <div class="p-2 bg-green-50 text-green-700 rounded-lg text-xl font-bold">🔄</div>
+    <div>
+      <h3 class="font-bold text-gray-800 text-sm sm:text-base">কোবো ও সার্ভার সিঙ্ক সেন্টার (KoBo & Server Sync)</h3>
+      <p class="text-xs text-gray-500">মোবাইলে অফলাইনে সংগৃহীত বৃক্ষরোপণের তথ্য কোবো টুলবক্স বা যেকোনো API সার্ভারে সিঙ্ক করুন</p>
+    </div>
+  </div>
+  
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-3">
+    <!-- Section 1: Spreadsheet Download with Database Columns -->
+    <div class="border border-gray-100 rounded-lg p-4 bg-gray-50/50 flex flex-col justify-between">
+      <div>
+        <h4 class="font-bold text-gray-700 text-xs sm:text-sm mb-1">পদ্ধতি ১: KoBo / ODK ডাটাবেজ উপযোগী Excel</h4>
+        <p class="text-xs text-gray-500 mb-4 leading-relaxed">এই এক্সেল ফাইলটির কলামগুলোর নাম আন্তর্জাতিক XLSForm মানদণ্ড (English Snake_Case) অনুযায়ী প্রস্তুত করা হয়েছে। এটি সরাসরি কোবো বা আপনার নিজস্ব সার্ভারে আপলোড করার জন্য শতভাগ প্রস্তুত।</p>
+      </div>
+      <button onclick="exportToKoboExcel('dash')" class="w-full text-white text-xs sm:text-sm px-4 py-2.5 rounded-lg shadow transition font-semibold flex items-center justify-center gap-2 hover:bg-green-800 cursor-pointer" style="background:#15803d">
+        <span>📥 KoBo / Server XLS ডাউনলোড</span>
+      </button>
+    </div>
+
+    <!-- Section 2: JSON REST API Sync Emulator -->
+    <div class="border border-gray-100 rounded-lg p-4 bg-gray-50/50">
+      <h4 class="font-bold text-gray-700 text-xs sm:text-sm mb-1">পদ্ধতি ২: সরাসরি REST API-তে ডাটা সিঙ্ক</h4>
+      <p class="text-xs text-gray-500 mb-3 leading-relaxed">আপনার কোবো বা নিজস্ব সার্ভারের এন্ডপয়েন্ট ও সিক্রেট টোকেন দিয়ে সরাসরি মোবাইল থেকে ইন্টারনেট পাওয়ার পর ডাটা সাবমিট করুন।</p>
+      
+      <div class="space-y-2 mb-3">
+        <div>
+          <label class="block text-[10px] uppercase font-bold text-gray-500 mb-0.5">API Endpoint (সার্ভার ইউআরএল) *</label>
+          <input type="url" id="syncEndpoint" placeholder="https://yourserver.com/api/v1/sync" class="w-full border rounded px-2.5 py-1.5 text-xs outline-none focus:ring-1 focus:ring-green-400" style="border-color:#d1d5db" onchange="saveSyncConfig()">
+        </div>
+        <div>
+          <label class="block text-[10px] uppercase font-bold text-gray-500 mb-0.5 font-mono">Authorization Token (সিক্রেট টোকেন - ঐচ্ছিক)</label>
+          <input type="password" id="syncToken" placeholder="Bearer kobo_token_xyz" class="w-full border rounded px-2.5 py-1.5 text-xs outline-none focus:ring-1 focus:ring-green-400" style="border-color:#d1d5db" onchange="saveSyncConfig()">
+        </div>
+      </div>
+      
+      <div class="flex gap-2">
+        <button onclick="apiSyncNow()" class="flex-1 text-white text-xs px-4 py-2 rounded font-semibold transition flex items-center justify-center gap-1 hover:opacity-90 cursor-pointer" style="background:#2563eb">
+          <span>⚡ ডাটা সিঙ্ক করুন</span>
+        </button>
+        <button onclick="previewSyncJSON()" class="text-gray-700 border text-xs px-3 py-2 rounded font-semibold transition hover:bg-gray-100 cursor-pointer" style="border-color:#d1d5db">
+          <span>📝 JSON দেখুন</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sync log display area -->
+  <div id="syncLogContainer" class="hidden mt-4 border border-blue-100 rounded-lg bg-blue-50/30 p-3">
+    <div class="flex justify-between items-center mb-1.5">
+      <p class="text-[10px] font-bold text-blue-800 uppercase tracking-wider font-mono">সিঙ্ক স্ট্যাটাস কনসোল (Sync Console)</p>
+      <button onclick="closeSyncConsole()" class="text-xs text-blue-500 hover:text-blue-800 font-semibold cursor-pointer">বন্ধ করুন</button>
+    </div>
+    <div id="syncLog" class="font-mono text-[10px] text-gray-700 max-h-[140px] overflow-y-auto whitespace-pre-wrap leading-relaxed"></div>
+  </div>
+</div>
+
+</section>
+
+<!-- ========== TAB: MAP ========== -->
+<section id="tab-map" class="tab-content hidden">
+<div class="bg-white rounded-xl shadow p-4 mb-4">
+<p class="font-semibold text-gray-700 mb-3 text-sm">🗺️ রোপণ লোকেশন ফিল্টার করুন</p>
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+<select id="mapRegion" onchange="onMapFilterChange()" class="border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব অঞ্চল</option></select>
+<select id="mapDistrict" onchange="onMapFilterChange()" class="border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব জেলা</option></select>
+<button onclick="zoomToMyGeoLocation()" class="text-white px-4 py-2 rounded-lg text-sm font-semibold transition hover:bg-green-800 flex items-center justify-center gap-1.5" style="background:#15803d">
+<svg id="geoIcon" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+আমার অবস্থান খুঁজুন
+</button>
+</div>
+</div>
+<div class="bg-white rounded-xl shadow p-3 mb-6 relative">
+<div id="leafletMap" class="w-full h-[450px] sm:h-[550px] rounded-lg border border-gray-200" style="z-index: 10;"></div>
+<div class="mt-3 flex flex-wrap justify-between items-center text-xs text-gray-500 gap-2 px-1">
+<div>
+<span class="inline-flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-orange-500 inline-block"></span> ফলদ/বৃক্ষ সংখ্যা > ১০,০০০ (বৃহৎ)</span>
+<span class="inline-flex items-center gap-2 ml-3"><span class="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> ৫,০০০ - ১০,০০০ চারা</span>
+<span class="inline-flex items-center gap-2 ml-3"><span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span> < ৫,০০০ চারা</span>
+</div>
+<div id="mapStatsText" class="font-semibold text-green-700"></div>
+</div>
 </div>
 </section>
 
@@ -224,12 +381,21 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 
 <!-- ========== TAB: ADMIN ========== -->
 <section id="tab-admin" class="tab-content hidden">
-
-<div id="adminPanel">
+<div id="adminLogin" class="max-w-sm mx-auto bg-white rounded-xl shadow p-6 mt-8">
+<div class="text-center mb-4"><span class="text-4xl">🔐</span><h2 class="text-lg font-bold text-green-700 mt-2">এডমিন লগইন</h2></div>
+<div class="space-y-3">
+<input type="password" id="adminPass" placeholder="পাসওয়ার্ড দিন" class="w-full border rounded-md px-3 py-2.5 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db" onkeydown="if(event.key==='Enter')adminLogin()">
+<p id="adminLoginErr" class="hidden text-xs" style="color:#ef4444">ভুল পাসওয়ার্ড!</p>
+<button onclick="adminLogin()" class="w-full text-white py-2.5 rounded-lg font-semibold text-sm transition" style="background:#15803d">লগইন করুন</button>
+</div>
+</div>
+<div id="adminPanel" class="hidden">
 <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-<div class="flex items-center gap-2"><span class="text-xs font-semibold px-3 py-1 rounded-full" style="background:#dcfce7;color:#166534">✅ এডমিন</span></div>
+<div class="flex items-center gap-2"><span class="text-xs font-semibold px-3 py-1 rounded-full" style="background:#dcfce7;color:#166534">✅ এডমিন</span><button onclick="changePassword()" class="text-xs underline" style="color:#2563eb">পাসওয়ার্ড পরিবর্তন</button></div>
 <div class="flex gap-2">
-<button onclick="exportToExcel('admin')" class="text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition" style="background:#15803d">📥 Excel</button>
+<button onclick="exportToGovExcel('admin')" class="text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition hover:opacity-90 cursor-pointer" style="background:#0284c7">📥 সরকারি ছক</button>
+<button onclick="exportToExcel('admin')" class="text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition hover:opacity-90 cursor-pointer" style="background:#15803d">📥 সাধারণ Excel</button>
+<button onclick="adminLogout()" class="text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition hover:opacity-90 cursor-pointer" style="background:#dc2626">🚪 লগআউট</button>
 </div>
 </div>
 <div class="bg-white rounded-xl shadow p-3 mb-4">
@@ -240,7 +406,7 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 </div>
 <div class="bg-white rounded-xl shadow overflow-x-auto">
 <table class="w-full text-xs sm:text-sm" id="adminTable">
-<thead><tr style="background:#f0fdf4;color:#166534"><th class="px-2 py-2 text-left whitespace-nowrap">ক্রম</th><th class="px-2 py-2 text-left whitespace-nowrap">অঞ্চল</th><th class="px-2 py-2 text-left whitespace-nowrap">জেলা</th><th class="px-2 py-2 text-left whitespace-nowrap">উপজেলা</th><th class="px-2 py-2 text-left whitespace-nowrap">নার্সারি</th><th class="px-2 py-2 text-left whitespace-nowrap">মোবাইল</th><th class="px-2 py-2 text-left whitespace-nowrap">চারা</th><th class="px-2 py-2 text-left whitespace-nowrap">তারিখ</th><th class="px-2 py-2 text-center whitespace-nowrap">অ্যাকশন</th></tr></thead>
+<thead><tr style="background:#f0fdf4;color:#166534"><th class="px-2 py-2 text-left whitespace-nowrap">ক্রম</th><th class="px-2 py-2 text-left whitespace-nowrap">অঞ্চল</th><th class="px-2 py-2 text-left whitespace-nowrap">জেলা</th><th class="px-2 py-2 text-left whitespace-nowrap">উপজেলা</th><th class="px-2 py-2 text-left whitespace-nowrap">রোপণকারীর নাম</th><th class="px-2 py-2 text-left whitespace-nowrap">মোবাইল</th><th class="px-2 py-2 text-left whitespace-nowrap">চারা</th><th class="px-2 py-2 text-left whitespace-nowrap">তারিখ</th><th class="px-2 py-2 text-center whitespace-nowrap">অ্যাকশন</th></tr></thead>
 <tbody id="adminTableBody"></tbody>
 </table>
 <p id="adminNoData" class="hidden text-center text-gray-400 py-8">কোনো তথ্য নেই।</p>
@@ -260,10 +426,14 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <div><label class="block text-xs font-semibold text-gray-700 mb-1">অঞ্চল *</label><select id="eRegion" onchange="onEditRegionChange()" class="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">নির্বাচন</option></select></div>
 <div><label class="block text-xs font-semibold text-gray-700 mb-1">জেলা *</label><select id="eDistrict" onchange="onEditDistrictChange()" class="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">নির্বাচন</option></select></div>
 <div><label class="block text-xs font-semibold text-gray-700 mb-1">উপজেলা *</label><select id="eUpazila" class="w-full border rounded-md px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-green-400" style="border-color:#d1d5db"><option value="">উপজেলা নির্বাচন করুন</option></select></div>
-<div><label class="block text-xs font-semibold text-gray-700 mb-1">নার্সারির নাম *</label><input type="text" id="eNursery" class="w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-400" style="border-color:#d1d5db"></div>
+<div><label class="block text-xs font-semibold text-gray-700 mb-1">রোপণকারীর নাম *</label><input type="text" id="eNursery" class="w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-400" style="border-color:#d1d5db"></div>
 <div><label class="block text-xs font-semibold text-gray-700 mb-1">মোবাইল *</label><input type="text" id="eMobile" maxlength="11" inputmode="numeric" class="w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-400" style="border-color:#d1d5db"></div>
-<div><label class="block text-xs font-semibold text-gray-700 mb-1">জিও লোকেশন</label><input type="text" id="eGeo" class="w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-400" style="border-color:#d1d5db"></div>
-<div class="sm:col-span-2"><label class="block text-xs font-semibold text-gray-700 mb-1">ঠিকানা</label><textarea id="eAddress" rows="2" class="w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-400" style="border-color:#d1d5db"></textarea></div>
+<div><label class="block text-xs font-semibold text-gray-700 mb-1">মনিটরিং অফিসার / তদারককারীর নাম</label><input type="text" id="eCaretakerName" class="w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-400" style="border-color:#d1d5db"></div>
+<div><label class="block text-xs font-semibold text-gray-700 mb-1">মনিটরিং অফিসার / তদারককারীর মোবাইল নম্বর</label><input type="text" id="eCaretakerMobile" maxlength="11" inputmode="numeric" class="w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-400" style="border-color:#d1d5db"><p class="text-xs mt-0.5 hidden" data-error="eCaretakerMobile" style="color:#ef4444;font-size:0.75rem"></p></div>
+<div><label class="block text-xs font-semibold text-gray-700 mb-1">রোপণের তারিখ</label><input type="date" id="ePlantingDate" class="w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-400" style="border-color:#d1d5db"></div>
+<div><label class="block text-xs font-semibold text-gray-700 mb-1">জিও লোকেশন</label><input type="text" id="eGeo" class="w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-400" style="border-color:#d1d5db" onchange="if(window.onGeoLocationChange){window.onGeoLocationChange(this, 'eAddress')}"></div>
+<div class="sm:col-span-2"><label class="block text-xs font-semibold text-gray-700 mb-1">রোপণকৃত বৃক্ষের অবস্থান</label><textarea id="eAddress" rows="2" class="w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-400" style="border-color:#d1d5db"></textarea></div>
+<div><label class="block text-xs font-semibold text-gray-700 mb-1">মন্তব্য</label><input type="text" id="eRemarks" class="w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-400" style="border-color:#d1d5db"></div>
 </div>
 <div id="editSeedlingSections" class="space-y-3 mb-4"></div>
 <div class="flex gap-3 justify-end">
@@ -275,8 +445,9 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 </div>
 
 <!-- ==================== FOOTER ==================== -->
-<footer class="text-green-100 text-center py-3 px-4 text-xs sm:text-sm mt-auto no-print" style="background:#14532d;color:#dcfce7">
-<p>কৃষি সম্প্রসারণ অধিদপ্তর | গণপ্রজাতন্ত্রী বাংলাদেশ সরকার</p>
+<footer class="text-green-100 text-center py-4 px-4 text-xs sm:text-sm mt-auto no-print" style="background:#14532d;color:#dcfce7">
+<p class="mb-1">কৃষি সম্প্রসারণ অধিদপ্তর | গণপ্রজাতন্ত্রী বাংলাদেশ সরকার</p>
+<p class="mb-1 text-green-300" style="color:#a7f3d0">সাপোর্ট ইমেইল: <a href="mailto:krishiailive@gmail.com" class="underline hover:text-white transition">krishiailive@gmail.com</a></p>
 <p class="text-green-300 text-xs mt-0.5" style="color:#86efac">&copy; ২০২৬ সর্বস্বত্ব সংরক্ষিত</p>
 </footer>
 
@@ -399,7 +570,8 @@ if(sec)sec.classList.remove("hidden");
 document.querySelectorAll('.nav-btn[data-tab="'+tab+'"]').forEach(function(b){b.classList.add("active")});
 hideBanner("successBanner");hideBanner("errorBanner");
 if(tab==="dashboard")renderDashboard();
-if(tab==="admin")renderAdminTable();
+if(tab==="admin"&&isAdmin)renderAdminTable();
+if(tab==="map")renderMap();
 window.scrollTo({top:0,behavior:"smooth"});
 }catch(err){console.error("Tab switch error:",err)}
 };
@@ -415,6 +587,7 @@ function populateUpazilaDD(dd,district,selected){dd.innerHTML='<option value="">
 
 
 // ── Cascading ──
+window.onMapFilterChange=function(){populateDistrictDD(document.getElementById("mapDistrict"),document.getElementById("mapRegion").value);renderMap()};
 window.onDashFilterChange=function(){populateDistrictDD(document.getElementById("dashDistrict"),document.getElementById("dashRegion").value);renderDashboard()};
 window.onFormRegionChange=function(){populateDistrictDD(document.getElementById("fDistrict"),document.getElementById("fRegion").value);document.getElementById("fUpazila").innerHTML='<option value="">উপজেলা নির্বাচন করুন</option>'};
 window.onFormDistrictChange=function(){populateUpazilaDD(document.getElementById("fUpazila"),document.getElementById("fDistrict").value)};
@@ -439,7 +612,24 @@ window.buildSeedlingHTML=buildSeedlingHTML;
 
 function collectSeedlingsFromDOM(containerId){
 var result={};
-CATEGORIES.forEach(function(cat,ci){var c=document.getElementById(containerId+"_"+cat.key);if(!c)return;result[cat.key]=Array.from(c.querySelectorAll("[data-type='"+cat.key+"']")).map(function(card){var inp=card.querySelectorAll("input,select");return{name:(inp[0]&&inp[0].value||"").trim(),age:(inp[1]&&inp[1].value||"").trim(),count:(inp[2]&&inp[2].value||"0").trim(),graftingCount:(inp[3]&&inp[3].value||"0").trim()}})});
+CATEGORIES.forEach(function(cat,ci){
+  var c=document.getElementById(containerId+"_"+cat.key);
+  if(!c)return;
+  var items=Array.from(c.querySelectorAll("[data-type='"+cat.key+"']")).map(function(card){
+    var inp=card.querySelectorAll("input,select");
+    return{
+      name:(inp[0]&&inp[0].value||"").trim(),
+      age:(inp[1]&&inp[1].value||"").trim(),
+      count:(inp[2]&&inp[2].value||"0").trim(),
+      graftingCount:(inp[3]&&inp[3].value||"0").trim()
+    };
+  });
+  result[cat.key]=items.filter(function(item){
+    var cnt=parseInt(item.count)||0;
+    var grf=parseInt(item.graftingCount)||0;
+    return item.name!==""||item.age!==""||cnt>0||grf>0;
+  });
+});
 return result;
 }
 
@@ -447,7 +637,7 @@ return result;
 function validateMobile(v){return /^0\d{10}$/.test(v)}
 function validateForm(prefix){
 var ok=true;
-[{id:prefix+"Region",msg:"অঞ্চল আবশ্যক"},{id:prefix+"District",msg:"জেলা আবশ্যক"},{id:prefix+"Nursery",msg:"নার্সারির নাম আবশ্যক"}].forEach(function(r){
+[{id:prefix+"Region",msg:"অঞ্চল আবশ্যক"},{id:prefix+"District",msg:"জেলা আবশ্যক"},{id:prefix+"Nursery",msg:"রোপণকারীর নাম আবশ্যক"}].forEach(function(r){
 var el=document.getElementById(r.id),err=el?el.nextElementSibling:null;
 if(!el||!el.value.trim()){if(el){el.classList.add("shake");el.style.borderColor="#ef4444"}if(err){err.textContent=r.msg;err.classList.remove("hidden")}ok=false;setTimeout(function(){if(el){el.classList.remove("shake");el.style.borderColor="#d1d5db"}},350)}
 else{if(el){el.classList.remove("shake");el.style.borderColor="#d1d5db"}if(err)err.classList.add("hidden")}
@@ -459,12 +649,44 @@ var mobEl=document.getElementById(prefix+"Mobile"),mobErr=mobEl?mobEl.nextElemen
 if(!mobEl||!mobEl.value.trim()){if(mobErr){mobErr.textContent="মোবাইল নম্বর আবশ্যক";mobErr.classList.remove("hidden")}if(mobEl){mobEl.classList.add("shake");mobEl.style.borderColor="#ef4444"}ok=false;setTimeout(function(){if(mobEl){mobEl.classList.remove("shake");mobEl.style.borderColor="#d1d5db"}},350)}
 else if(!validateMobile(mobEl.value.trim())){if(mobErr){mobErr.textContent="মোবাইল নম্বর অবশ্যই ১১ ডিজিট (017XXXXXXXX)";mobErr.classList.remove("hidden")}if(mobEl){mobEl.classList.add("shake");mobEl.style.borderColor="#ef4444"}ok=false;setTimeout(function(){if(mobEl){mobEl.classList.remove("shake");mobEl.style.borderColor="#d1d5db"}},350)}
 else{if(mobErr)mobErr.classList.add("hidden");if(mobEl)mobEl.style.borderColor="#d1d5db"}
+
+var careMobEl=document.getElementById(prefix+"CaretakerMobile"),careMobErr=careMobEl?careMobEl.nextElementSibling:null;
+if(careMobEl && careMobEl.value.trim()){
+  if(!validateMobile(careMobEl.value.trim())){
+    if(careMobErr){careMobErr.textContent="তদারককারীর মোবাইল অবশ্যই ১১ ডিজিট (01XXXXXXXXX)";careMobErr.classList.remove("hidden")}
+    careMobEl.classList.add("shake");careMobEl.style.borderColor="#ef4444";
+    ok=false;
+    setTimeout(function(){careMobEl.classList.remove("shake");careMobEl.style.borderColor="#d1d5db"},350);
+  } else {
+    if(careMobErr)careMobErr.classList.add("hidden");
+    careMobEl.style.borderColor="#d1d5db";
+  }
+} else if(careMobErr) {
+  careMobErr.classList.add("hidden");
+  if(careMobEl) careMobEl.style.borderColor="#d1d5db";
+}
 return ok;
 }
 
 function buildPayload(prefix){
 var upEl=document.getElementById(prefix+"Upazila");
-return{region:document.getElementById(prefix+"Region").value.trim(),district:document.getElementById(prefix+"District").value.trim(),upazila:upEl&&upEl.value.trim(),nurseryName:document.getElementById(prefix+"Nursery").value.trim(),mobile:document.getElementById(prefix+"Mobile").value.trim(),address:(document.getElementById(prefix+"Address")&&document.getElementById(prefix+"Address").value.trim())||"",geoLocation:(document.getElementById(prefix+"Geo")&&document.getElementById(prefix+"Geo").value.trim())||"",submittedAt:new Date().toISOString()};
+var pDateEl=document.getElementById(prefix+"PlantingDate");
+var pDateVal=pDateEl?pDateEl.value.trim():new Date().toISOString().slice(0, 10);
+return{
+region:document.getElementById(prefix+"Region").value.trim(),
+district:document.getElementById(prefix+"District").value.trim(),
+upazila:upEl&&upEl.value.trim(),
+nurseryName:document.getElementById(prefix+"Nursery").value.trim(),
+mobile:document.getElementById(prefix+"Mobile").value.trim(),
+caretakerName:(document.getElementById(prefix+"CaretakerName")&&document.getElementById(prefix+"CaretakerName").value.trim())||"",
+caretakerMobile:(document.getElementById(prefix+"CaretakerMobile")&&document.getElementById(prefix+"CaretakerMobile").value.trim())||"",
+address:(document.getElementById(prefix+"Address")&&document.getElementById(prefix+"Address").value.trim())||"",
+geoLocation:(document.getElementById(prefix+"Geo")&&document.getElementById(prefix+"Geo").value.trim())||"",
+officerName:(document.getElementById(prefix+"CaretakerName")&&document.getElementById(prefix+"CaretakerName").value.trim())||"",
+remarks:(document.getElementById(prefix+"Remarks")&&document.getElementById(prefix+"Remarks").value.trim())||"",
+plantingDate:pDateVal,
+submittedAt:new Date().toISOString()
+};
 }
 function sendToWebhook(p){try{fetch(WEBHOOK_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(p),redirect:"follow"}).catch(function(){})}catch(e){}}
 
@@ -495,28 +717,76 @@ document.getElementById("fUpazila").innerHTML='<option value="">উপজেল�
 document.getElementById("seedlingSections").innerHTML=buildSeedlingSections("seedlingSections",null);
 document.querySelectorAll("[data-error]").forEach(function(el){el.classList.add("hidden")});
 document.getElementById("fGeo").value="";
+var pDateEl=document.getElementById("fPlantingDate"); if(pDateEl){pDateEl.value=new Date().toISOString().slice(0, 10);}
 fetchGeoLocation();
 };
 
 // ── Geo Location ──
-window.fetchGeoLocation=async function(){
+window.reverseGeocode = function(lat, lng, targetId) {
+  var addrField = document.getElementById(targetId);
+  if (!addrField) return;
+  addrField.placeholder = "🌐 জিপিএস থেকে ঠিকানা লোড হচ্ছে...";
+  
+  var url = "https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=" + lat + "&lon=" + lng + "&accept-language=bn,en";
+  fetch(url, {
+    headers: {
+      "User-Agent": "PlantationTracker/1.0"
+    }
+  })
+  .then(function(res) { return res.json(); })
+  .then(function(data) {
+    if (data && data.display_name) {
+      var addressStr = data.display_name;
+      if (data.address) {
+        var parts = [];
+        var a = data.address;
+        
+        // Match standard local/regional divisions
+        var village = a.village || a.suburb || a.neighbourhood || a.hamlet || a.road || "";
+        var upazilaLoc = a.county || a.subdistrict || "";
+        var districtLoc = a.state_district || a.district || a.city || "";
+        var postOffice = a.postcode ? "পোস্টকোড: " + a.postcode : "";
+        
+        if (village) parts.push(village);
+        if (upazilaLoc) parts.push(upazilaLoc);
+        if (districtLoc) parts.push(districtLoc);
+        if (postOffice) parts.push(postOffice);
+        
+        if (parts.length > 0) {
+          addressStr = parts.join(", ");
+        }
+      }
+      addrField.value = addressStr;
+    }
+  })
+  .catch(function(err) {
+    console.error("Geocoding failed:", err);
+  });
+};
+
+window.onGeoLocationChange = function(inputEl, targetAddressId) {
+  var val = inputEl.value.trim();
+  var m = /^\s*(-?\d+(?:\.\d+)?)\s*[\s,;]\s*(-?\d+(?:\.\d+)?)\s*$/.exec(val);
+  if (m) {
+    var lat = parseFloat(m[1]).toFixed(6);
+    var lng = parseFloat(m[2]).toFixed(6);
+    window.reverseGeocode(lat, lng, targetAddressId);
+  }
+};
+
+window.fetchGeoLocation=function(){
 try{
 var geoField=document.getElementById("fGeo"),geoStatus=document.getElementById("geoStatus"),geoStatusText=document.getElementById("geoStatusText"),geoBtnText=document.getElementById("geoBtnText");
-geoBtnText.textContent="অপেক্ষা...";geoStatusText.textContent="📡 লোকেশন খোঁজা হচ্ছে...";geoStatus.classList.remove("hidden");geoStatus.style.color="#2563eb";
-var handleSuccess=function(lat,lng){geoField.value=lat+", "+lng;geoStatusText.textContent="✅ লোকেশন সফলভাবে পাওয়া গেছে";geoStatus.style.color="#15803d";geoBtnText.textContent="আপডেট";setTimeout(function(){geoStatus.classList.add("hidden")},3000)};
-var handleError=function(msg){geoStatusText.textContent=msg;geoStatus.style.color="#dc2626";geoBtnText.textContent="আবার চেষ্টা"};
-if(window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.Geolocation){
-  try{
-    var perm=await window.Capacitor.Plugins.Geolocation.requestPermissions();
-    if(perm.location==='denied'){handleError("❌ লোকেশন অনুমতি দেওয়া হয়নি।");return}
-    var pos=await window.Capacitor.Plugins.Geolocation.getCurrentPosition({enableHighAccuracy:true});
-    handleSuccess(pos.coords.latitude.toFixed(6),pos.coords.longitude.toFixed(6));
-  }catch(err){handleError("⚠️ লোকেশন পাওয়া যায়নি।")}
-}else if(navigator.geolocation){
-  navigator.geolocation.getCurrentPosition(function(pos){handleSuccess(pos.coords.latitude.toFixed(6),pos.coords.longitude.toFixed(6));},function(err){var msg="";switch(err.code){case 1:msg="❌ লোকেশন অনুমতি দেওয়া হয়নি। ব্রাউজার সেটিংস থেকে অনুমতি দিন।";break;case 2:msg="⚠️ লোকেশন পাওয়া যায়নি।";break;case 3:msg="⏱️ লোকেশন খোঁজার সময় শেষ হয়ে গেছে।";break;default:msg="⚠️ অজানা ত্রুটি হয়েছে।"}handleError(msg)},{enableHighAccuracy:true,timeout:10000,maximumAge:300000});
-}else{
-  handleError("⚠️ আপনার ব্রাউজার লোকেশন সাপোর্ট করে না।");
-}
+if(!navigator.geolocation){geoStatusText.textContent="⚠️ আপনার ব্রাউজার লোকেশন সাপোর্ট করে না।";geoStatus.classList.remove("hidden");return}
+geoBtnText.textContent="অপেক্ষা...";
+geoStatusText.textContent="📡 লোকেশন খোঁজা হচ্ছে...";geoStatus.classList.remove("hidden");geoStatus.style.color="#2563eb";
+navigator.geolocation.getCurrentPosition(function(pos){
+var lat=pos.coords.latitude.toFixed(6),lng=pos.coords.longitude.toFixed(6);
+geoField.value=lat+", "+lng;
+geoStatusText.textContent="✅ লোকেশন সফলভাবে পাওয়া গেছে";geoStatus.style.color="#15803d";geoBtnText.textContent="আপডেট";
+setTimeout(function(){geoStatus.classList.add("hidden")},3000);
+window.reverseGeocode(lat, lng, "fAddress");
+},function(err){var msg="";switch(err.code){case 1:msg="❌ লোকেশন অনুমতি দেওয়া হয়নি। ব্রাউজার সেটিংস থেকে অনুমতি দিন।";break;case 2:msg="⚠️ লোকেশন পাওয়া যায়নি।";break;case 3:msg="⏱️ লোকেশন খোঁজার সময় শেষ হয়ে গেছে।";break;default:msg="⚠️ অজানা ত্রুটি হয়েছে।"}geoStatusText.textContent=msg;geoStatus.style.color="#dc2626";geoBtnText.textContent="আবার চেষ্টা"},{enableHighAccuracy:true,timeout:10000,maximumAge:300000});
 }catch(e){console.error("Geo error:",e)}
 };
 
@@ -542,6 +812,9 @@ setTimeout(function(){
 document.getElementById("fDistrict").value=s.district;onFormDistrictChange();
 document.getElementById("fUpazila").value=s.upazila||"";
 document.getElementById("fNursery").value=s.nurseryName;document.getElementById("fMobile").value=s.mobile;document.getElementById("fAddress").value=s.address||"";document.getElementById("fGeo").value=s.geoLocation||"";
+document.getElementById("fCaretakerName").value=s.caretakerName||"";document.getElementById("fCaretakerMobile").value=s.caretakerMobile||"";
+document.getElementById("fRemarks").value=s.remarks||"";
+document.getElementById("fPlantingDate").value=s.plantingDate||(s.submittedAt?s.submittedAt.slice(0, 10):new Date().toISOString().slice(0, 10));
 document.getElementById("seedlingSections").innerHTML=buildSeedlingSections("seedlingSections",s);
 document.getElementById("tab-form").scrollIntoView({behavior:"smooth"});
 },100);
@@ -555,6 +828,23 @@ var r=document.getElementById(prefix+"Region")&&document.getElementById(prefix+"
 var d=document.getElementById(prefix+"District")&&document.getElementById(prefix+"District").value;
 return getSubmissions().filter(function(s){if(r&&s.region!==r)return false;if(d&&s.district!==d)return false;return true});
 }
+window.currentDashboardViewMode = "gov";
+window.setDashboardViewMode = function(mode) {
+  window.currentDashboardViewMode = mode;
+  var btnGov = document.getElementById("btnViewGov");
+  var btnGen = document.getElementById("btnViewGen");
+  if(btnGov && btnGen) {
+    if(mode === "gov") {
+      btnGov.className = "px-3 py-1 text-xs font-semibold rounded-md bg-white text-green-700 shadow-sm transition-all focus:outline-none cursor-pointer";
+      btnGen.className = "px-3 py-1 text-xs font-semibold rounded-md text-gray-600 hover:text-green-700 transition-all focus:outline-none cursor-pointer";
+    } else {
+      btnGov.className = "px-3 py-1 text-xs font-semibold rounded-md text-gray-600 hover:text-green-700 transition-all focus:outline-none cursor-pointer";
+      btnGen.className = "px-3 py-1 text-xs font-semibold rounded-md bg-white text-green-700 shadow-sm transition-all focus:outline-none cursor-pointer";
+    }
+  }
+  window.renderDashboard();
+};
+
 window.renderDashboard=function(){
 try{
 var subs=getFiltered("dash");var totalS=0,totalG=0,nurs=new Set();
@@ -571,9 +861,111 @@ if(chartCat)chartCat.destroy();
 chartCat=new Chart(document.getElementById("chartCategory"),{type:"doughnut",data:{labels:CATEGORIES.map(function(c){return c.label}),datasets:[{data:catC,backgroundColor:CATEGORIES.map(function(c){return c.color})}]},options:{responsive:true,plugins:{legend:{position:"bottom"}}}});
 }
 
-var tb=document.getElementById("dashTableBody"),nd=document.getElementById("dashNoData");
-if(!subs.length){tb.innerHTML="";nd.classList.remove("hidden");return}nd.classList.add("hidden");
-tb.innerHTML=subs.map(function(s,i){var c=countSeedlings(s);return '<tr class="border-b" style="font-size:12px"><td class="px-2 py-2">'+(i+1).toLocaleString("bn-BD")+'</td><td class="px-2 py-2">'+s.region+'</td><td class="px-2 py-2">'+s.district+'</td><td class="px-2 py-2">'+s.upazila+'</td><td class="px-2 py-2 font-semibold">'+s.nurseryName+'</td><td class="px-2 py-2">'+s.mobile+'</td><td class="px-2 py-2" style="color:#ea580c">'+c.fruit+'</td><td class="px-2 py-2" style="color:#047857">'+c.forest+'</td><td class="px-2 py-2" style="color:#1d4ed8">'+c.medicinal+'</td><td class="px-2 py-2" style="color:#9ca3af">'+new Date(s.submittedAt).toLocaleDateString("bn-BD")+'</td></tr>'}).join("");
+var th=document.getElementById("dashTableHead"),tb=document.getElementById("dashTableBody"),nd=document.getElementById("dashNoData");
+if(!subs.length){if(tb)tb.innerHTML="";if(th)th.innerHTML="";if(nd)nd.classList.remove("hidden");return}
+if(nd)nd.classList.add("hidden");
+
+if(!window.currentDashboardViewMode) window.currentDashboardViewMode = "gov";
+
+if(window.currentDashboardViewMode === "gov") {
+  if (th) {
+    th.innerHTML = '<tr style="background:#0284c7;color:#ffffff">' +
+      '<th class="px-2 py-2 text-left whitespace-nowrap">ক্র. নং</th>' +
+      '<th class="px-2 py-2 text-left whitespace-nowrap">জেলা, উপজেলা ও গ্রাম/অবস্থান</th>' +
+      '<th class="px-2 py-2 text-left whitespace-nowrap">রোপণকৃত প্রজাতির নাম</th>' +
+      '<th class="px-2 py-2 text-left whitespace-nowrap">রোপণকৃত বৃক্ষের সংখ্যা</th>' +
+      '<th class="px-2 py-2 text-left whitespace-nowrap">বৃক্ষরোপণের তারিখ</th>' +
+      '<th class="px-2 py-2 text-left whitespace-nowrap">সুনির্দিষ্ট এলাকা (জিওغرافিক্যাল কোঅর্ডিনেটসহ)</th>' +
+      '<th class="px-2 py-2 text-left whitespace-nowrap">তদারককারী / মনিটরিং অফিসার ও ফোন</th>' +
+      '<th class="px-2 py-2 text-left whitespace-nowrap">মন্তব্য</th>' +
+      '</tr>';
+  }
+  
+  var rowsHtml = [];
+  var rowIndex = 1;
+  subs.forEach(function(s) {
+    var pD = s.plantingDate ? new Date(s.plantingDate).toLocaleDateString("bn-BD") : (s.submittedAt ? new Date(s.submittedAt).toLocaleDateString("bn-BD") : "");
+    var fullLocation = "জেলা: " + s.district + ", উপজেলা: " + s.upazila + (s.address ? ", গ্রাম/অবস্থান: " + s.address : "");
+    var geoLoc = s.geoLocation || "কোনো কোঅর্ডিনেট নেই";
+    
+    var caretakerInfo = "";
+    if (s.caretakerName) {
+      caretakerInfo = s.caretakerName + (s.caretakerMobile ? " (" + s.caretakerMobile + ")" : "");
+    } else {
+      caretakerInfo = s.nurseryName + (s.mobile ? " (" + s.mobile + ")" : "");
+    }
+    
+    var remarks = s.remarks || "";
+    var has = (s.fruitSeedlings && s.fruitSeedlings.length || 0) + 
+              (s.forestSeedlings && s.forestSeedlings.length || 0) + 
+              (s.medicinalSeedlings && s.medicinalSeedlings.length || 0);
+
+    if (!has) {
+      rowsHtml.push('<tr class="border-b hover:bg-gray-50 transition" style="font-size:12px">' +
+        '<td class="px-2 py-2">' + rowIndex.toLocaleString("bn-BD") + '</td>' +
+        '<td class="px-2 py-2">' + fullLocation + '</td>' +
+        '<td class="px-2 py-2 text-gray-400 font-medium">কোনো চারা রোপণ বিবরণী নেই</td>' +
+        '<td class="px-2 py-2">০</td>' +
+        '<td class="px-2 py-2">' + pD + '</td>' +
+        '<td class="px-2 py-2 font-mono text-cyan-700">' + geoLoc + '</td>' +
+        '<td class="px-2 py-2 font-semibold text-sky-800">' + caretakerInfo + '</td>' +
+        '<td class="px-2 py-2 text-gray-500">' + remarks + '</td>' +
+        '</tr>');
+      rowIndex++;
+    } else {
+      CATEGORIES.forEach(function(cat) {
+        (s[cat.key] || []).forEach(function(e) {
+          var countVal = (parseInt(e.count) || 0) + (parseInt(e.graftingCount) || 0);
+          rowsHtml.push('<tr class="border-b hover:bg-gray-50 transition" style="font-size:12px">' +
+            '<td class="px-2 py-2">' + rowIndex.toLocaleString("bn-BD") + '</td>' +
+            '<td class="px-2 py-2">' + fullLocation + '</td>' +
+            '<td class="px-2 py-2 font-semibold text-gray-800">' + (e.name || "নামহীন প্রজাতি") + ' <span class="text-xs text-gray-400">(' + cat.label + ')</span></td>' +
+            '<td class="px-2 py-2 font-bold text-green-700">' + countVal.toLocaleString("bn-BD") + '</td>' +
+            '<td class="px-2 py-2">' + pD + '</td>' +
+            '<td class="px-2 py-2 font-mono text-cyan-700">' + geoLoc + '</td>' +
+            '<td class="px-2 py-2 font-semibold text-sky-800">' + caretakerInfo + '</td>' +
+            '<td class="px-2 py-2 text-gray-500">' + remarks + '</td>' +
+            '</tr>');
+          rowIndex++;
+        });
+      });
+    }
+  });
+  if (tb) tb.innerHTML = rowsHtml.join("");
+} else {
+  if (th) {
+    th.innerHTML = '<tr style="background:#f0fdf4;color:#166534">' +
+      '<th class="px-2 py-2 text-left whitespace-nowrap">ক্রম</th>' +
+      '<th class="px-2 py-2 text-left whitespace-nowrap">অঞ্চল</th>' +
+      '<th class="px-2 py-2 text-left whitespace-nowrap">জেলা</th>' +
+      '<th class="px-2 py-2 text-left whitespace-nowrap">উপজেলা</th>' +
+      '<th class="px-2 py-2 text-left whitespace-nowrap">রোপণকারীর নাম</th>' +
+      '<th class="px-2 py-2 text-left whitespace-nowrap">মোবাইল</th>' +
+      '<th class="px-2 py-2 text-left whitespace-nowrap" style="color:#b45309">ফলদ</th>' +
+      '<th class="px-2 py-2 text-left whitespace-nowrap" style="color:#047857">বনজ</th>' +
+      '<th class="px-2 py-2 text-left whitespace-nowrap" style="color:#1d4ed8">ঔষধি</th>' +
+      '<th class="px-2 py-2 text-left whitespace-nowrap">রোপণের তারিখ</th>' +
+      '</tr>';
+  }
+  if (tb) {
+    tb.innerHTML=subs.map(function(s,i){
+      var c=countSeedlings(s);
+      var pD = s.plantingDate ? new Date(s.plantingDate).toLocaleDateString("bn-BD") : (s.submittedAt ? new Date(s.submittedAt).toLocaleDateString("bn-BD") : "");
+      return '<tr class="border-b" style="font-size:12px">' +
+        '<td class="px-2 py-2">'+(i+1).toLocaleString("bn-BD")+'</td>' +
+        '<td class="px-2 py-2">'+s.region+'</td>' +
+        '<td class="px-2 py-2">'+s.district+'</td>' +
+        '<td class="px-2 py-2">'+s.upazila+'</td>' +
+        '<td class="px-2 py-2 font-semibold">'+s.nurseryName+'</td>' +
+        '<td class="px-2 py-2">'+s.mobile+'</td>' +
+        '<td class="px-2 py-2 font-semibold" style="color:#ea580c">'+c.fruit.toLocaleString("bn-BD")+'</td>' +
+        '<td class="px-2 py-2 font-semibold" style="color:#047857">'+c.forest.toLocaleString("bn-BD")+'</td>' +
+        '<td class="px-2 py-2 font-semibold" style="color:#1d4ed8">'+c.medicinal.toLocaleString("bn-BD")+'</td>' +
+        '<td class="px-2 py-2 text-gray-500">'+pD+'</td>' +
+        '</tr>';
+    }).join("");
+  }
+}
 }catch(err){console.error("Dashboard error:",err)}
 };
 
@@ -581,20 +973,419 @@ tb.innerHTML=subs.map(function(s,i){var c=countSeedlings(s);return '<tr class="b
 window.exportToExcel=function(prefix){
 if(typeof XLSX==="undefined"){showBanner("errorBanner","Excel লাইব্রেরি লোড হয়নি। ইন্টারনেট সংযোগ নিশ্চিত করুন।");return}
 var subs=getFiltered(prefix||"dash");if(!subs.length){showBanner("errorBanner","রপ্তানি করার মতো তথ্য নেই।");return}
-var rows=[];
-subs.forEach(function(s){var has=(s.fruitSeedlings&&s.fruitSeedlings.length||0)+(s.forestSeedlings&&s.forestSeedlings.length||0)+(s.medicinalSeedlings&&s.medicinalSeedlings.length||0);
-if(!has)rows.push({"ক্রম":rows.length+1,"অঞ্চল":s.region,"জেলা":s.district,"উপজেলা":s.upazila,"নার্সারি":s.nurseryName,"ঠিকানা":s.address||"","মোবাইল":s.mobile,"জিও":s.geoLocation||"","ধরন":"","নাম":"","বয়স":"","চারা":"","কলম":"","তারিখ":s.submittedAt});
-CATEGORIES.forEach(function(cat){(s[cat.key]||[]).forEach(function(e){rows.push({"ক্রম":rows.length+1,"অঞ্চল":s.region,"জেলা":s.district,"উপজেলা":s.upazila,"নার্সারি":s.nurseryName,"ঠিকানা":s.address||"","মোবাইল":s.mobile,"জিও":s.geoLocation||"","ধরন":cat.label,"নাম":e.name,"বয়স":e.age,"চারা":parseInt(e.count)||0,"কলম":parseInt(e.graftingCount)||0,"তারিখ":s.submittedAt})})});
+var data = [];
+data.push(["ক্রম", "আইডি", "অঞ্চল", "জেলা", "উপজেলা", "রোপণকারীর নাম", "মোবাইল", "তদারককারীর নাম", "মোবাইল", "রোপণকৃত বৃক্ষের অবস্থান", "জিও লোকেশন", "রোপণের তারিখ", "চারার ধরন", "চারার নাম", "চারার বয়স", "চারা সংখ্যা", "কলম সংখ্যা"]);
+
+subs.forEach(function(s){
+  var pDate = s.plantingDate || (s.submittedAt ? s.submittedAt.slice(0, 10) : "");
+  var has=(s.fruitSeedlings&&s.fruitSeedlings.length||0)+(s.forestSeedlings&&s.forestSeedlings.length||0)+(s.medicinalSeedlings&&s.medicinalSeedlings.length||0);
+  if(!has) {
+    data.push([
+      data.length,
+      s.id || "",
+      s.region || "",
+      s.district || "",
+      s.upazila || "",
+      s.nurseryName || "",
+      s.mobile || "",
+      s.caretakerName || "",
+      s.caretakerMobile || "",
+      s.address || "",
+      s.geoLocation || "",
+      pDate,
+      "", "", "", "", ""
+    ]);
+  } else {
+    CATEGORIES.forEach(function(cat){
+      (s[cat.key] || []).forEach(function(e){
+        data.push([
+          data.length,
+          s.id || "",
+          s.region || "",
+          s.district || "",
+          s.upazila || "",
+          s.nurseryName || "",
+          s.mobile || "",
+          s.caretakerName || "",
+          s.caretakerMobile || "",
+          s.address || "",
+          s.geoLocation || "",
+          pDate,
+          cat.label || "",
+          e.name || "",
+          e.age || "",
+          parseInt(e.count)||0,
+          parseInt(e.graftingCount)||0
+        ]);
+      });
+    });
+  }
 });
-var ws=XLSX.utils.json_to_sheet(rows);ws["!cols"]=[{wch:5},{wch:10},{wch:10},{wch:12},{wch:18},{wch:22},{wch:12},{wch:16},{wch:8},{wch:12},{wch:12},{wch:8},{wch:8},{wch:16}];
-var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"নার্সারি তথ্য");XLSX.writeFile(wb,"নার্সারি_তথ্য_"+new Date().toISOString().slice(0,10)+".xlsx");
+
+var ws=XLSX.utils.aoa_to_sheet(data);
+ws["!cols"]=[
+  {wch:6}, {wch:12}, {wch:12}, {wch:12}, {wch:12}, {wch:20}, {wch:14}, {wch:20}, {wch:14}, {wch:25}, {wch:18}, {wch:12}, {wch:12}, {wch:15}, {wch:12}, {wch:10}, {wch:10}
+];
+var wb=XLSX.utils.book_new();
+XLSX.utils.book_append_sheet(wb,ws,"বৃক্ষরোপণের তথ্য");
+XLSX.writeFile(wb,"বৃক্ষরোপণ_তথ্য_"+new Date().toISOString().slice(0,10)+".xlsx");
 };
 
+// ── KoBo / Server Sync Specialized Export ──
+window.exportToKoboExcel = function(prefix) {
+  if (typeof XLSX === "undefined") {
+    showBanner("errorBanner", "Excel লাইব্রেরি লোড হয়নি। ইন্টারনেট সংযোগ নিশ্চিত করুন।");
+    return;
+  }
+  var subs = getFiltered(prefix || "dash");
+  if (!subs.length) {
+    showBanner("errorBanner", "রপ্তানি করার মতো কোনো ডাটা পাওয়া যায়নি।");
+    return;
+  }
+  
+  var data = [];
+  // Standard KoBoToolbox / ODK / Database compatible Snake_case header names
+  data.push([
+    "id", "region", "district", "upazila", "planter_name", "planter_mobile", 
+    "caretaker_name", "caretaker_mobile", "planting_location", "gps_coordinates", 
+    "planting_date", "seedling_category", "seedling_name", "seedling_age", 
+    "seedling_count", "grafting_count", "submitted_at"
+  ]);
+
+  subs.forEach(function(s) {
+    var pDate = s.plantingDate || (s.submittedAt ? s.submittedAt.slice(0, 10) : "");
+    var subAt = s.submittedAt || new Date().toISOString();
+    var has = (s.fruitSeedlings && s.fruitSeedlings.length || 0) + 
+              (s.forestSeedlings && s.forestSeedlings.length || 0) + 
+              (s.medicinalSeedlings && s.medicinalSeedlings.length || 0);
+              
+    if (!has) {
+      data.push([
+        s.id || "",
+        s.region || "",
+        s.district || "",
+        s.upazila || "",
+        s.nurseryName || "",
+        s.mobile || "",
+        s.caretakerName || "",
+        s.caretakerMobile || "",
+        s.address || "",
+        s.geoLocation || "",
+        pDate,
+        "", "", "", 0, 0,
+        subAt
+      ]);
+    } else {
+      CATEGORIES.forEach(function(cat) {
+        var key = cat.key;
+        (s[key] || []).forEach(function(e) {
+          data.push([
+            s.id || "",
+            s.region || "",
+            s.district || "",
+            s.upazila || "",
+            s.nurseryName || "",
+            s.mobile || "",
+            s.caretakerName || "",
+            s.caretakerMobile || "",
+            s.address || "",
+            s.geoLocation || "",
+            pDate,
+            key.replace("Seedlings", ""), // e.g., fruit, forest, medicinal
+            e.name || "",
+            e.age || "",
+            parseInt(e.count) || 0,
+            parseInt(e.graftingCount) || 0,
+            subAt
+          ]);
+        });
+      });
+    }
+  });
+
+  var ws = XLSX.utils.aoa_to_sheet(data);
+  ws["!cols"] = [
+    {wch:12}, {wch:12}, {wch:12}, {wch:12}, {wch:20}, {wch:14}, {wch:15}, {wch:14}, {wch:25}, {wch:20}, {wch:12}, {wch:14}, {wch:14}, {wch:10}, {wch:10}, {wch:10}, {wch:22}
+  ];
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "KoBo_Plantation_Sync");
+  XLSX.writeFile(wb, "kobo_plantation_sync_" + new Date().toISOString().slice(0, 10) + ".xlsx");
+  showBanner("successBanner", "KoBo সিঙ্ক উপযোগী এক্সেল সফলভাবে ডাউনলোড হয়েছে!");
+  setTimeout(function() { hideBanner("successBanner"); }, 3000);
+};
+
+// ── REST API Sync Configurations ──
+window.saveSyncConfig = function() {
+  try {
+    var ep = document.getElementById("syncEndpoint").value.trim();
+    var tk = document.getElementById("syncToken").value.trim();
+    localStorage.setItem("kobo_sync_endpoint", ep);
+    localStorage.setItem("kobo_sync_token", tk);
+  } catch (err) {
+    console.error("Failed to save sync config:", err);
+  }
+};
+
+window.loadSyncConfig = function() {
+  try {
+    var ep = localStorage.getItem("kobo_sync_endpoint") || "";
+    var tk = localStorage.getItem("kobo_sync_token") || "";
+    var epInput = document.getElementById("syncEndpoint");
+    var tkInput = document.getElementById("syncToken");
+    if (epInput) epInput.value = ep;
+    if (tkInput) tkInput.value = tk;
+  } catch (err) {
+    console.error("Failed to load sync config:", err);
+  }
+};
+
+// ── Log UI Helper ──
+function writeToSyncLog(line, type) {
+  var logBox = document.getElementById("syncLog");
+  var container = document.getElementById("syncLogContainer");
+  if (!logBox || !container) return;
+  
+  container.classList.remove("hidden");
+  var timestamp = "[" + new Date().toLocaleTimeString() + "] ";
+  var color = "color: #374151;"; // grey
+  if (type === "error") color = "color: #dc2626; font-weight: bold;";
+  else if (type === "success") color = "color: #16a34a; font-weight: bold;";
+  else if (type === "info") color = "color: #2563eb;";
+  
+  logBox.innerHTML += '<div style="' + color + '">' + timestamp + escapeHtml(line) + '</div>';
+  logBox.scrollTop = logBox.scrollHeight;
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
+window.closeSyncConsole = function() {
+  var container = document.getElementById("syncLogContainer");
+  if (container) container.classList.add("hidden");
+};
+
+// ── Generate Clean Payload JSON ──
+function generateSyncPayload() {
+  var subs = getSubmissions(); // Get all local submissions
+  var payload = [];
+  
+  subs.forEach(function(s) {
+    var items = [];
+    CATEGORIES.forEach(function(cat) {
+      var list = s[cat.key] || [];
+      list.forEach(function(e) {
+        items.push({
+          seedling_category: cat.key.replace("Seedlings", ""),
+          seedling_name: e.name || "",
+          seedling_age: e.age || "",
+          seedling_count: parseInt(e.count) || 0,
+          grafting_count: parseInt(e.graftingCount) || 0
+        });
+      });
+    });
+    
+    payload.push({
+      id: s.id || "",
+      region: s.region || "",
+      district: s.district || "",
+      upazila: s.upazila || "",
+      planter_name: s.nurseryName || "",
+      planter_mobile: s.mobile || "",
+      caretaker_name: s.caretakerName || "",
+      caretaker_mobile: s.caretakerMobile || "",
+      planting_location: s.address || "",
+      gps_coordinates: s.geoLocation || "",
+      planting_date: s.plantingDate || (s.submittedAt ? s.submittedAt.slice(0, 10) : ""),
+      submitted_at: s.submittedAt || new Date().toISOString(),
+      seedlings: items
+    });
+  });
+  
+  return payload;
+}
+
+window.previewSyncJSON = function() {
+  var logBox = document.getElementById("syncLog");
+  if (logBox) logBox.innerHTML = ""; // Clear
+  
+  var payload = generateSyncPayload();
+  writeToSyncLog("[PREVIEW] Preparing offline JSON payload...", "info");
+  writeToSyncLog("[PREVIEW] Total records found: " + payload.length, "info");
+  
+  if (payload.length === 0) {
+    writeToSyncLog("[WARN] No records available to preview. Try submitting some plantation records first.", "error");
+    return;
+  }
+  
+  writeToSyncLog("[PREVIEW] Formatted JSON Schema structure below:", "success");
+  writeToSyncLog(JSON.stringify(payload, null, 2), "default");
+  writeToSyncLog("[TIP] You can copy the raw JSON text from above to manually seed your server / databases.", "info");
+};
+
+window.apiSyncNow = function() {
+  var logBox = document.getElementById("syncLog");
+  if (logBox) logBox.innerHTML = ""; // Clear
+  
+  var ep = document.getElementById("syncEndpoint").value.trim();
+  var tk = document.getElementById("syncToken").value.trim();
+  
+  writeToSyncLog("[SYNC] Starting offline data synchronization...", "info");
+  
+  if (!ep) {
+    writeToSyncLog("[ERROR] Integration Sync Endpoint URL is required!", "error");
+    writeToSyncLog("[HELP] Please supply a REST API endpoint where the JSON payload should be transmitted.", "info");
+    return;
+  }
+  
+  var payload = generateSyncPayload();
+  if (payload.length === 0) {
+    writeToSyncLog("[INFO] No offline-saved entries found to synchronize.", "error");
+    return;
+  }
+  
+  writeToSyncLog("[SYNC] Prepared payload with " + payload.length + " plantation records.", "info");
+  writeToSyncLog("[SYNC] POSTing payload securely to: " + ep, "info");
+  
+  var headers = {
+    "Content-Type": "application/json"
+  };
+  if (tk) {
+    headers["Authorization"] = tk.indexOf("Bearer") === 0 ? tk : "Bearer " + tk;
+    writeToSyncLog("[SYNC] Authorization headers appended.", "info");
+  }
+  
+  fetch(ep, {
+    method: "POST",
+    headers: headers,
+    body: JSON.stringify(payload),
+    mode: "cors"
+  })
+  .then(function(res) {
+    writeToSyncLog("[SYNC] Connection established. HTTP status code: " + res.status, "info");
+    return res.text();
+  })
+  .then(function(text) {
+    writeToSyncLog("[SUCCESS] Synchronization complete! Raw response from backend:", "success");
+    writeToSyncLog(text || "(Empty Success Response)", "success");
+    showBanner("successBanner", "সার্ভারের সাথে ডাটা সিঙ্ক সম্পন্ন হয়েছে!");
+    setTimeout(function() { hideBanner("successBanner"); }, 3000);
+  })
+  .catch(function(err) {
+    writeToSyncLog("[WARNING] Direct API Sync was blocked (Network error or CORS policy restrictions).", "error");
+    writeToSyncLog("[DETAIL] Reason: " + err.message, "error");
+    writeToSyncLog("[INFO] Standard Web Browsers often block client-side fetch requests to external URLs due to CORS policies.", "info");
+    writeToSyncLog("[SOLUTION] You can copy the ready-to-use JSON payload printed below to insert directly into KoBo or Server import tools manually:", "success");
+    writeToSyncLog(JSON.stringify(payload, null, 2), "default");
+  });
+};
+
+// ── Government Template Specialized Export ──
+window.exportToGovExcel = function(prefix) {
+  if (typeof XLSX === "undefined") {
+    showBanner("errorBanner", "Excel লাইব্রেরি লোড হয়নি। ইন্টারনেট সংযোগ নিশ্চিত করুন।");
+    return;
+  }
+  var subs = getFiltered(prefix || "dash");
+  if (!subs.length) {
+    showBanner("errorBanner", "রপ্তানি করার মতো কোনো ডাটা পাওয়া যায়নি।");
+    return;
+  }
+  
+  var data = [];
+  // Exact 9 columns as requested by the user:
+  data.push([
+    "ক্র. নং",
+    "বৃক্ষরোপণের জেলা,উপজেলা,ইউনিয়ন ও গ্রামের নাম",
+    "রোপণকৃত বৃক্ষের প্রজাতির নাম",
+    "রোপণকৃত বৃক্ষের সংখ্যা",
+    "বৃক্ষরোপণের তারিখ",
+    "বৃক্ষরোপণের সুনির্দিষ্ট এলাকা (জিওغرافিক্যাল কোঅর্ডিনেটসহ)",
+    "পরিচর্যাকানীর নাম ও ফোন নম্বর",
+    "মনিটরিং অফিসারের নাম ও ফোন নম্বর",
+    "মন্তব্য"
+  ]);
+
+  // Index numbering line requested by the user
+  data.push([
+    "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯"
+  ]);
+
+  var rowIndex = 1;
+  subs.forEach(function(s) {
+    var pDate = s.plantingDate || (s.submittedAt ? s.submittedAt.slice(0, 10) : "");
+    
+    // Combine district, upazila, and Union & Village / address as requested
+    var fullLocation = "জেলা: " + s.district + ", উপজেলা: " + s.upazila + (s.address ? ", অবস্থান/গ্রাম: " + s.address : "");
+    var geoLoc = s.geoLocation || "উল্লেখ নেই";
+    
+    // Caretaker and Planter info
+    var caretakerInfo = "";
+    if (s.caretakerName) {
+      caretakerInfo = s.caretakerName + (s.caretakerMobile ? " (" + s.caretakerMobile + ")" : "");
+    } else {
+      caretakerInfo = s.nurseryName + (s.mobile ? " (" + s.mobile + ")" : "");
+    }
+    
+    var officerInfo = caretakerInfo;
+    var remarks = s.remarks || "";
+
+    var has = (s.fruitSeedlings && s.fruitSeedlings.length || 0) + 
+              (s.forestSeedlings && s.forestSeedlings.length || 0) + 
+              (s.medicinalSeedlings && s.medicinalSeedlings.length || 0);
+
+    if (!has) {
+      data.push([
+        rowIndex++,
+        fullLocation,
+        "কোনো চারা রোপণ বিবরণী নেই",
+        0,
+        pDate,
+        geoLoc,
+        caretakerInfo,
+        officerInfo,
+        remarks
+      ]);
+    } else {
+      CATEGORIES.forEach(function(cat) {
+        (s[cat.key] || []).forEach(function(e) {
+          var countVal = (parseInt(e.count) || 0) + (parseInt(e.graftingCount) || 0);
+          data.push([
+            rowIndex++,
+            fullLocation,
+            e.name || "নামহীন প্রজাতি (" + cat.label + ")",
+            countVal,
+            pDate,
+            geoLoc,
+            caretakerInfo,
+            officerInfo,
+            remarks
+          ]);
+        });
+      });
+    }
+  });
+
+  var ws = XLSX.utils.aoa_to_sheet(data);
+  ws["!cols"] = [
+    {wch:8}, {wch:48}, {wch:25}, {wch:12}, {wch:15}, {wch:25}, {wch:30}, {wch:30}, {wch:25}
+  ];
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "বৃক্ষরোপণ_সরকারি_ছক");
+  XLSX.writeFile(wb, "plantation_official_sheet_" + new Date().toISOString().slice(0, 10) + ".xlsx");
+  showBanner("successBanner", "সরকারি ছকে এক্সেল সফলভাবে ডাউনলোড হয়েছে!");
+  setTimeout(function() { hideBanner("successBanner"); }, 3000);
+};
+
+
 // ── Admin ──
+window.adminLogin=function(){if(document.getElementById("adminPass").value===getAdminPw()){isAdmin=true;document.getElementById("adminLogin").classList.add("hidden");document.getElementById("adminPanel").classList.remove("hidden");document.getElementById("adminLoginErr").classList.add("hidden");renderAdminTable();populateRegionDD(document.getElementById("adminRegion"))}else document.getElementById("adminLoginErr").classList.remove("hidden")};
+window.adminLogout=function(){isAdmin=false;document.getElementById("adminLogin").classList.remove("hidden");document.getElementById("adminPanel").classList.add("hidden");document.getElementById("adminPass").value=""};
+window.changePassword=function(){var np=prompt("নতুন পাসওয়ার্ড দিন:");if(np&&np.trim().length>=4){setAdminPw(np.trim());showBanner("successBanner","পাসওয়ার্ড পরিবর্তন হয়েছে!");setTimeout(function(){hideBanner("successBanner")},3000)}else if(np)showBanner("errorBanner","পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে।")};
 window.renderAdminTable=function(){
-var subs=getFiltered("admin"),tb=document.getElementById("adminTableBody"),nd=document.getElementById("adminNoData");
+if(!isAdmin)return;var subs=getFiltered("admin"),tb=document.getElementById("adminTableBody"),nd=document.getElementById("adminNoData");
 if(!subs.length){tb.innerHTML="";nd.classList.remove("hidden");return}nd.classList.add("hidden");
-tb.innerHTML=subs.map(function(s,i){var c=countSeedlings(s),t=c.fruit+c.forest+c.medicinal;return '<tr class="border-b"><td class="px-2 py-2">'+(i+1).toLocaleString("bn-BD")+'</td><td class="px-2 py-2">'+s.region+'</td><td class="px-2 py-2">'+s.district+'</td><td class="px-2 py-2">'+s.upazila+'</td><td class="px-2 py-2">'+s.nurseryName+'</td><td class="px-2 py-2">'+s.mobile+'</td><td class="px-2 py-2 font-semibold">'+t+'</td><td class="px-2 py-2 text-gray-400 text-xs">'+new Date(s.submittedAt).toLocaleDateString("bn-BD")+'</td><td class="px-2 py-2 text-center whitespace-nowrap"><button onclick="adminEdit(\''+s.id+'\')" style="background:#dbeafe;color:#1d4ed8;font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;border:none;cursor:pointer;margin-right:4px">✏️</button><button onclick="adminDelete(\''+s.id+'\')" style="background:#fee2e2;color:#b91c1c;font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;border:none;cursor:pointer">🗑️</button></td></tr>'}).join("");
+tb.innerHTML=subs.map(function(s,i){var c=countSeedlings(s),t=c.fruit+c.forest+c.medicinal;var pD = s.plantingDate ? new Date(s.plantingDate).toLocaleDateString("bn-BD") : new Date(s.submittedAt).toLocaleDateString("bn-BD");return '<tr class="border-b"><td class="px-2 py-2">'+(i+1).toLocaleString("bn-BD")+'</td><td class="px-2 py-2">'+s.region+'</td><td class="px-2 py-2">'+s.district+'</td><td class="px-2 py-2">'+s.upazila+'</td><td class="px-2 py-2">'+s.nurseryName+'</td><td class="px-2 py-2">'+s.mobile+'</td><td class="px-2 py-2 font-semibold">'+t+'</td><td class="px-2 py-2 text-gray-500 text-xs">'+pD+'</td><td class="px-2 py-2 text-center whitespace-nowrap"><button onclick="adminEdit(\''+s.id+'\')" style="background:#dbeafe;color:#1d4ed8;font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;border:none;cursor:pointer;margin-right:4px">✏️</button><button onclick="adminDelete(\''+s.id+'\')" style="background:#fee2e2;color:#b91c1c;font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;border:none;cursor:pointer">🗑️</button></td></tr>'}).join("");
 };
 window.adminEdit=function(id){
 var s=getSubmissions().find(function(x){return x.id===id});if(!s)return;
@@ -602,29 +1393,216 @@ document.getElementById("eId").value=s.id;document.getElementById("eRegion").val
 setTimeout(function(){document.getElementById("eDistrict").value=s.district;onEditDistrictChange();
 document.getElementById("eUpazila").value=s.upazila||"";
 document.getElementById("eNursery").value=s.nurseryName;document.getElementById("eMobile").value=s.mobile;document.getElementById("eAddress").value=s.address||"";document.getElementById("eGeo").value=s.geoLocation||"";
+document.getElementById("eCaretakerName").value=s.caretakerName||"";document.getElementById("eCaretakerMobile").value=s.caretakerMobile||"";
+document.getElementById("eRemarks").value=s.remarks||"";
+document.getElementById("ePlantingDate").value=s.plantingDate||(s.submittedAt?s.submittedAt.slice(0, 10):new Date().toISOString().slice(0, 10));
 document.getElementById("editSeedlingSections").innerHTML=buildSeedlingSections("editSeedlingSections",s);document.getElementById("editModal").classList.remove("hidden")},60);
 };
 window.closeEditModal=function(){document.getElementById("editModal").classList.add("hidden")};
 document.getElementById("editForm").addEventListener("submit",function(e){
 e.preventDefault();var mob=document.getElementById("eMobile").value.trim();
 if(!validateMobile(mob)){alert("মোবাইল নম্বর অবশ্যই ১১ ডিজিট (017XXXXXXXX)");return}
+var careMob = document.getElementById("eCaretakerMobile").value.trim();
+if(careMob && !validateMobile(careMob)){alert("তদারককারীর মোবাইল অবশ্যই ১১ ডিজিট (01XXXXXXXXX)");return}
 var upEl=document.getElementById("eUpazila"),upVal=upEl&&upEl.value.trim();
 if(!upVal||!document.getElementById("eRegion").value||!document.getElementById("eDistrict").value||!document.getElementById("eNursery").value){alert("সকল প্রয়োজনীয় তথ্য পূরণ করুন");return}
 var subs=getSubmissions(),idx=subs.findIndex(function(s){return s.id===document.getElementById("eId").value});
 if(idx===-1){closeEditModal();return}
-subs[idx]=Object.assign({},subs[idx],{region:document.getElementById("eRegion").value,district:document.getElementById("eDistrict").value,upazila:upVal,nurseryName:document.getElementById("eNursery").value.trim(),mobile:mob,address:document.getElementById("eAddress").value.trim(),geoLocation:document.getElementById("eGeo").value.trim()},collectSeedlingsFromDOM("editSeedlingSections"));
+subs[idx]=Object.assign({},subs[idx],{region:document.getElementById("eRegion").value,district:document.getElementById("eDistrict").value,upazila:upVal,nurseryName:document.getElementById("eNursery").value.trim(),mobile:mob,caretakerName:document.getElementById("eCaretakerName").value.trim(),caretakerMobile:careMob,address:document.getElementById("eAddress").value.trim(),geoLocation:document.getElementById("eGeo").value.trim(),plantingDate:document.getElementById("ePlantingDate").value.trim(),officerName:document.getElementById("eCaretakerName").value.trim(),remarks:document.getElementById("eRemarks").value.trim()},collectSeedlingsFromDOM("editSeedlingSections"));
 saveSubmissions(subs);closeEditModal();renderAdminTable();
 });
 window.adminDelete=function(id){if(!confirm("আপনি কি নিশ্চিত?"))return;saveSubmissions(getSubmissions().filter(function(s){return s.id!==id}));renderAdminTable()};
 document.getElementById("editModal").addEventListener("click",function(e){if(e.target===this)closeEditModal()});
 
+// ── Leaflet Map Visualizer ──
+var mapInstance = null;
+var mapMarkers = [];
+
+window.zoomToMyGeoLocation = function() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(function(pos) {
+      if (mapInstance) {
+        var lat = pos.coords.latitude;
+        var lng = pos.coords.longitude;
+        mapInstance.setView([lat, lng], 13);
+        var pulseIcon = L.divIcon({
+          html: '<span class="flex h-3 w-3 relative"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" style="position:absolute; background:#60a5fa; border-radius:9999px; width:12px; height:12px; display:inline-block;"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-blue-500" style="position:relative; background:#3b82f6; border-radius:9999px; width:12px; height:12px; display:inline-block;"></span></span>',
+          className: 'custom-me-marker',
+          iconSize: [12, 12]
+        });
+        L.marker([lat, lng], { icon: pulseIcon }).addTo(mapInstance).bindPopup("<b>আপনার বর্তমান অবস্থান</b>").openPopup();
+      }
+    }, function() {
+      alert("লোকেশন পাওয়া যায়নি বা পারমিশন নেই।");
+    });
+  } else {
+    alert("আপনার ব্রাউজার লোকেশন সমর্থন করে না।");
+  }
+};
+
+window.renderMap = function() {
+  try {
+    var mapContainer = document.getElementById("leafletMap");
+    if (!mapContainer) return;
+    
+    // Initialize map if not done already
+    if (!mapInstance) {
+      // Default viewpoint focused on Bangladesh
+      mapInstance = L.map('leafletMap').setView([23.8103, 90.4125], 7);
+      
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+      }).addTo(mapInstance);
+    }
+    
+    // Clear old markers
+    mapMarkers.forEach(function(m) { mapInstance.removeLayer(m); });
+    mapMarkers = [];
+    
+    // Get filtered submissions
+    var subs = getFiltered("map");
+    
+    var bounds = [];
+    var mappedCount = 0;
+    var totalCount = subs.length;
+    
+    subs.forEach(function(s) {
+      var geoStr = (s.geoLocation || "").trim();
+      if (!geoStr) return;
+      var parts = geoStr.split(",");
+      if (parts.length !== 2) return;
+      var lat = parseFloat(parts[0]);
+      var lng = parseFloat(parts[1]);
+      if (isNaN(lat) || isNaN(lng)) return;
+      
+      bounds.push([lat, lng]);
+      mappedCount++;
+      
+      var t = countSeedlings(s);
+      var totalScCount = t.fruit + t.forest + t.medicinal;
+      
+      // Seedlings detailed details
+      var detailsHtml = '<div style="font-family: inherit; font-size:12px; line-height:1.5; min-width: 200px;">';
+      detailsHtml += '<p style="font-weight:700; color:#15803d; font-size:13px; margin:0 0 4px 0;">' + s.nurseryName + '</p>';
+      detailsHtml += '<p style="margin:2px 0;"><b>মোবাইল:</b> <a href="tel:' + s.mobile + '" style="color:#2563eb; font-weight:600; text-decoration:underline;">' + s.mobile + '</a></p>';
+      if (s.caretakerName) {
+        detailsHtml += '<p style="margin:2px 0;"><b>তদারককারী:</b> ' + s.caretakerName + (s.caretakerMobile ? ' (<a href="tel:' + s.caretakerMobile + '" style="color:#2563eb; text-decoration:underline;">' + s.caretakerMobile + '</a>)' : '') + '</p>';
+      }
+      var pD = s.plantingDate ? new Date(s.plantingDate).toLocaleDateString("bn-BD") : (s.submittedAt ? new Date(s.submittedAt).toLocaleDateString("bn-BD") : "");
+      if (pD) {
+        detailsHtml += '<p style="margin:2px 0;"><b>রোপণের তারিখ:</b> ' + pD + '</p>';
+      }
+      detailsHtml += '<p style="margin:2px 0;"><b>রোপণকৃত বৃক্ষের অবস্থান:</b> ' + (s.address || "উল্লেখ নেই") + '</p>';
+      detailsHtml += '<p style="font-size:10px; color:#6b7280; margin:2px 0;">(' + s.region + ' > ' + s.district + ' > ' + s.upazila + ')</p>';
+      detailsHtml += '<div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 4px; text-align: center; font-size:10px; margin-top:6px;">';
+      detailsHtml += '<div style="background:#fff7ed; border-radius:4px; padding:3px;"><span style="color:#ea580c; font-weight:bold;">' + t.fruit + '</span><br><span style="color:#6b7280;">ফলদ</span></div>';
+      detailsHtml += '<div style="background:#ecfdf5; border-radius:4px; padding:3px;"><span style="color:#047857; font-weight:bold;">' + t.forest + '</span><br><span style="color:#6b7280;">বনজ</span></div>';
+      detailsHtml += '<div style="background:#eff6ff; border-radius:4px; padding:3px;"><span style="color:#1d4ed8; font-weight:bold;">' + t.medicinal + '</span><br><span style="color:#6b7280;">ঔষধি</span></div>';
+      detailsHtml += '</div>';
+      detailsHtml += '<button onclick="parent.window.editMySubmission ? parent.window.editMySubmission(\''+s.id+'\') : editMySubmission(\''+s.id+'\')" style="width:100%; margin-top:8px; background:#dbeafe; color:#1d4ed8; border:none; padding:5px; border-radius:6px; font-weight:700; cursor:pointer; font-size:11px;">✏️ তথ্য সম্পাদনা</button>';
+      detailsHtml += '</div>';
+      
+      // Marker color logic: Larger is Orange, Medium is Blue, Small is Emerald
+      var markerBg = '#10b981'; // Green
+      if (totalScCount >= 10000) markerBg = '#f97316'; // Orange
+      else if (totalScCount >= 5000) markerBg = '#3b82f6'; // Blue
+      
+      var customIcon = L.divIcon({
+        html: '<div style="background-color: ' + markerBg + '; width: 28px; height: 28px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); transform: scale(1);" title="' + s.nurseryName + '">🌳</div>',
+        className: 'custom-tree-icon',
+        iconSize: [28, 28],
+        iconAnchor: [14, 14]
+      });
+      
+      var marker = L.marker([lat, lng], { icon: customIcon }).addTo(mapInstance).bindPopup(detailsHtml);
+      mapMarkers.push(marker);
+    });
+    
+    // Update footer text statistics
+    var statsText = document.getElementById("mapStatsText");
+    if (statsText) {
+      statsText.textContent = "মোট রোপণকারী: " + totalCount + " | ম্যাপে প্রদর্শিত: " + mappedCount;
+    }
+    
+    // Zoom/fit map bounds
+    if (bounds.length > 0) {
+      mapInstance.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+    } else {
+      // Zoom to general Bangladesh bounds or default to Kurigram center
+      mapInstance.setView([25.8113, 89.6582], 9);
+    }
+    
+    // Correct Leaflet display inside hidden container
+    setTimeout(function() {
+      mapInstance.invalidateSize();
+    }, 250);
+    
+  } catch (err) {
+    console.error("Map rendering error:", err);
+  }
+};
+
+// ── PWA Direct App Install & Iframe Detect ──
+var deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  deferredPrompt = e;
+  var installBanner = document.getElementById('pwaInstallBanner');
+  if (installBanner) {
+    installBanner.classList.remove('hidden');
+  }
+});
+
+window.triggerPWAInstall = function() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(function(choiceResult) {
+      if (choiceResult.outcome === 'accepted') {
+        console.log('User accepted the PWA install prompt');
+      } else {
+        console.log('User dismissed the PWA install prompt');
+      }
+      deferredPrompt = null;
+      var installBanner = document.getElementById('pwaInstallBanner');
+      if (installBanner) installBanner.classList.add('hidden');
+    });
+  } else {
+    alert("আপনার ফোন বা ব্রাউজার থেকে সরাসরি অ্যাপ হিসেবে ইনস্টল করতে ব্রাউজারের থ্রি-ডট (triple-dot) বা শেয়ার মেনুতে গিয়ে 'Add to Home Screen' অথবা 'Install' এ ক্লিক করুন।");
+  }
+};
+
+function checkIframeAndPrompt() {
+  var isLinkedIframe = false;
+  try {
+    isLinkedIframe = window.self !== window.top;
+  } catch (e) {
+    isLinkedIframe = true;
+  }
+  if (isLinkedIframe) {
+    var iframeBanner = document.getElementById('pwaIframeBanner');
+    if (iframeBanner) iframeBanner.classList.remove('hidden');
+  } else {
+    setTimeout(function() {
+      var installBanner = document.getElementById('pwaInstallBanner');
+      // If we got the beforeinstallprompt, show the banner, otherwise show for awareness
+      if (installBanner) {
+        installBanner.classList.remove('hidden');
+      }
+    }, 2000);
+  }
+}
+
 // ── Init ──
 try{
 populateRegionDD(document.getElementById("fRegion"));
 populateRegionDD(document.getElementById("dashRegion"));
+populateRegionDD(document.getElementById("mapRegion"));
 populateRegionDD(document.getElementById("adminRegion"));
 document.getElementById("seedlingSections").innerHTML=buildSeedlingSections("seedlingSections",null);
 fetchGeoLocation();
+checkIframeAndPrompt();
+if (window.loadSyncConfig) { window.loadSyncConfig(); }
 }catch(err){
 console.error("Init error:",err);
 // Retry seedling sections build

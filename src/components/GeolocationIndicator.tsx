@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Geolocation as CapGeolocation } from '@capacitor/geolocation';
+import { Capacitor } from '@capacitor/core';
 import { 
   MapPin, 
   MapIcon, 
@@ -35,74 +37,194 @@ export default function GeolocationIndicator() {
 
   // Monitor coordinates and accuracy using watchPosition
   useEffect(() => {
-    let watchId: number | null = null;
+    let watchId: number | string | null = null;
+    let isMounted = true;
 
-    // Detect Geolocation permission state
-    if (typeof navigator !== 'undefined' && navigator.permissions) {
-      navigator.permissions.query({ name: 'geolocation' as PermissionName })
-        .then((result) => {
-          setGeo(prev => ({ ...prev, permissionState: result.state }));
-          result.onchange = () => {
-            setGeo(prev => ({ ...prev, permissionState: result.state }));
-          };
-        })
-        .catch(() => {
-          setGeo(prev => ({ ...prev, permissionState: 'unknown' }));
-        });
-    }
+    const startWatching = async () => {
+      const isNative = Capacitor.isNativePlatform();
 
-    if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      setGeo(prev => ({
-        ...prev,
-        loading: false,
-        error: "এই ব্রাউজারটিতে জিপিএস সিঙ্ক সুবিধা সমর্থিত নয়"
-      }));
-      return;
-    }
+      if (isNative && Capacitor.isPluginAvailable('Geolocation')) {
+        try {
+          // 1. Request/Check Permissions natively
+          const status = await CapGeolocation.checkPermissions();
+          let state = status.location;
+          
+          if (state !== 'granted') {
+            const reqStatus = await CapGeolocation.requestPermissions();
+            state = reqStatus.location;
+          }
 
-    const handleSuccess = (position: GeolocationPosition) => {
-      setGeo(prev => ({
-        ...prev,
-        loading: false,
-        error: null,
-        coords: {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracy: position.coords.accuracy,
-          altitude: position.coords.altitude
+          if (isMounted) {
+            setGeo(prev => ({ ...prev, permissionState: state === 'granted' ? 'granted' : 'denied' }));
+          }
+
+          if (state !== 'granted') {
+            if (isMounted) {
+              setGeo(prev => ({
+                ...prev,
+                loading: false,
+                error: "অ্যাপের জিপিএস ব্যবহারের অনুমতি দেওয়া হয়নি। অনুগ্রহ করে সেটিংসে গিয়ে অনুমতি চালু করুন।"
+              }));
+            }
+            return;
+          }
+
+          // 2. Start Cap Watch
+          const id = await CapGeolocation.watchPosition(
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+            (position, err) => {
+              if (!isMounted) return;
+              if (err) {
+                setGeo(prev => ({
+                  ...prev,
+                  loading: false,
+                  error: "জিপিএস সংকেত পেতে সমস্যা হচ্ছে: " + (err.message || 'Error')
+                }));
+              } else if (position && position.coords) {
+                setGeo(prev => ({
+                  ...prev,
+                  loading: false,
+                  error: null,
+                  coords: {
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude,
+                    accuracy: position.coords.accuracy,
+                    altitude: position.coords.altitude || null
+                  }
+                }));
+
+                // Push position to web legacy iframe environment if it exists
+                try {
+                  const iframe = document.querySelector('iframe');
+                  if (iframe && iframe.contentWindow) {
+                    iframe.contentWindow.postMessage({
+                      type: 'device-location',
+                      coords: {
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude,
+                        accuracy: position.coords.accuracy
+                      }
+                    }, '*');
+                  }
+                } catch (e) {
+                  // Fallback safely
+                }
+              }
+            }
+          );
+          watchId = id;
+
+        } catch (err: any) {
+          if (isMounted) {
+            setGeo(prev => ({
+              ...prev,
+              loading: false,
+              error: "জিপিএস স্টার্ট করতে ব্যর্থ: " + (err.message || err)
+            }));
+          }
         }
-      }));
-    };
+      } else {
+        // --- Web Fallback ---
+        if (typeof navigator !== 'undefined' && navigator.permissions) {
+          navigator.permissions.query({ name: 'geolocation' as PermissionName })
+            .then((result) => {
+              if (isMounted) {
+                setGeo(prev => ({ ...prev, permissionState: result.state }));
+              }
+              result.onchange = () => {
+                if (isMounted) {
+                  setGeo(prev => ({ ...prev, permissionState: result.state }));
+                }
+              };
+            })
+            .catch(() => {
+              if (isMounted) {
+                setGeo(prev => ({ ...prev, permissionState: 'unknown' }));
+              }
+            });
+        }
 
-    const handleError = (error: GeolocationPositionError) => {
-      let msg = "লোকেশন সনাক্ত করতে সমস্যা হয়েছে";
-      if (error.code === error.PERMISSION_DENIED) {
-        msg = "জিপিএস ব্যবহারের অনুমতি দেওয়া হয়নি। অনুগ্রহ করে অনুমতি চালু করুন";
-      } else if (error.code === error.POSITION_UNAVAILABLE) {
-        msg = "ডিভাইসের জিপিএস সংকেত উপলব্ধ নয়";
-      } else if (error.code === error.TIMEOUT) {
-        msg = "জিপিএস অবস্থান সনাক্তকরণ সময় উত্তীর্ণ হয়েছে";
+        if (typeof navigator === 'undefined' || !navigator.geolocation) {
+          if (isMounted) {
+            setGeo(prev => ({
+              ...prev,
+              loading: false,
+              error: "এই ব্রাউজারটিতে জিপিএস সিঙ্ক সুবিধা সমর্থিত নয়"
+            }));
+          }
+          return;
+        }
+
+        const handleSuccess = (position: GeolocationPosition) => {
+          if (!isMounted) return;
+          setGeo(prev => ({
+            ...prev,
+            loading: false,
+            error: null,
+            coords: {
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+              accuracy: position.coords.accuracy,
+              altitude: position.coords.altitude
+            }
+          }));
+
+          // Send coordinates to our nested iframe so legacy app form leverages accurate coordinates!
+          try {
+            const iframe = document.querySelector('iframe');
+            if (iframe && iframe.contentWindow) {
+              iframe.contentWindow.postMessage({
+                type: 'device-location',
+                coords: {
+                  latitude: position.coords.latitude,
+                  longitude: position.coords.longitude,
+                  accuracy: position.coords.accuracy
+                }
+              }, '*');
+            }
+          } catch (e) {
+            // Ignore
+          }
+        };
+
+        const handleError = (error: GeolocationPositionError) => {
+          if (!isMounted) return;
+          let msg = "লোকেশন সনাক্ত করতে সমস্যা হয়েছে";
+          if (error.code === error.PERMISSION_DENIED) {
+            msg = "জিপিএস ব্যবহারের অনুমতি দেওয়া হয়নি। অনুগ্রহ করে অনুমতি চালু করুন";
+          } else if (error.code === error.POSITION_UNAVAILABLE) {
+            msg = "ডিভাইসের জিপিএস সংকেত উপলব্ধ নয়";
+          } else if (error.code === error.TIMEOUT) {
+            msg = "জিপিএস অবস্থান সনাক্তকরণ সময় উত্তীর্ণ হয়েছে";
+          }
+          setGeo(prev => ({
+            ...prev,
+            loading: false,
+            error: msg,
+            coords: null
+          }));
+        };
+
+        const options: PositionOptions = {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0
+        };
+
+        watchId = navigator.geolocation.watchPosition(handleSuccess, handleError, options);
       }
-      setGeo(prev => ({
-        ...prev,
-        loading: false,
-        error: msg,
-        coords: null
-      }));
     };
 
-    // Configure options for maximum accuracy
-    const options: PositionOptions = {
-      enableHighAccuracy: true,
-      timeout: 15000,
-      maximumAge: 0
-    };
-
-    watchId = navigator.geolocation.watchPosition(handleSuccess, handleError, options);
+    startWatching();
 
     return () => {
+      isMounted = false;
       if (watchId !== null) {
-        navigator.geolocation.clearWatch(watchId);
+        if (typeof watchId === 'string') {
+          CapGeolocation.clearWatch({ id: watchId });
+        } else {
+          navigator.geolocation.clearWatch(watchId as number);
+        }
       }
     };
   }, []);
@@ -121,7 +243,7 @@ export default function GeolocationIndicator() {
     if (meters < 10) return { label: 'খুবই সূক্ষ্ম জিপিএস সংকেত', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' };
     if (meters < 30) return { label: 'ভালো জিপিএস সংকেত', color: 'bg-teal-100 text-teal-800 border-teal-200' };
     if (meters < 100) return { label: 'মাঝারি জিপিএস সংকেত', color: 'bg-blue-100 text-blue-800 border-blue-200' };
-    return { label: 'দুর্বল জিপিএস সংকেত', color: 'bg-amber-100 text-amber-805 border-amber-205' };
+    return { label: 'দুর্বল জিপিএস সংকেত', color: 'bg-amber-100 text-amber-800 border-amber-200' };
   };
 
   return (
