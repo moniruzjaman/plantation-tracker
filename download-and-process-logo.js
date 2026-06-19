@@ -98,6 +98,13 @@ async function run() {
       .toFile(path.join(PUBLIC_DIR, 'favicon-32x32.png'));
     console.log('Created public/favicon-32x32.png (high-visibility circular)');
 
+    // 6b. Also make favicon.ico of identical content for maximum fallback coverage in production hosts like Vercel
+    await sharp(fav32BgCircle)
+      .composite([{ input: fav32SealResized, gravity: 'center' }])
+      .png()
+      .toFile(path.join(PUBLIC_DIR, 'favicon.ico'));
+    console.log('Created public/favicon.ico');
+
     // 7. Create favicon-16x16.png (16x16) with white circle backdrop
     const fav16BgCircle = Buffer.from('<svg width="16" height="16"><circle cx="8" cy="8" r="8" fill="#ffffff"/></svg>');
     const fav16SealResized = await sharp(svgBuffer)
