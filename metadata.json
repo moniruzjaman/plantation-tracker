@@ -1,5 +1,5 @@
 {
-  "name": "Plantation_kurigram",
+  "name": "Plantation Tracker",
   "description": "To collect and sync real-time plantation update information with offline state, dual language modes, geolocation mapping, and KoBoToolbox XLS / Server endpoint utilities.",
   "requestFramePermissions": [
     "geolocation"
