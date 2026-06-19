@@ -265,6 +265,7 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <div class="flex gap-2">
 <button onclick="exportToGovExcel('dash')" class="text-white text-xs sm:text-sm px-4 py-2 rounded-lg shadow transition font-semibold hover:opacity-90 cursor-pointer" style="background:#0284c7">📥 সরকারি ছকে ডাউনলোড (Official)</button>
 <button onclick="exportToExcel('dash')" class="text-white text-xs sm:text-sm px-4 py-2 rounded-lg shadow transition font-semibold hover:opacity-90 cursor-pointer" style="background:#15803d">📥 সাধারণ Excel ডাউনলোড</button>
+<button onclick="exportToCSV('dash')" class="text-white text-xs sm:text-sm px-4 py-2 rounded-lg shadow transition font-semibold hover:opacity-90 cursor-pointer" style="background:#4f46e5">📥 CSV ডাউনলোড</button>
 </div>
 </div>
 <div class="overflow-x-auto"><table class="w-full text-sm" id="dashTable">
@@ -395,6 +396,7 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <div class="flex gap-2">
 <button onclick="exportToGovExcel('admin')" class="text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition hover:opacity-90 cursor-pointer" style="background:#0284c7">📥 সরকারি ছক</button>
 <button onclick="exportToExcel('admin')" class="text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition hover:opacity-90 cursor-pointer" style="background:#15803d">📥 সাধারণ Excel</button>
+<button onclick="exportToCSV('admin')" class="text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition hover:opacity-90 cursor-pointer" style="background:#4f46e5">📥 CSV</button>
 <button onclick="adminLogout()" class="text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition hover:opacity-90 cursor-pointer" style="background:#dc2626">🚪 লগআউট</button>
 </div>
 </div>
@@ -1029,6 +1031,94 @@ ws["!cols"]=[
 var wb=XLSX.utils.book_new();
 XLSX.utils.book_append_sheet(wb,ws,"বৃক্ষরোপণের তথ্য");
 XLSX.writeFile(wb,"বৃক্ষরোপণ_তথ্য_"+new Date().toISOString().slice(0,10)+".xlsx");
+};
+
+// ── Export to CSV ──
+window.exportToCSV = function(prefix) {
+  var subs = getFiltered(prefix || "dash");
+  if (!subs || !subs.length) {
+    showBanner("errorBanner", "রপ্তানি করার মতো তথ্য নেই।");
+    return;
+  }
+  
+  var rows = [];
+  rows.push(["ক্রম", "আইডি", "অঞ্চল", "জেলা", "উপজেলা", "রোপণকারীর নাম", "মোবাইল", "তদারককারীর নাম", "মোবাইল", "রোপণকৃত বৃক্ষের অবস্থান", "জিও লোকেশন", "রোপণের তারিখ", "চারার ধরন", "চারার নাম", "চারার বয়স", "চারা সংখ্যা", "কলম সংখ্যা", "সিঙ্ক স্ট্যাটাস"]);
+
+  subs.forEach(function(s) {
+    var pDate = s.plantingDate || (s.submittedAt ? s.submittedAt.slice(0, 10) : "");
+    var syncText = s.synced ? "সিঙ্কড (Synced)" : "অফলাইন (Offline)";
+    var has = (s.fruitSeedlings && s.fruitSeedlings.length || 0) + 
+              (s.forestSeedlings && s.forestSeedlings.length || 0) + 
+              (s.medicinalSeedlings && s.medicinalSeedlings.length || 0);
+    
+    if (!has) {
+      rows.push([
+        rows.length,
+        s.id || "",
+        s.region || "",
+        s.district || "",
+        s.upazila || "",
+        s.nurseryName || "",
+        s.mobile || "",
+        s.caretakerName || "",
+        s.caretakerMobile || "",
+        s.address || "",
+        s.geoLocation || "",
+        pDate,
+        "", "", "", "", "",
+        syncText
+      ]);
+    } else {
+      CATEGORIES.forEach(function(cat) {
+        (s[cat.key] || []).forEach(function(e) {
+          rows.push([
+            rows.length,
+            s.id || "",
+            s.region || "",
+            s.district || "",
+            s.upazila || "",
+            s.nurseryName || "",
+            s.mobile || "",
+            s.caretakerName || "",
+            s.caretakerMobile || "",
+            s.address || "",
+            s.geoLocation || "",
+            pDate,
+            cat.label || "",
+            e.name || "",
+            e.age || "",
+            parseInt(e.count) || 0,
+            parseInt(e.graftingCount) || 0,
+            syncText
+          ]);
+        });
+      });
+    }
+  });
+
+  // Convert to CSV string, handling quotes and commas properly
+  var csvContent = rows.map(function(row) {
+    return row.map(function(val) {
+      var str = (val === null || val === undefined) ? "" : String(val);
+      if (str.includes(",") || str.includes('"') || str.includes("\n") || str.includes("\r")) {
+        str = '"' + str.replace(/"/g, '""') + '"';
+      }
+      return str;
+    }).join(",");
+  }).join("\n");
+
+  // Create downloadable Blob with BOM for UTF-8 compatibility in Excel
+  var blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+  var url = URL.createObjectURL(blob);
+  var link = document.createElement("a");
+  link.setAttribute("href", url);
+  var filename = "বৃক্ষরোপণ_তথ্য_" + new Date().toISOString().slice(0, 10) + ".csv";
+  link.setAttribute("download", filename);
+  link.style.visibility = "hidden";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 };
 
 // ── KoBo / Server Sync Specialized Export ──

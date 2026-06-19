@@ -12,6 +12,39 @@ export default defineConfig(({mode}) => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
+        workbox: {
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest,txt}'],
+          runtimeCaching: [
+            {
+              urlPattern: /^https:\/\/unpkg\.com\/leaflet@[\d\.]+\/dist\/leaflet\.(js|css)/,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'leaflet-assets',
+                expiration: {
+                  maxEntries: 10,
+                  maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+                },
+                cacheableResponse: {
+                  statuses: [0, 200]
+                }
+              }
+            },
+            {
+              urlPattern: /^https:\/\/[a-c]\.tile\.openstreetmap\.org\/\d+\/\d+\/\d+\.png/,
+              handler: 'StaleWhileRevalidate',
+              options: {
+                cacheName: 'openstreetmap-tiles',
+                expiration: {
+                  maxEntries: 500, // cache up to 500 tiles
+                  maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+                },
+                cacheableResponse: {
+                  statuses: [0, 200]
+                }
+              }
+            }
+          ]
+        },
         manifest: {
           name: 'বৃক্ষরোপণ ট্র্যাকার (Plantation Tracker)',
           short_name: 'বৃক্ষরোপণ ট্র্যাকার',

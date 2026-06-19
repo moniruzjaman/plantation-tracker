@@ -151,6 +151,7 @@
 <div class="flex gap-2">
 <button onclick="exportToGovExcel('dash')" class="text-white text-xs sm:text-sm px-4 py-2 rounded-lg shadow transition font-semibold hover:opacity-90 cursor-pointer" style="background:#0284c7">📥 সরকারি ছকে ডাউনলোড (Official)</button>
 <button onclick="exportToExcel('dash')" class="text-white text-xs sm:text-sm px-4 py-2 rounded-lg shadow transition font-semibold hover:opacity-90 cursor-pointer" style="background:#15803d">📥 সাধারণ Excel ডাউনলোড</button>
+<button onclick="exportToCSV('dash')" class="text-white text-xs sm:text-sm px-4 py-2 rounded-lg shadow transition font-semibold hover:opacity-90 cursor-pointer" style="background:#4f46e5">📥 CSV ডাউনলোড</button>
 </div>
 </div>
 <div class="overflow-x-auto"><table class="w-full text-sm" id="dashTable">
@@ -281,6 +282,7 @@
 <div class="flex gap-2">
 <button onclick="exportToGovExcel('admin')" class="text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition hover:opacity-90 cursor-pointer" style="background:#0284c7">📥 সরকারি ছক</button>
 <button onclick="exportToExcel('admin')" class="text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition hover:opacity-90 cursor-pointer" style="background:#15803d">📥 সাধারণ Excel</button>
+<button onclick="exportToCSV('admin')" class="text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition hover:opacity-90 cursor-pointer" style="background:#4f46e5">📥 CSV</button>
 <button onclick="adminLogout()" class="text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition hover:opacity-90 cursor-pointer" style="background:#dc2626">🚪 লগআউট</button>
 </div>
 </div>
