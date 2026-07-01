@@ -27,56 +27,28 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Run Build Suite (Logo & Map Generation)
+      - name: Run Build Suite (Logo, Map & Icon Generation)
         run: npm run build
 
       # 4. Integrate Capacitor native files
       - name: Sync Capacitor Android Project
         run: npx cap sync android
 
-      # 4b. Fix Android Icons (Prevent AAPT Compilation Errors)
-      - name: Fix Android Launcher Icons
+      # 4b. Generate Android Icons (ensures valid PNG files)
+      - name: Generate Android Launcher Icons
         run: |
-          cd android
+          echo "🎨 Generating Android launcher icons with proper dimensions..."
+          node generate-android-icons.js
           
-          echo "🔧 Checking and fixing Android launcher icons..."
+          # Verify all icons exist
+          echo "\n🔍 Verifying generated icons:"
+          find android/app/src/main/res/mipmap-* -name "*.png" | wc -l
+          echo "icon files found"
           
-          # Try to generate from resources if available
-          if [ -d "../resources" ] && [ -f "../resources/icon.png" ]; then
-            echo "🎨 Generating Android icons from resources..."
-            npx capacitor-assets generate --android || echo "⚠️  Icon generation failed, will use placeholders"
-          fi
-          
-          # Create a minimal valid PNG (1x1 green pixel) as fallback
-          # This is a valid PNG file that will compile successfully
-          MINIMAL_PNG=$(printf '\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0\x00\x00\x00\x03\x00\x01\x5b\xcd\x8e\x8f\x00\x00\x00\x00IEND\xaeB`\x82')
-          
-          # Ensure all required icon files exist and are valid
-          for density in ldpi mdpi hdpi xhdpi xxhdpi xxxhdpi; do
-            mkdir -p "app/src/main/res/mipmap-$density"
-            
-            for icon in ic_launcher_background.png ic_launcher.png ic_launcher_round.png ic_launcher_foreground.png; do
-              filepath="app/src/main/res/mipmap-$density/$icon"
-              
-              # Check if file exists and has valid content (at least 8 bytes for PNG header)
-              if [ ! -f "$filepath" ] || [ $(stat -c%s "$filepath" 2>/dev/null || echo 0) -lt 8 ]; then
-                echo "Creating valid placeholder: $filepath"
-                echo "$MINIMAL_PNG" > "$filepath"
-              else
-                # Verify PNG header
-                if ! head -c 4 "$filepath" | grep -q "PNG"; then
-                  echo "Fixing corrupted file: $filepath"
-                  echo "$MINIMAL_PNG" > "$filepath"
-                fi
-              fi
-            done
-            
-            echo "✅ Verified mipmap-$density icons"
-          done
-          
-          # Count total icon files
-          TOTAL_ICONS=$(find app/src/main/res/mipmap-* -name "*.png" | wc -l)
-          echo "✅ Total icon files verified: $TOTAL_ICONS"
+          # Check file sizes (should be > 100 bytes for valid PNGs)
+          echo "\n📊 Sample file sizes:"
+          ls -lh android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          ls -lh android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
 
       # 5. Set up Java SE 21 environment for Gradle compilation
       - name: Set up JDK 21
