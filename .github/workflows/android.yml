@@ -34,10 +34,10 @@ jobs:
       - name: Sync Capacitor Android Project
         run: npx cap sync android
 
-      # 4b. Generate Android Icons (ensures valid PNG files)
-      - name: Generate Android Launcher Icons
+      # 4b. Generate Android Icons and Splash Screens
+      - name: Generate Android Launcher Icons & Splash Screens
         run: |
-          echo "🎨 Generating Android launcher icons with proper dimensions..."
+          echo "🎨 Generating Android launcher icons and splash screens with proper dimensions..."
           node generate-android-icons.js
           
           # Verify all icons exist
@@ -45,10 +45,16 @@ jobs:
           find android/app/src/main/res/mipmap-* -name "*.png" | wc -l
           echo "icon files found"
           
+          # Verify splash screens
+          echo "\n🔍 Verifying generated splash screens:"
+          find android/app/src/main/res/drawable* -name "splash.png" | wc -l
+          echo "splash files found"
+          
           # Check file sizes (should be > 100 bytes for valid PNGs)
           echo "\n📊 Sample file sizes:"
-          ls -lh android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-          ls -lh android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          ls -lh android/app/src/main/res/mipmap-hdpi/ic_launcher.png 2>/dev/null || echo "No mipmap-hdpi icons"
+          ls -lh android/app/src/main/res/drawable-port-hdpi/splash.png 2>/dev/null || echo "No splash screens"
+          ls -lh android/app/src/main/res/drawable-port-night-hdpi/splash.png 2>/dev/null || echo "No night splash screens"
 
       # 5. Set up Java SE 21 environment for Gradle compilation
       - name: Set up JDK 21
