@@ -2,9 +2,9 @@ name: Plantation Tracker Android PWA & Native Build
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main ]
 
 jobs:
   build:
@@ -34,44 +34,173 @@ jobs:
       - name: Sync Capacitor Android Project
         run: npx cap sync android
 
-      # 5. Set up Java SE 17 environment for Gradle compilation
-      - name: Set up JDK 17
+      # 5. Set up Java SE 21 environment for Gradle compilation
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '17'
+          java-version: '21'
           cache: 'gradle'
 
-      # 5b. Force-restore clean Gradle Wrapper JAR to prevent any Git-based binary corruption
+      # 5b. Force-restore clean Gradle Wrapper JAR
       - name: Force Restore Clean gradle-wrapper.jar
         run: |
           mkdir -p android/gradle/wrapper
-          curl -L -o android/gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.5.0/gradle/wrapper/gradle-wrapper.jar
+          curl -L -o android/gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.14.3/gradle/wrapper/gradle-wrapper.jar
 
-      # 6. Set executable permission on Gradle Wrapper
       - name: Set Gradlew Executable
         run: chmod +x android/gradlew
 
-      # 7. Build Native debug/release App and Bundle (AAB for Google Play Console)
-      - name: Build Android App Bundle (Release AAB)
+      # 6. Generate or Decode Signing Keystore
+      - name: Setup Signing Keystore
+        id: keystore
+        run: |
+          mkdir -p android/app
+          
+          # Check if secrets are available
+          if [ -n "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" ]; then
+            echo "🔐 Using existing keystore from secrets..."
+            echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > android/app/release.jks
+            echo "keystore_source=secret" >> $GITHUB_OUTPUT
+          else
+            echo "🔑 Generating new release keystore..."
+            KEYSTORE_PASS=$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9' | head -c 16)
+            ALIAS_PASS=$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9' | head -c 16)
+            
+            keytool -genkeypair \
+              -v \
+              -keystore android/app/release.jks \
+              -alias plantation-key \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass "$KEYSTORE_PASS" \
+              -keypass "$ALIAS_PASS" \
+              -dname "CN=Plantation Tracker, OU=DAE, O=KrishiAI, L=Dhaka, ST=Dhaka, C=BD"
+            
+            # Save generated credentials as outputs
+            echo "keystore_source=generated" >> $GITHUB_OUTPUT
+            echo "generated_store_pass=$KEYSTORE_PASS" >> $GITHUB_OUTPUT
+            echo "generated_alias_pass=$ALIAS_PASS" >> $GITHUB_OUTPUT
+            echo "generated_alias=plantation-key" >> $GITHUB_OUTPUT
+            
+            # Display credentials (only visible in logs for this run)
+            echo "::warning::Generated Keystore Credentials (save these to your repository secrets):"
+            echo "RELEASE_KEYSTORE_PASSWORD: $KEYSTORE_PASS"
+            echo "RELEASE_KEY_PASSWORD: $ALIAS_PASS"
+            echo "RELEASE_KEY_ALIAS: plantation-key"
+          fi
+
+      # 7. Configure Gradle for signing
+      - name: Configure Gradle Signing
+        run: |
+          # Determine keystore credentials
+          if [ "${{ steps.keystore.outputs.keystore_source }}" = "secret" ]; then
+            STORE_PASS="${{ secrets.RELEASE_KEYSTORE_PASSWORD }}"
+            KEY_PASS="${{ secrets.RELEASE_KEY_PASSWORD }}"
+            KEY_ALIAS="${{ secrets.RELEASE_KEY_ALIAS }}"
+          else
+            STORE_PASS="${{ steps.keystore.outputs.generated_store_pass }}"
+            KEY_PASS="${{ steps.keystore.outputs.generated_alias_pass }}"
+            KEY_ALIAS="${{ steps.keystore.outputs.generated_alias }}"
+          fi
+          
+          # Create gradle.properties with signing config
+          cat > android/gradle.properties << EOF
+          RELEASE_STORE_FILE=release.jks
+          RELEASE_STORE_PASSWORD=$STORE_PASS
+          RELEASE_KEY_ALIAS=$KEY_ALIAS
+          RELEASE_KEY_PASSWORD=$KEY_PASS
+          EOF
+          
+          echo "✅ Gradle signing configured with ${{ steps.keystore.outputs.keystore_source }} keystore"
+
+      # 8. Build Signed Release AAB
+      - name: Build Signed Release AAB
+        env:
+          RELEASE_VERSION_CODE: ${{ github.run_number }}
         run: |
           cd android
-          ./gradlew bundleRelease
+          ./gradlew bundleRelease \
+            -PRELEASE_STORE_FILE=release.jks \
+            -PRELEASE_STORE_PASSWORD=$(grep RELEASE_STORE_PASSWORD gradle.properties | cut -d'=' -f2) \
+            -PRELEASE_KEY_ALIAS=$(grep RELEASE_KEY_ALIAS gradle.properties | cut -d'=' -f2) \
+            -PRELEASE_KEY_PASSWORD=$(grep RELEASE_KEY_PASSWORD gradle.properties | cut -d'=' -f2)
 
-      - name: Build Test APK (Release Unsigned APK)
+      # 9. Build Signed Release APK
+      - name: Build Signed Release APK
+        env:
+          RELEASE_VERSION_CODE: ${{ github.run_number }}
         run: |
           cd android
-          ./gradlew assembleRelease
+          ./gradlew assembleRelease \
+            -PRELEASE_STORE_FILE=release.jks \
+            -PRELEASE_STORE_PASSWORD=$(grep RELEASE_STORE_PASSWORD gradle.properties | cut -d'=' -f2) \
+            -PRELEASE_KEY_ALIAS=$(grep RELEASE_KEY_ALIAS gradle.properties | cut -d'=' -f2) \
+            -PRELEASE_KEY_PASSWORD=$(grep RELEASE_KEY_PASSWORD gradle.properties | cut -d'=' -f2)
 
-      # 8. Upload the artifacts for direct download
-      - name: Upload Release AAB Artifact
+      # 10. Clean Up Sensitive Files
+      - name: Clean Up Keystore
+        if: always()
+        run: |
+          rm -f android/app/release.jks
+          rm -f android/gradle.properties
+          echo "🧹 Cleaned up keystore and signing configuration"
+
+      # 11. Upload Release AAB
+      - name: Upload Release AAB
         uses: actions/upload-artifact@v4
         with:
-          name: plantation-tracker-release-bundle (AAB)
-          path: android/app/build/outputs/bundle/release/app-release-unsigned.aab
+          name: plantation-tracker-release-bundle-aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 30
 
-      - name: Upload Test APK Artifact
+      # 12. Upload Signed APK
+      - name: Upload Signed APK
         uses: actions/upload-artifact@v4
         with:
-          name: plantation-tracker-test-apk (APK)
-          path: android/app/build/outputs/apk/release/app-release-unsigned.apk
+          name: plantation-tracker-signed-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 30
+
+      # 13. Export Generated Keystore (if auto-generated)
+      - name: Export Generated Keystore
+        if: steps.keystore.outputs.keystore_source == 'generated'
+        run: |
+          mkdir -p keystore-export
+          cp android/app/release.jks keystore-export/ 2>/dev/null || echo "Keystore already cleaned"
+          
+          # Create credentials file
+          cat > keystore-export/keystore-credentials.txt << EOF
+          ========================================
+          PLANTATION TRACKER - SIGNING CREDENTIALS
+          ========================================
+          
+          Generated: $(date)
+          GitHub Run: ${{ github.run_number }}
+          
+          Keystore File: release.jks
+          Keystore Password: ${{ steps.keystore.outputs.generated_store_pass }}
+          Key Alias: ${{ steps.keystore.outputs.generated_alias }}
+          Key Password: ${{ steps.keystore.outputs.generated_alias_pass }}
+          
+          IMPORTANT: Save these credentials to your GitHub repository secrets:
+          - RELEASE_KEYSTORE_BASE64 (base64 encode the release.jks file)
+          - RELEASE_KEYSTORE_PASSWORD
+          - RELEASE_KEY_ALIAS
+          - RELEASE_KEY_PASSWORD
+          
+          Keep this file secure! Delete after saving to secrets.
+          ========================================
+          EOF
+          
+          echo "::warning::⚠️ Auto-generated keystore credentials created. Check the 'keystore-export' artifact!"
+
+      # 14. Upload Keystore Export (if generated)
+      - name: Upload Keystore Export
+        if: steps.keystore.outputs.keystore_source == 'generated'
+        uses: actions/upload-artifact@v4
+        with:
+          name: keystore-credentials-export
+          path: keystore-export/
+          retention-days: 7
