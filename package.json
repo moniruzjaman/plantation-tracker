@@ -1,7 +1,7 @@
 {
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
-    "build": "node fix-gradle-wrapper.js && node chmod-gradlew.js && (node download-and-process-logo.js || echo '⚠️ Logo download skipped - using existing/placeholder') && node map.js && vite build",
+    "build": "node fix-gradle-wrapper.js && node chmod-gradlew.js && (node download-and-process-logo.js || echo '⚠️ Logo processing skipped - using existing assets') && node map.js && vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit"
