@@ -1,35 +1,1341 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-    <link rel="shortcut icon" href="/favicon-32x32.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>বৃক্ষরোপণ তথ্য সংগ্রহ | Plantation Tracker</title>
+  <meta name="description" content="০৫ বছরে ২৫ কোটি বৃক্ষ রোপণ কর্মসূচি - কৃষি সম্প্রসারণ অধিদপ্তর" />
+  
+  <!-- Favicon & PWA -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+  
+  <!-- Open Graph -->
+  <meta property="og:title" content="বৃক্ষরোপণ তথ্য সংগ্রহ" />
+  <meta property="og:description" content="০৫ বছরে ২৫ কোটি বৃক্ষ রোপণ কর্মসূচি" />
+  <meta property="og:image" content="/og-image-large.png" />
+  
+  <!-- Libraries -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    * { font-family: 'Hind Siliguri', sans-serif; }
+    body { background: #f3f4f6; }
+    .tab-active { background: linear-gradient(135deg, #10b981, #059669); color: white; box-shadow: 0 4px 6px rgba(16,185,129,0.3); }
+    .tab-inactive { background: white; color: #374151; }
+    .banner { position: fixed; top: 1rem; right: 1rem; z-index: 9999; padding: 1rem 1.5rem; border-radius: 0.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: none; animation: slideIn 0.3s ease; }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    .banner.success { background: #10b981; color: white; }
+    .banner.error { background: #ef4444; color: white; }
+    .banner.info { background: #3b82f6; color: white; }
+    #map, #miniMap { height: 300px; width: 100%; border-radius: 0.5rem; z-index: 1; }
+    .legend-box { background: white; padding: 8px 12px; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.2); font-size: 12px; line-height: 1.6; }
+    .legend-box i { width: 18px; height: 18px; float: left; margin-right: 8px; opacity: 0.8; }
+    .pulse-ring { animation: pulseRing 1.5s infinite; }
+    @keyframes pulseRing { 0% { box-shadow: 0 0 0 0 rgba(245,158,11,0.7); } 70% { box-shadow: 0 0 0 10px rgba(245,158,11,0); } 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0); } }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body>
+
+<!-- Banner -->
+<div id="banner" class="banner"></div>
+
+<!-- Header -->
+<header class="bg-gradient-to-r from-green-700 via-green-600 to-emerald-600 text-white shadow-lg sticky top-0 z-40">
+  <div class="container mx-auto px-4 py-3">
+    <div class="flex justify-between items-center">
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">🌳</span>
+        <div>
+          <h1 class="text-base md:text-lg font-bold leading-tight">বৃক্ষরোপণ তথ্য সংগ্রহ</h1>
+          <p class="text-xs text-green-100 hidden sm:block">০৫ বছরে ২৫ কোটি বৃক্ষ রোপণ কর্মসূচি</p>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="shareApp()" class="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition" title="শেয়ার">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+        </button>
+      </div>
+    </div>
     
-    <!-- General Web & PWA Title -->
-    <title>বৃক্ষরোপণ তথ্য সংগ্রহ | plantation-tracker</title>
-    <meta name="description" content="মোবাইলে অফলাইনে সংগৃহীত বৃক্ষরোপণের তথ্য এবং সিঙ্ক সেন্টার। কৃষি সম্প্রসারণ অধিদপ্তর।" />
+    <!-- Tab Navigation -->
+    <nav class="flex gap-1 mt-3 overflow-x-auto scrollbar-hide">
+      <button onclick="switchTab('form')" id="tab-form" class="tab-active px-4 py-2 rounded-t-lg text-sm font-semibold whitespace-nowrap transition">📝 ফর্ম</button>
+      <button onclick="switchTab('map')" id="tab-map" class="tab-inactive px-4 py-2 rounded-t-lg text-sm font-semibold whitespace-nowrap transition">🗺️ ম্যাপ</button>
+      <button onclick="switchTab('profile')" id="tab-profile" class="tab-inactive px-4 py-2 rounded-t-lg text-sm font-semibold whitespace-nowrap transition">👤 প্রোফাইল</button>
+      <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-inactive px-4 py-2 rounded-t-lg text-sm font-semibold whitespace-nowrap transition">📊 ড্যাশবোর্ড</button>
+    </nav>
+  </div>
+</header>
 
-    <!-- Open Graph / Facebook / Messenger / WhatsApp -->
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="বৃক্ষরোপণ তথ্য সংগ্রহ | plantation-tracker" />
-    <meta property="og:description" content="মোবাইলে অফলাইনে সংগৃহীত বৃক্ষরোপণের তথ্য এবং কোবো/সার্ভার সিঙ্ক সেন্টার।" />
-    <meta property="og:image" content="/og-image-large.png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="plantation-tracker" />
+<main class="container mx-auto px-4 py-4 pb-20">
 
-    <!-- Twitter / Media Previews -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="বৃক্ষরোপণ তথ্য সংগ্রহ | plantation-tracker" />
-    <meta name="twitter:description" content="মোবাইলে অফলাইনে সংগৃহীত বৃক্ষরোপণের তথ্য এবং কোবো/সার্ভার সিঙ্ক সেন্টার।" />
-    <meta name="twitter:image" content="/og-image-large.png" />
-    <script type="module" crossorigin src="/assets/index-BoDu3Vy3.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-gAu3zeD8.css">
-  <link rel="manifest" href="/manifest.webmanifest"></head>
-  <body>
-    <div id="root"></div>
-  </body>
+  <!-- ============ FORM TAB ============ -->
+  <section id="page-form" class="space-y-4">
+    
+    <!-- Location Auto-fill Card -->
+    <div class="bg-white rounded-xl shadow-md p-4">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-bold text-gray-800 flex items-center gap-2">
+          <span class="text-xl">📍</span> অবস্থান তথ্য (স্বয়ংক্রিয়)
+        </h3>
+        <button onclick="getLocation()" id="btnLocate" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 flex items-center gap-1">
+          <span id="locIcon">📡</span> <span id="locText">অবস্থান নিন</span>
+        </button>
+      </div>
+      
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div>
+          <label class="text-xs text-gray-600">জেলা *</label>
+          <input type="text" id="fDistrict" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50" readonly placeholder="স্বয়ংক্রিয়">
+        </div>
+        <div>
+          <label class="text-xs text-gray-600">উপজেলা *</label>
+          <input type="text" id="fUpazila" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50" readonly placeholder="স্বয়ংক্রিয়">
+        </div>
+        <div>
+          <label class="text-xs text-gray-600">ইউনিয়ন *</label>
+          <input type="text" id="fUnion" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50" readonly placeholder="স্বয়ংক্রিয়">
+        </div>
+        <div class="col-span-2 md:col-span-1">
+          <label class="text-xs text-gray-600">গ্রামের নাম *</label>
+          <input type="text" id="fVillage" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50" readonly placeholder="স্বয়ংক্রিয়">
+        </div>
+        <div>
+          <label class="text-xs text-gray-600">ব্লক (ঐচ্ছিক)</label>
+          <input type="text" id="fBlock" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="এসএএও এর জন্য">
+        </div>
+      </div>
+      
+      <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-gray-600">জিও-কোঅর্ডিনেট</label>
+          <div class="flex gap-2">
+            <input type="text" id="fGeo" readonly class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50" placeholder="অক্ষাংশ, দ্রাঘিমাংশ">
+            <button onclick="openMapPicker()" class="px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700" title="ম্যাপে দেখুন/নির্বাচন করুন">🗺️</button>
+          </div>
+        </div>
+        <div>
+          <label class="text-xs text-gray-600">সম্পূর্ণ ঠিকানা</label>
+          <input type="text" id="fAddress" readonly class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50" placeholder="স্বয়ংক্রিয়">
+        </div>
+      </div>
+      
+      <!-- Mini Map -->
+      <div id="miniMap" class="mt-3 hidden"></div>
+    </div>
+
+    <!-- Planting Entry Card -->
+    <div class="bg-white rounded-xl shadow-md p-4">
+      <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2">
+        <span class="text-xl">🌱</span> চারা রোপণ বিবরণী
+      </h3>
+      
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div>
+          <label class="text-xs text-gray-600">বৃক্ষের প্রজাতি *</label>
+          <select id="fSpecies" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+            <option value="">-- নির্বাচন করুন --</option>
+            <optgroup label="🥭 ফলজ">
+              <option value="আম">আম</option>
+              <option value="কাঁঠাল">কাঁঠাল</option>
+              <option value="লিচু">লিচু</option>
+              <option value="জাম">জাম</option>
+              <option value="কলা">কলা</option>
+              <option value="পেয়ারা">পেয়ারা</option>
+              <option value="নারিকেল">নারিকেল</option>
+              <option value="সুপারি">সুপারি</option>
+              <option value="জয়ত্রী">জয়ত্রী</option>
+              <option value="কমলা">কমলা</option>
+              <option value="মাল্টা">মাল্টা</option>
+              <option value="লেবু">লেবু</option>
+              <option value="ডুমুর">ডুমুর</option>
+              <option value="আনারস">আনারস</option>
+            </optgroup>
+            <optgroup label="🌲 বনজ">
+              <option value="শিশু">শিশু</option>
+              <option value="সেগুন">সেগুন</option>
+              <option value="মেহগনি">মেহগনি</option>
+              <option value="আকাশমনি">আকাশমনি</option>
+              <option value="ইউক্যালিপ্টাস">ইউক্যালিপ্টাস</option>
+              <option value="গামার">গামার</option>
+              <option value="কড়ই">কড়ই</option>
+              <option value="নিম">নিম</option>
+              <option value="বট">বট</option>
+              <option value="অশ্বথ">অশ্বথ</option>
+              <option value="পাকুড়">পাকুড়</option>
+              <option value="বাবলা">বাবলা</option>
+              <option value="রায়ন">রায়ন</option>
+              <option value="গাব">গাব</option>
+              <option value="সুন্দরী">সুন্দরী</option>
+              <option value="কেওয়া">কেওয়া</option>
+              <option value="বাঁশ">বাঁশ</option>
+            </optgroup>
+            <optgroup label="🌿 ঔষধি">
+              <option value="অশ্বগন্ধা">অশ্বগন্ধা</option>
+              <option value="তুলসী">তুলসী</option>
+              <option value="আদা">আদা</option>
+              <option value="হলুদ">হলুদ</option>
+              <option value="গাঁজা (ঔষধি)">গাঁজা (ঔষধি)</option>
+              <option value="সর্পগন্ধা">সর্পগন্ধা</option>
+              <option value="মুখমাত্রা">মুখমাত্রা</option>
+              <option value="বহেড়া">বহেড়া</option>
+              <option value="অমলকী">অমলকী</option>
+              <option value="হরীতকী">হরীতকী</option>
+            </optgroup>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-gray-600">চারার সংখ্যা *</label>
+          <input type="number" id="fCount" min="1" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="সংখ্যা">
+        </div>
+        <div>
+          <label class="text-xs text-gray-600">রোপণের তারিখ *</label>
+          <input type="date" id="fDate" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+        </div>
+      </div>
+      
+      <!-- Added Seedlings List -->
+      <div id="seedlingList" class="mt-3 space-y-2"></div>
+      
+      <button onclick="addSeedling()" class="mt-3 w-full px-4 py-2 bg-green-100 text-green-700 rounded-lg text-sm font-semibold hover:bg-green-200">
+        + প্রজাতি যোগ করুন
+      </button>
+    </div>
+
+    <!-- Caretaker Info (Mandatory) -->
+    <div class="bg-white rounded-xl shadow-md p-4">
+      <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2">
+        <span class="text-xl">👨‍🌾</span> পরিচর্যাকারীর তথ্য <span class="text-xs text-red-500">(বাধ্যতামূলক)</span>
+      </h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-gray-600">নাম *</label>
+          <input type="text" id="fCaretakerName" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="পরিচর্যাকারীর নাম">
+        </div>
+        <div>
+          <label class="text-xs text-gray-600">মোবাইল *</label>
+          <input type="tel" id="fCaretakerMobile" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="০১XXXXXXXXX">
+        </div>
+      </div>
+    </div>
+
+    <!-- DAE Officials Info -->
+    <div class="bg-white rounded-xl shadow-md p-4">
+      <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2">
+        <span class="text-xl">🏛️</span> কৃষি সম্প্রসারণ অধিদপ্তর (DAE) তথ্য
+      </h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-gray-600">সংশ্লিষ্ট এসএএও এর নাম</label>
+          <input type="text" id="fSAAOName" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="এসএএও নাম">
+        </div>
+        <div>
+          <label class="text-xs text-gray-600">এসএএও মোবাইল</label>
+          <input type="tel" id="fSAOOMobile" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="০১XXXXXXXXX">
+        </div>
+        <div>
+          <label class="text-xs text-gray-600">মনিটরিং অফিসারের নাম</label>
+          <input type="text" id="fOfficerName" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="মনিটরিং অফিসার">
+        </div>
+        <div>
+          <label class="text-xs text-gray-600">মনিটরিং অফিসারের মোবাইল</label>
+          <input type="tel" id="fOfficerMobile" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="০১XXXXXXXXX">
+        </div>
+      </div>
+    </div>
+
+    <!-- NDVI / Comments -->
+    <div class="bg-white rounded-xl shadow-md p-4">
+      <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2">
+        <span class="text-xl">🛰️</span> NDVI রেটিং ও মন্তব্য
+      </h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-gray-600">NDVI রেটিং (রোপণকালীন)</label>
+          <div class="flex gap-2">
+            <input type="text" id="fNDVI" readonly class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50" placeholder="স্বয়ংক্রিয়">
+            <button onclick="fetchNDVI()" class="px-3 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700">🛰️ Fetch</button>
+          </div>
+          <p class="text-xs text-gray-500 mt-1">উপগ্রহ তথ্য থেকে স্বয়ংক্রিয়</p>
+        </div>
+        <div>
+          <label class="text-xs text-gray-600">মন্তব্য</label>
+          <input type="text" id="fRemarks" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="অতিরিক্ত মন্তব্য">
+        </div>
+      </div>
+    </div>
+
+    <!-- Submit -->
+    <button onclick="submitForm()" class="w-full px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition">
+      ✅ এন্ট্রি জমা দিন
+    </button>
+  </section>
+
+  <!-- ============ MAP TAB ============ -->
+  <section id="page-map" class="hidden space-y-4">
+    
+    <!-- Layer Switcher -->
+    <div class="bg-white rounded-xl shadow-md p-3">
+      <div class="flex gap-2 overflow-x-auto scrollbar-hide">
+        <button onclick="switchLayer('ndvi')" id="layer-ndvi" class="px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap bg-green-700 text-white border-2 border-green-700">🌿 NDVI</button>
+        <button onclick="switchLayer('evi')" id="layer-evi" class="px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap bg-white text-gray-700 border-2 border-gray-200">🍃 EVI</button>
+        <button onclick="switchLayer('satellite')" id="layer-satellite" class="px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap bg-white text-gray-700 border-2 border-gray-200">🛰️ স্যাটেলাইট</button>
+        <button onclick="switchLayer('osm')" id="layer-osm" class="px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap bg-white text-gray-700 border-2 border-gray-200">🗺️ মানচিত্র</button>
+      </div>
+    </div>
+
+    <!-- Main Map -->
+    <div class="bg-white rounded-xl shadow-md p-3">
+      <div id="map" style="height: 400px;"></div>
+      <div class="flex gap-2 mt-3">
+        <button onclick="locateOnMap()" class="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">📍 আমার অবস্থান</button>
+        <button onclick="toggleLegend()" class="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300">📊 লেজেন্ড</button>
+      </div>
+    </div>
+
+    <!-- NDVI Legend -->
+    <div id="ndviLegend" class="bg-white rounded-xl shadow-md p-4 hidden">
+      <h4 class="font-bold text-gray-800 mb-2">🌿 NDVI লেজেন্ড</h4>
+      <div class="space-y-1 text-sm">
+        <div class="flex items-center gap-2"><span class="w-6 h-4 inline-block" style="background:#d73027"></span> নগ্ন ভূমি (-0.1 to 0.1)</div>
+        <div class="flex items-center gap-2"><span class="w-6 h-4 inline-block" style="background:#fee08b"></span> বিরল সবুজ (0.1 to 0.3)</div>
+        <div class="flex items-center gap-2"><span class="w-6 h-4 inline-block" style="background:#ffffbf"></span> মধ্যম (0.3 to 0.5)</div>
+        <div class="flex items-center gap-2"><span class="w-6 h-4 inline-block" style="background:#d9ef8b"></span> ঘন সবুজ (0.5 to 0.7)</div>
+        <div class="flex items-center gap-2"><span class="w-6 h-4 inline-block" style="background:#1a9850"></span> অতি ঘন (0.7 to 1.0)</div>
+      </div>
+    </div>
+
+    <!-- Cloud Pipeline -->
+    <div class="bg-white rounded-xl shadow-md p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h4 class="font-bold text-gray-800">☁️ ক্লাউড NDVI পাইপলাইন</h4>
+          <p class="text-xs text-gray-600">Google Earth Engine বিশ্লেষণ</p>
+        </div>
+        <button onclick="runCloudPipeline()" id="btnPipeline" class="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm hover:bg-amber-600 flex items-center gap-2">
+          <span id="pipelineIcon">⚙️</span> <span id="pipelineText">বিশ্লেষণ</span>
+        </button>
+      </div>
+      <div id="pipelineResult" class="mt-3 hidden">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div class="bg-green-50 p-2 rounded-lg text-center">
+            <div class="text-xs text-gray-600">গড় NDVI</div>
+            <div id="res-ndvi" class="text-lg font-bold text-green-700">-</div>
+          </div>
+          <div class="bg-green-50 p-2 rounded-lg text-center">
+            <div class="text-xs text-gray-600">সুস্থ</div>
+            <div id="res-healthy" class="text-lg font-bold text-green-700">-</div>
+          </div>
+          <div class="bg-amber-50 p-2 rounded-lg text-center">
+            <div class="text-xs text-gray-600">চাপগ্রস্ত</div>
+            <div id="res-stress" class="text-lg font-bold text-amber-700">-</div>
+          </div>
+          <div class="bg-red-50 p-2 rounded-lg text-center">
+            <div class="text-xs text-gray-600">নগ্ন</div>
+            <div id="res-bare" class="text-lg font-bold text-red-700">-</div>
+          </div>
+        </div>
+        <div class="mt-2 text-center text-sm text-gray-600">মোট এলাকা: <span id="res-area" class="font-bold">-</span> হেক্টর</div>
+      </div>
+    </div>
+
+    <!-- Submissions on Map -->
+    <div class="bg-white rounded-xl shadow-md p-4">
+      <h4 class="font-bold text-gray-800 mb-2">📍 ম্যাপে এন্ট্রি সমূহ</h4>
+      <div id="mapEntries" class="space-y-2 max-h-64 overflow-y-auto"></div>
+    </div>
+  </section>
+
+  <!-- ============ PROFILE TAB ============ -->
+  <section id="page-profile" class="hidden space-y-4">
+    
+    <!-- Profile Card (Krishak Card Inspired) -->
+    <div class="bg-gradient-to-br from-green-600 to-emerald-700 rounded-2xl shadow-xl p-6 text-white relative overflow-hidden">
+      <div class="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -mr-20 -mt-20"></div>
+      <div class="relative">
+        <div class="flex items-center gap-4 mb-4">
+          <div id="profileAvatar" class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center text-4xl border-4 border-white/30">👤</div>
+          <div>
+            <h2 id="profileName" class="text-xl font-bold">অতিথি ব্যবহারকারী</h2>
+            <p id="profileRole" class="text-sm text-green-100">ভূমিকা: নির্বাচন করুন</p>
+            <p id="profileDistrict" class="text-xs text-green-200 mt-1">📍 জেলা: -</p>
+          </div>
+        </div>
+        <div class="grid grid-cols-3 gap-2 pt-4 border-t border-white/20">
+          <div class="text-center">
+            <div id="statEntries" class="text-2xl font-bold">0</div>
+            <div class="text-xs text-green-100">এন্ট্রি</div>
+          </div>
+          <div class="text-center">
+            <div id="statTrees" class="text-2xl font-bold">0</div>
+            <div class="text-xs text-green-100">মোট চারা</div>
+          </div>
+          <div class="text-center">
+            <div id="statArea" class="text-2xl font-bold">0</div>
+            <div class="text-xs text-green-100">এলাকা (ha)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Role Selection -->
+    <div class="bg-white rounded-xl shadow-md p-4">
+      <h3 class="font-bold text-gray-800 mb-3">🎭 ভূমিকা নির্বাচন</h3>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <button onclick="selectRole('citizen')" class="role-btn p-3 border-2 border-gray-200 rounded-lg text-center hover:border-green-500 transition" data-role="citizen">
+          <div class="text-2xl">👨‍🌾</div>
+          <div class="text-xs font-semibold mt-1">নাগরিক</div>
+        </button>
+        <button onclick="selectRole('farmer')" class="role-btn p-3 border-2 border-gray-200 rounded-lg text-center hover:border-green-500 transition" data-role="farmer">
+          <div class="text-2xl">🌾</div>
+          <div class="text-xs font-semibold mt-1">কৃষক</div>
+        </button>
+        <button onclick="selectRole('sao')" class="role-btn p-3 border-2 border-gray-200 rounded-lg text-center hover:border-green-500 transition" data-role="sao">
+          <div class="text-2xl">👨‍💼</div>
+          <div class="text-xs font-semibold mt-1">এসএএও</div>
+        </button>
+        <button onclick="selectRole('dae')" class="role-btn p-3 border-2 border-gray-200 rounded-lg text-center hover:border-green-500 transition" data-role="dae">
+          <div class="text-2xl">🏛️</div>
+          <div class="text-xs font-semibold mt-1">DAE অফিসার</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Profile Form -->
+    <div class="bg-white rounded-xl shadow-md p-4">
+      <h3 class="font-bold text-gray-800 mb-3">📝 প্রোফাইল তথ্য</h3>
+      <div class="space-y-3">
+        <div>
+          <label class="text-xs text-gray-600">পূর্ণ নাম</label>
+          <input type="text" id="pName" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="আপনার নাম">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-gray-600">মোবাইল</label>
+            <input type="tel" id="pMobile" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="০১XXXXXXXXX">
+          </div>
+          <div>
+            <label class="text-xs text-gray-600">ইমেইল</label>
+            <input type="email" id="pEmail" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="email@example.com">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-gray-600">জেলা</label>
+            <input type="text" id="pDistrict" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="জেলা">
+          </div>
+          <div>
+            <label class="text-xs text-gray-600">উপজেলা</label>
+            <input type="text" id="pUpazila" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="উপজেলা">
+          </div>
+        </div>
+        <div id="daeFields" class="hidden space-y-3 pt-3 border-t">
+          <div>
+            <label class="text-xs text-gray-600">কর্মস্থল / অফিস</label>
+            <input type="text" id="pOffice" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="কৃষি সম্প্রসারণ অফিস">
+          </div>
+          <div>
+            <label class="text-xs text-gray-600">পদবী</label>
+            <input type="text" id="pDesignation" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="পদবী">
+          </div>
+          <div>
+            <label class="text-xs text-gray-600">কর্মচারী আইডি</label>
+            <input type="text" id="pEmpId" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="DAE Employee ID">
+          </div>
+        </div>
+        <button onclick="saveProfile()" class="w-full px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700">💾 প্রোফাইল সংরক্ষণ</button>
+      </div>
+    </div>
+
+    <!-- QR Code / Share Card -->
+    <div class="bg-white rounded-xl shadow-md p-4">
+      <h3 class="font-bold text-gray-800 mb-3">🆔 পরিচিতি কার্ড</h3>
+      <div class="flex flex-col items-center">
+        <div id="profileQR" class="w-40 h-40 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-sm">QR কোড</div>
+        <button onclick="generateQR()" class="mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">🔄 QR তৈরি করুন</button>
+        <button onclick="shareProfile()" class="mt-2 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700">📤 কার্ড শেয়ার</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DASHBOARD TAB ============ -->
+  <section id="page-dashboard" class="hidden space-y-4">
+    
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="bg-gradient-to-br from-green-500 to-green-600 text-white rounded-xl p-4 shadow-md">
+        <div class="text-3xl font-bold" id="dTotalEntries">0</div>
+        <div class="text-xs opacity-90">মোট এন্ট্রি</div>
+      </div>
+      <div class="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white rounded-xl p-4 shadow-md">
+        <div class="text-3xl font-bold" id="dTotalTrees">0</div>
+        <div class="text-xs opacity-90">মোট চারা</div>
+      </div>
+      <div class="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl p-4 shadow-md">
+        <div class="text-3xl font-bold" id="dDistricts">0</div>
+        <div class="text-xs opacity-90">জেলা</div>
+      </div>
+      <div class="bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-xl p-4 shadow-md">
+        <div class="text-3xl font-bold" id="dSpecies">0</div>
+        <div class="text-xs opacity-90">প্রজাতি</div>
+      </div>
+    </div>
+
+    <!-- Category Breakdown -->
+    <div class="bg-white rounded-xl shadow-md p-4">
+      <h3 class="font-bold text-gray-800 mb-3">📊 ক্যাটাগরি অনুযায়ী চারা</h3>
+      <div class="grid grid-cols-3 gap-3">
+        <div class="bg-orange-50 p-3 rounded-lg text-center">
+          <div class="text-2xl">🥭</div>
+          <div id="dFruit" class="text-xl font-bold text-orange-700">0</div>
+          <div class="text-xs text-gray-600">ফলজ</div>
+        </div>
+        <div class="bg-green-50 p-3 rounded-lg text-center">
+          <div class="text-2xl">🌲</div>
+          <div id="dForest" class="text-xl font-bold text-green-700">0</div>
+          <div class="text-xs text-gray-600">বনজ</div>
+        </div>
+        <div class="bg-purple-50 p-3 rounded-lg text-center">
+          <div class="text-2xl">🌿</div>
+          <div id="dMedicinal" class="text-xl font-bold text-purple-700">0</div>
+          <div class="text-xs text-gray-600">ঔষধি</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Species -->
+    <div class="bg-white rounded-xl shadow-md p-4">
+      <h3 class="font-bold text-gray-800 mb-3">🏆 শীর্ষ প্রজাতি</h3>
+      <div id="topSpecies" class="space-y-2"></div>
+    </div>
+
+    <!-- Export Options -->
+    <div class="bg-white rounded-xl shadow-md p-4">
+      <h3 class="font-bold text-gray-800 mb-3">📥 রপ্তানি / ডাউনলোড</h3>
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="exportGovExcel()" class="px-3 py-3 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 font-semibold">
+          🏛️ সরকারি ছক<br><span class="text-xs opacity-80">(১৭ কলাম)</span>
+        </button>
+        <button onclick="exportGeneralExcel()" class="px-3 py-3 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 font-semibold">
+          📊 সাধারণ Excel<br><span class="text-xs opacity-80">(সংক্ষিপ্ত)</span>
+        </button>
+        <button onclick="exportCSV()" class="px-3 py-3 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 font-semibold">
+          📄 CSV<br><span class="text-xs opacity-80">(সার্বজনীন)</span>
+        </button>
+        <button onclick="exportJSON()" class="px-3 py-3 bg-orange-600 text-white rounded-lg text-sm hover:bg-orange-700 font-semibold">
+          🔧 JSON<br><span class="text-xs opacity-80">(KoBo/API)</span>
+        </button>
+        <button onclick="exportPDF()" class="px-3 py-3 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 font-semibold col-span-2">
+          📋 PDF রিপোর্ট<br><span class="text-xs opacity-80">(সামগ্রিক সারাংশ)</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Recent Entries -->
+    <div class="bg-white rounded-xl shadow-md p-4">
+      <div class="flex justify-between items-center mb-3">
+        <h3 class="font-bold text-gray-800">📋 সাম্প্রতিক এন্ট্রি</h3>
+        <button onclick="clearAllData()" class="text-xs text-red-500 hover:text-red-700">🗑️ সব মুছুন</button>
+      </div>
+      <div id="recentEntries" class="space-y-2 max-h-96 overflow-y-auto"></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- Map Picker Modal -->
+<div id="mapModal" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-xl max-w-2xl w-full p-4">
+    <div class="flex justify-between items-center mb-3">
+      <h3 class="font-bold text-gray-800">🗺️ ম্যাপে অবস্থান নির্বাচন করুন</h3>
+      <button onclick="closeMapModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+    </div>
+    <div id="pickerMap" style="height: 400px; border-radius: 0.5rem;"></div>
+    <div class="mt-3 flex gap-2">
+      <input type="text" id="pickerCoords" readonly class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50" placeholder="ম্যাপে ক্লিক করুন">
+      <button onclick="confirmMapPick()" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">✓ নিশ্চিত</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============ STATE ============
+let state = {
+  submissions: JSON.parse(localStorage.getItem('plantation_submissions') || '[]'),
+  profile: JSON.parse(localStorage.getItem('plantation_profile') || '{}'),
+  currentLat: null,
+  currentLng: null,
+  pendingSeedlings: [],
+  map: null,
+  pickerMap: null,
+  pickerMarker: null,
+  miniMap: null,
+  miniMarker: null,
+  tileLayer: null,
+  activeLayer: 'ndvi'
+};
+
+const SPECIES_CATEGORY = {
+  'আম':'ফলজ','কাঁঠাল':'ফলজ','লিচু':'ফলজ','জাম':'ফলজ','কলা':'ফলজ','পেয়ারা':'ফলজ',
+  'নারিকেল':'ফলজ','সুপারি':'ফলজ','জয়ত্রী':'ফলজ','কমলা':'ফলজ','মাল্টা':'ফলজ','লেবু':'ফলজ',
+  'ডুমুর':'ফলজ','আনারস':'ফলজ',
+  'শিশু':'বনজ','সেগুন':'বনজ','মেহগনি':'বনজ','আকাশমনি':'বনজ','ইউক্যালিপ্টাস':'বনজ',
+  'গামার':'বনজ','কড়ই':'বনজ','নিম':'বনজ','বট':'বনজ','অশ্বথ':'বনজ','পাকুড়':'বনজ',
+  'বাবলা':'বনজ','রায়ন':'বনজ','গাব':'বনজ','সুন্দরী':'বনজ','কেওয়া':'বনজ','বাঁশ':'বনজ',
+  'অশ্বগন্ধা':'ঔষধি','তুলসী':'ঔষধি','আদা':'ঔষধি','হলুদ':'ঔষধি','গাঁজা (ঔষধি)':'ঔষধি',
+  'সর্পগন্ধা':'ঔষধি','মুখমাত্রা':'ঔষধি','বহেড়া':'ঔষধি','অমলকী':'ঔষধি','হরীতকী':'ঔষধি'
+};
+
+// ============ UTILITIES ============
+function showBanner(msg, type='success') {
+  const b = document.getElementById('banner');
+  b.className = `banner ${type}`;
+  b.textContent = (type==='success'?'✅ ':type==='error'?'❌ ':'ℹ️ ') + msg;
+  b.style.display = 'block';
+  setTimeout(() => b.style.display = 'none', 3000);
+}
+
+function saveSubmissions() {
+  localStorage.setItem('plantation_submissions', JSON.stringify(state.submissions));
+}
+
+function switchTab(tab) {
+  ['form','map','profile','dashboard'].forEach(t => {
+    document.getElementById('page-'+t).classList.toggle('hidden', t !== tab);
+    document.getElementById('tab-'+t).className = (t===tab?'tab-active':'tab-inactive') + ' px-4 py-2 rounded-t-lg text-sm font-semibold whitespace-nowrap transition';
+  });
+  if (tab === 'map') setTimeout(initMainMap, 100);
+  if (tab === 'dashboard') renderDashboard();
+  if (tab === 'profile') renderProfile();
+}
+
+// ============ GEOLOCATION ============
+function getLocation() {
+  const btn = document.getElementById('btnLocate');
+  const icon = document.getElementById('locIcon');
+  const text = document.getElementById('locText');
+  
+  if (!navigator.geolocation) {
+    showBanner('ব্রাউজার জিওলোকেশন সমর্থন করে না', 'error');
+    return;
+  }
+  
+  icon.textContent = '⏳';
+  text.textContent = 'নেওয়া হচ্ছে...';
+  showBanner('অবস্থান নেওয়া হচ্ছে...', 'info');
+  
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      state.currentLat = pos.coords.latitude.toFixed(6);
+      state.currentLng = pos.coords.longitude.toFixed(6);
+      document.getElementById('fGeo').value = `${state.currentLat}, ${state.currentLng}`;
+      
+      // Reverse geocode
+      await reverseGeocode(state.currentLat, state.currentLng);
+      
+      // Show mini map
+      showMiniMap();
+      
+      icon.textContent = '✅';
+      text.textContent = 'আপডেট';
+      showBanner('অবস্থান সফলভাবে নেওয়া হয়েছে!');
+    },
+    (err) => {
+      icon.textContent = '❌';
+      text.textContent = 'পুনরায় চেষ্টা';
+      showBanner('অবস্থান ব্যর্থ: ' + err.message, 'error');
+    },
+    { enableHighAccuracy: true, timeout: 15000 }
+  );
+}
+
+async function reverseGeocode(lat, lng) {
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=bn`, {
+      headers: { 'User-Agent': 'PlantationTracker/1.0' }
+    });
+    const data = await res.json();
+    if (data && data.address) {
+      const a = data.address;
+      if (a.state || a.region) document.getElementById('fDistrict').value = a.state || a.region || '';
+      if (a.county || a.city) document.getElementById('fUpazila').value = a.county || a.subdistrict || a.city || '';
+      if (a.subdistrict || a.town) document.getElementById('fUnion').value = a.subdistrict || a.town || '';
+      if (a.village || a.hamlet) document.getElementById('fVillage').value = a.village || a.hamlet || a.suburb || '';
+      if (data.display_name) document.getElementById('fAddress').value = data.display_name;
+    }
+  } catch (e) {
+    console.error('Reverse geocode error:', e);
+  }
+}
+
+function showMiniMap() {
+  const container = document.getElementById('miniMap');
+  container.classList.remove('hidden');
+  
+  if (state.miniMap) {
+    state.miniMap.setView([state.currentLat, state.currentLng], 16);
+    state.miniMarker.setLatLng([state.currentLat, state.currentLng]);
+    return;
+  }
+  
+  state.miniMap = L.map('miniMap').setView([state.currentLat, state.currentLng], 16);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap'
+  }).addTo(state.miniMap);
+  state.miniMarker = L.marker([state.currentLat, state.currentLng]).addTo(state.miniMap)
+    .bindPopup('📍 বর্তমান অবস্থান').openPopup();
+}
+
+// ============ MAP PICKER ============
+function openMapPicker() {
+  document.getElementById('mapModal').classList.remove('hidden');
+  setTimeout(() => {
+    if (!state.pickerMap) {
+      const center = state.currentLat ? [state.currentLat, state.currentLng] : [23.8103, 90.4125];
+      state.pickerMap = L.map('pickerMap').setView(center, 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+      }).addTo(state.pickerMap);
+      
+      state.pickerMap.on('click', (e) => {
+        if (state.pickerMarker) state.pickerMap.removeLayer(state.pickerMarker);
+        state.pickerMarker = L.marker(e.latlng).addTo(state.pickerMap);
+        document.getElementById('pickerCoords').value = `${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}`;
+      });
+    }
+    if (state.currentLat) {
+      state.pickerMap.setView([state.currentLat, state.currentLng], 16);
+      if (state.pickerMarker) state.pickerMap.removeLayer(state.pickerMarker);
+      state.pickerMarker = L.marker([state.currentLat, state.currentLng]).addTo(state.pickerMap);
+      document.getElementById('pickerCoords').value = `${state.currentLat}, ${state.currentLng}`;
+    }
+  }, 100);
+}
+
+function closeMapModal() {
+  document.getElementById('mapModal').classList.add('hidden');
+}
+
+function confirmMapPick() {
+  const coords = document.getElementById('pickerCoords').value;
+  if (!coords) {
+    showBanner('ম্যাপে ক্লিক করে অবস্থান নির্বাচন করুন', 'error');
+    return;
+  }
+  document.getElementById('fGeo').value = coords;
+  const [lat, lng] = coords.split(',').map(s => parseFloat(s.trim()));
+  state.currentLat = lat.toFixed(6);
+  state.currentLng = lng.toFixed(6);
+  reverseGeocode(lat, lng);
+  showMiniMap();
+  closeMapModal();
+  showBanner('অবস্থান নির্বাচিত হয়েছে!');
+}
+
+// ============ SEEDLING MANAGEMENT ============
+function addSeedling() {
+  const species = document.getElementById('fSpecies').value;
+  const count = parseInt(document.getElementById('fCount').value);
+  
+  if (!species) { showBanner('প্রজাতি নির্বাচন করুন', 'error'); return; }
+  if (!count || count < 1) { showBanner('সঠিক সংখ্যা দিন', 'error'); return; }
+  
+  state.pendingSeedlings.push({
+    name: species,
+    category: SPECIES_CATEGORY[species] || 'অন্যান্য',
+    count: count
+  });
+  
+  renderSeedlingList();
+  document.getElementById('fSpecies').value = '';
+  document.getElementById('fCount').value = '';
+  showBanner(`${species} (${count}টি) যোগ হয়েছে`);
+}
+
+function removeSeedling(idx) {
+  state.pendingSeedlings.splice(idx, 1);
+  renderSeedlingList();
+}
+
+function renderSeedlingList() {
+  const list = document.getElementById('seedlingList');
+  if (!state.pendingSeedlings.length) {
+    list.innerHTML = '<p class="text-sm text-gray-500 text-center py-2">কোনো প্রজাতি যোগ করা হয়নি</p>';
+    return;
+  }
+  list.innerHTML = state.pendingSeedlings.map((s, i) => `
+    <div class="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+      <div class="flex items-center gap-2">
+        <span class="text-lg">${s.category==='ফলজ'?'🥭':s.category==='বনজ'?'🌲':'🌿'}</span>
+        <div>
+          <div class="font-semibold text-sm">${s.name}</div>
+          <div class="text-xs text-gray-600">${s.category} · ${s.count} টি</div>
+        </div>
+      </div>
+      <button onclick="removeSeedling(${i})" class="text-red-500 hover:text-red-700 text-xl">×</button>
+    </div>
+  `).join('');
+}
+
+// ============ NDVI ============
+function fetchNDVI() {
+  if (!state.currentLat || !state.currentLng) {
+    showBanner('প্রথমে অবস্থান নিন', 'error');
+    return;
+  }
+  
+  document.getElementById('fNDVI').value = '⏳ বিশ্লেষণ হচ্ছে...';
+  
+  // Simulate NDVI fetch (in production, call GEE pipeline)
+  setTimeout(() => {
+    const ndvi = (Math.random() * 0.6 + 0.2).toFixed(3);
+    let rating = '';
+    if (ndvi < 0.2) rating = 'নগ্ন ভূমি';
+    else if (ndvi < 0.4) rating = 'বিরল সবুজ';
+    else if (ndvi < 0.6) rating = 'মধ্যম';
+    else if (ndvi < 0.8) rating = 'ঘন সবুজ';
+    else rating = 'অতি ঘন';
+    
+    document.getElementById('fNDVI').value = `${ndvi} (${rating})`;
+    showBanner(`NDVI: ${ndvi} - ${rating}`);
+  }, 1500);
+}
+
+// ============ FORM SUBMISSION ============
+function submitForm() {
+  // Validation
+  const required = {
+    village: document.getElementById('fVillage').value,
+    union: document.getElementById('fUnion').value,
+    upazila: document.getElementById('fUpazila').value,
+    district: document.getElementById('fDistrict').value,
+    caretakerName: document.getElementById('fCaretakerName').value,
+    caretakerMobile: document.getElementById('fCaretakerMobile').value
+  };
+  
+  for (const [key, val] of Object.entries(required)) {
+    if (!val) {
+      const labels = {
+        village:'গ্রামের নাম', union:'ইউনিয়ন', upazila:'উপজেলা', district:'জেলা',
+        caretakerName:'পরিচর্যাকারীর নাম', caretakerMobile:'পরিচর্যাকারীর মোবাইল'
+      };
+      showBanner(`${labels[key]} আবশ্যক`, 'error');
+      return;
+    }
+  }
+  
+  if (!state.pendingSeedlings.length) {
+    showBanner('অন্তত একটি প্রজাতি যোগ করুন', 'error');
+    return;
+  }
+  
+  const entry = {
+    id: Date.now(),
+    slNo: state.submissions.length + 1,
+    village: document.getElementById('fVillage').value,
+    block: document.getElementById('fBlock').value,
+    union: document.getElementById('fUnion').value,
+    upazila: document.getElementById('fUpazila').value,
+    district: document.getElementById('fDistrict').value,
+    seedlings: [...state.pendingSeedlings],
+    date: document.getElementById('fDate').value || new Date().toISOString().slice(0,10),
+    geo: document.getElementById('fGeo').value,
+    address: document.getElementById('fAddress').value,
+    caretakerName: document.getElementById('fCaretakerName').value,
+    caretakerMobile: document.getElementById('fCaretakerMobile').value,
+    saaoName: document.getElementById('fSAAOName').value,
+    saaoMobile: document.getElementById('fSAOOMobile').value,
+    officerName: document.getElementById('fOfficerName').value,
+    officerMobile: document.getElementById('fOfficerMobile').value,
+    ndvi: document.getElementById('fNDVI').value,
+    remarks: document.getElementById('fRemarks').value,
+    submittedAt: new Date().toISOString()
+  };
+  
+  state.submissions.push(entry);
+  saveSubmissions();
+  
+  // Reset form
+  state.pendingSeedlings = [];
+  renderSeedlingList();
+  ['fCaretakerName','fCaretakerMobile','fSAAOName','fSAOOMobile','fOfficerName','fOfficerMobile','fRemarks','fNDVI','fBlock'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  
+  showBanner(`✅ এন্ট্রি #${entry.slNo} জমা হয়েছে! ${entry.seedlings.length}টি প্রজাতি`);
+  setTimeout(() => switchTab('dashboard'), 1000);
+}
+
+// ============ MAIN MAP ============
+function initMainMap() {
+  if (state.map) {
+    state.map.invalidateSize();
+    return;
+  }
+  
+  const center = state.currentLat ? [state.currentLat, state.currentLng] : [23.8103, 90.4125];
+  state.map = L.map('map').setView(center, 10);
+  
+  switchLayer('ndvi');
+  
+  // Add submission markers
+  state.submissions.forEach(s => {
+    if (s.geo) {
+      const [lat, lng] = s.geo.split(',').map(x => parseFloat(x.trim()));
+      if (lat && lng) {
+        const total = s.seedlings.reduce((sum, sl) => sum + sl.count, 0);
+        L.marker([lat, lng]).addTo(state.map)
+          .bindPopup(`<b>${s.village}</b><br>${s.district}<br>🌱 ${total} টি চারা<br>📅 ${s.date}`);
+      }
+    }
+  });
+  
+  renderMapEntries();
+}
+
+function switchLayer(layer) {
+  state.activeLayer = layer;
+  
+  // Update UI
+  ['ndvi','evi','satellite','osm'].forEach(l => {
+    const btn = document.getElementById('layer-'+l);
+    if (l === layer) {
+      btn.className = 'px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap bg-green-700 text-white border-2 border-green-700';
+    } else {
+      btn.className = 'px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap bg-white text-gray-700 border-2 border-gray-200';
+    }
+  });
+  
+  if (!state.map) return;
+  
+  if (state.tileLayer) state.map.removeLayer(state.tileLayer);
+  
+  const urls = {
+    ndvi: 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_L3_NDVI_Monthly/default/{z}/{y}/{x}.png',
+    evi: 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_L3_EVI_Monthly/default/{z}/{y}/{x}.png',
+    satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    osm: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+  };
+  
+  const opts = layer === 'osm' ? { attribution: '© OpenStreetMap' } :
+               layer === 'satellite' ? { attribution: '© Esri' } :
+               { attribution: '© NASA GIBS' };
+  
+  state.tileLayer = L.tileLayer(urls[layer], opts).addTo(state.map);
+  
+  document.getElementById('ndviLegend').classList.toggle('hidden', !(layer === 'ndvi' || layer === 'evi'));
+}
+
+function locateOnMap() {
+  if (state.currentLat && state.map) {
+    state.map.setView([state.currentLat, state.currentLng], 16);
+    L.marker([state.currentLat, state.currentLng]).addTo(state.map)
+      .bindPopup('📍 আমার অবস্থান').openPopup();
+  } else {
+    showBanner('প্রথমে ফর্ম ট্যাবে অবস্থান নিন', 'error');
+  }
+}
+
+function toggleLegend() {
+  document.getElementById('ndviLegend').classList.toggle('hidden');
+}
+
+function renderMapEntries() {
+  const container = document.getElementById('mapEntries');
+  if (!state.submissions.length) {
+    container.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">কোনো এন্ট্রি নেই</p>';
+    return;
+  }
+  container.innerHTML = state.submissions.slice().reverse().map(s => `
+    <div class="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+      <div class="flex items-center gap-2">
+        <span class="text-lg">📍</span>
+        <div>
+          <div class="font-semibold text-sm">${s.village}, ${s.upazila}</div>
+          <div class="text-xs text-gray-600">${s.seedlings.length}টি প্রজাতি · ${s.date}</div>
+        </div>
+      </div>
+      <button onclick="focusOnMap('${s.geo}')" class="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">দেখুন</button>
+    </div>
+  `).join('');
+}
+
+function focusOnMap(geo) {
+  if (!geo || !state.map) return;
+  const [lat, lng] = geo.split(',').map(x => parseFloat(x.trim()));
+  if (lat && lng) {
+    state.map.setView([lat, lng], 17);
+  }
+}
+
+// ============ CLOUD PIPELINE ============
+function runCloudPipeline() {
+  const btn = document.getElementById('btnPipeline');
+  const icon = document.getElementById('pipelineIcon');
+  const text = document.getElementById('pipelineText');
+  
+  btn.disabled = true;
+  icon.textContent = '⚙️';
+  icon.className = 'animate-spin';
+  text.textContent = 'বিশ্লেষণ...';
+  btn.className = 'px-4 py-2 bg-amber-500 text-white rounded-lg text-sm flex items-center gap-2 pulse-ring';
+  
+  // Simulate GEE pipeline
+  setTimeout(() => {
+    const ndvi = (Math.random() * 0.5 + 0.3).toFixed(3);
+    const healthy = Math.round(Math.random() * 40 + 50);
+    const stress = Math.round(Math.random() * 20 + 10);
+    const bare = 100 - healthy - stress;
+    const area = (Math.random() * 5 + 0.5).toFixed(2);
+    
+    document.getElementById('res-ndvi').textContent = ndvi;
+    document.getElementById('res-healthy').textContent = healthy + '%';
+    document.getElementById('res-stress').textContent = stress + '%';
+    document.getElementById('res-bare').textContent = bare + '%';
+    document.getElementById('res-area').textContent = area;
+    
+    document.getElementById('pipelineResult').classList.remove('hidden');
+    
+    btn.disabled = false;
+    icon.textContent = '✅';
+    icon.className = '';
+    text.textContent = 'পুনরায়';
+    btn.className = 'px-4 py-2 bg-green-600 text-white rounded-lg text-sm flex items-center gap-2 hover:bg-green-700';
+    
+    showBanner('বিশ্লেষণ সম্পন্ন!');
+  }, 2500);
+}
+
+// ============ PROFILE ============
+function selectRole(role) {
+  document.querySelectorAll('.role-btn').forEach(b => {
+    b.classList.remove('border-green-500', 'bg-green-50');
+    b.classList.add('border-gray-200');
+  });
+  const btn = document.querySelector(`[data-role="${role}"]`);
+  btn.classList.add('border-green-500', 'bg-green-50');
+  btn.classList.remove('border-gray-200');
+  
+  state.profile.role = role;
+  document.getElementById('daeFields').classList.toggle('hidden', !(role === 'sao' || role === 'dae'));
+  
+  const labels = { citizen:'নাগরিক', farmer:'কৃষক', sao:'এসএএও', dae:'DAE অফিসার' };
+  document.getElementById('profileRole').textContent = 'ভূমিকা: ' + labels[role];
+}
+
+function saveProfile() {
+  state.profile.name = document.getElementById('pName').value;
+  state.profile.mobile = document.getElementById('pMobile').value;
+  state.profile.email = document.getElementById('pEmail').value;
+  state.profile.district = document.getElementById('pDistrict').value;
+  state.profile.upazila = document.getElementById('pUpazila').value;
+  state.profile.office = document.getElementById('pOffice').value;
+  state.profile.designation = document.getElementById('pDesignation').value;
+  state.profile.empId = document.getElementById('pEmpId').value;
+  
+  localStorage.setItem('plantation_profile', JSON.stringify(state.profile));
+  
+  document.getElementById('profileName').textContent = state.profile.name || 'অতিথি ব্যবহারকারী';
+  document.getElementById('profileDistrict').textContent = '📍 ' + (state.profile.district || 'জেলা: -');
+  
+  showBanner('প্রোফাইল সংরক্ষিত!');
+}
+
+function renderProfile() {
+  const p = state.profile;
+  if (p.name) document.getElementById('profileName').textContent = p.name;
+  if (p.district) document.getElementById('profileDistrict').textContent = '📍 ' + p.district;
+  if (p.role) {
+    const labels = { citizen:'নাগরিক', farmer:'কৃষক', sao:'এসএএও', dae:'DAE অফিসার' };
+    document.getElementById('profileRole').textContent = 'ভূমিকা: ' + labels[p.role];
+    const btn = document.querySelector(`[data-role="${p.role}"]`);
+    if (btn) {
+      document.querySelectorAll('.role-btn').forEach(b => {
+        b.classList.remove('border-green-500', 'bg-green-50');
+        b.classList.add('border-gray-200');
+      });
+      btn.classList.add('border-green-500', 'bg-green-50');
+      btn.classList.remove('border-gray-200');
+    }
+    document.getElementById('daeFields').classList.toggle('hidden', !(p.role === 'sao' || p.role === 'dae'));
+  }
+  
+  ['pName','pMobile','pEmail','pDistrict','pUpazila','pOffice','pDesignation','pEmpId'].forEach(id => {
+    const key = id.substring(1);
+    const k = key.charAt(0).toLowerCase() + key.slice(1);
+    const el = document.getElementById(id);
+    if (el && p[k]) el.value = p[k];
+  });
+  
+  // Stats
+  const total = state.submissions.length;
+  const trees = state.submissions.reduce((sum, s) => sum + s.seedlings.reduce((a, sl) => a + sl.count, 0), 0);
+  document.getElementById('statEntries').textContent = total;
+  document.getElementById('statTrees').textContent = trees;
+  document.getElementById('statArea').textContent = (trees * 0.01).toFixed(1);
+}
+
+function generateQR() {
+  const data = encodeURIComponent(JSON.stringify({
+    name: state.profile.name,
+    role: state.profile.role,
+    district: state.profile.district
+  }));
+  const qr = document.getElementById('profileQR');
+  qr.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${data}" alt="QR" class="w-full h-full rounded-lg">`;
+}
+
+function shareProfile() {
+  const text = `🌳 বৃক্ষরোপণ তথ্য সংগ্রহ কার্ড\n\nনাম: ${state.profile.name || '-'}\nভূমিকা: ${state.profile.role || '-'}\nজেলা: ${state.profile.district || '-'}\n\n${window.location.href}`;
+  if (navigator.share) {
+    navigator.share({ title: 'বৃক্ষরোপণ কার্ড', text });
+  } else {
+    navigator.clipboard.writeText(text);
+    showBanner('কার্ড কপি হয়েছে!');
+  }
+}
+
+// ============ DASHBOARD ============
+function renderDashboard() {
+  const subs = state.submissions;
+  const total = subs.length;
+  let totalTrees = 0;
+  const districts = new Set();
+  const species = {};
+  let fruit = 0, forest = 0, medicinal = 0;
+  
+  subs.forEach(s => {
+    if (s.district) districts.add(s.district);
+    s.seedlings.forEach(sl => {
+      totalTrees += sl.count;
+      species[sl.name] = (species[sl.name] || 0) + sl.count;
+      if (sl.category === 'ফলজ') fruit += sl.count;
+      else if (sl.category === 'বনজ') forest += sl.count;
+      else if (sl.category === 'ঔষধি') medicinal += sl.count;
+    });
+  });
+  
+  document.getElementById('dTotalEntries').textContent = total;
+  document.getElementById('dTotalTrees').textContent = totalTrees;
+  document.getElementById('dDistricts').textContent = districts.size;
+  document.getElementById('dSpecies').textContent = Object.keys(species).length;
+  document.getElementById('dFruit').textContent = fruit;
+  document.getElementById('dForest').textContent = forest;
+  document.getElementById('dMedicinal').textContent = medicinal;
+  
+  // Top species
+  const sorted = Object.entries(species).sort((a,b) => b[1]-a[1]).slice(0, 5);
+  const topEl = document.getElementById('topSpecies');
+  if (!sorted.length) {
+    topEl.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">কোনো তথ্য নেই</p>';
+  } else {
+    const max = sorted[0][1];
+    topEl.innerHTML = sorted.map(([name, count]) => `
+      <div>
+        <div class="flex justify-between text-sm mb-1">
+          <span class="font-semibold">${name}</span>
+          <span class="text-gray-600">${count} টি</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2">
+          <div class="bg-green-600 h-2 rounded-full" style="width: ${(count/max*100)}%"></div>
+        </div>
+      </div>
+    `).join('');
+  }
+  
+  // Recent entries
+  const recent = document.getElementById('recentEntries');
+  if (!subs.length) {
+    recent.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">কোনো এন্ট্রি নেই</p>';
+  } else {
+    recent.innerHTML = subs.slice().reverse().slice(0, 10).map((s, i) => `
+      <div class="p-3 bg-gray-50 rounded-lg">
+        <div class="flex justify-between items-start">
+          <div>
+            <div class="font-bold text-sm">#${s.slNo} ${s.village}</div>
+            <div class="text-xs text-gray-600">${s.upazila}, ${s.district} · ${s.date}</div>
+            <div class="text-xs text-gray-500 mt-1">🌱 ${s.seedlings.length}টি প্রজাতি · 👤 ${s.caretakerName}</div>
+          </div>
+          <button onclick="deleteEntry(${subs.length - 1 - i})" class="text-red-500 hover:text-red-700 text-sm">🗑️</button>
+        </div>
+      </div>
+    `).join('');
+  }
+}
+
+function deleteEntry(idx) {
+  if (!confirm('এই এন্ট্রি মুছে ফেলতে চান?')) return;
+  state.submissions.splice(idx, 1);
+  // Renumber
+  state.submissions.forEach((s, i) => s.slNo = i + 1);
+  saveSubmissions();
+  renderDashboard();
+  showBanner('এন্ট্রি মুছে ফেলা হয়েছে');
+}
+
+function clearAllData() {
+  if (!confirm('সব ডাটা মুছে ফেলতে চান? এটি পূর্বাবস্থায় ফেরানো যাবে না।')) return;
+  if (!confirm('নিশ্চিত? সব এন্ট্রি স্থায়ীভাবে মুছে যাবে।')) return;
+  state.submissions = [];
+  saveSubmissions();
+  renderDashboard();
+  showBanner('সব ডাটা মুছে ফেলা হয়েছে');
+}
+
+// ============ EXPORTS ============
+function exportGovExcel() {
+  if (typeof XLSX === 'undefined') { showBanner('Excel লাইব্রেরি লোড হয়নি', 'error'); return; }
+  if (!state.submissions.length) { showBanner('কোনো ডাটা নেই', 'error'); return; }
+  
+  const data = [];
+  // Title
+  data.push(['০৫ বছরে ২৫ কোটি বৃক্ষ রোপণ কর্মসূচির আওতায় রোপণকৃত চারার তথ্য']);
+  data.push([]);
+  // Ministry header
+  const month = new Date().toLocaleDateString('bn-BD', { month:'long', year:'numeric' });
+  data.push(['মন্ত্রণালয়/বিভাগ/অধিদপ্তর/দপ্তরের নাম: কৃষি সম্প্রসারণ অধিদপ্তর', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'মাসের নাম: ' + month]);
+  data.push([]);
+  // Column headers (17 columns)
+  data.push([
+    'ক্র. নং', 'বৃক্ষরোপণের গ্রামের নাম', 'ব্লক', 'ইউনিয়ন', 'উপজেলা', 'জেলা',
+    'রোপণকৃত বৃক্ষের প্রজাতির নাম', 'রোপণকৃত বৃক্ষের চারার প্রজাতিভিত্তিক সংখ্যা',
+    'বৃক্ষরোপণের তারিখ', 'বৃক্ষরোপণের সুনির্দিষ্ট এলাকা জিওগ্রাফিক্যাল কো-অর্ডিনেট (অক্ষাংশ ও দ্রাঘিমাংশ)',
+    'পরিচর্যাকারীর নাম', 'পরিচর্যাকারীর মোবাইল নাম্বর',
+    'সংশ্লিষ্ট এসএএও এর নাম', 'সংশ্লিষ্ট এসএএও মোবাইল নাম্বর',
+    'মনিটরিং অফিসারের নাম', 'মনিটরিং অফিসারের মোবাইল নাম্বর', 'মন্তব্য'
+  ]);
+  data.push([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17]);
+  
+  let row = 1;
+  state.submissions.forEach(s => {
+    s.seedlings.forEach(sl => {
+      data.push([
+        row++, s.village, s.block, s.union, s.upazila, s.district,
+        sl.name, sl.count, s.date, s.geo,
+        s.caretakerName, s.caretakerMobile,
+        s.saaoName, s.saaoMobile,
+        s.officerName, s.officerMobile,
+        `${s.ndvi || ''} ${s.remarks || ''}`.trim()
+      ]);
+    });
+  });
+  
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  ws['!cols'] = [
+    {wch:6},{wch:20},{wch:12},{wch:15},{wch:15},{wch:15},
+    {wch:25},{wch:15},{wch:12},{wch:28},{wch:20},{wch:15},
+    {wch:20},{wch:15},{wch:20},{wch:15},{wch:25}
+  ];
+  ws['!merges'] = [
+    {s:{r:0,c:0}, e:{r:0,c:16}},
+    {s:{r:2,c:0}, e:{r:2,c:15}}
+  ];
+  
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'সরকারি_ছক');
+  XLSX.writeFile(wb, 'plantation_official_' + new Date().toISOString().slice(0,10) + '.xlsx');
+  showBanner('সরকারি ছক ডাউনলোড হয়েছে!');
+}
+
+function exportGeneralExcel() {
+  if (!state.submissions.length) { showBanner('কোনো ডাটা নেই', 'error'); return; }
+  const rows = [];
+  state.submissions.forEach(s => {
+    s.seedlings.forEach(sl => {
+      rows.push({
+        'ক্র.নং': s.slNo, 'গ্রাম': s.village, 'ব্লক': s.block, 'ইউনিয়ন': s.union,
+        'উপজেলা': s.upazila, 'জেলা': s.district, 'প্রজাতি': sl.name, 'ক্যাটাগরি': sl.category,
+        'সংখ্যা': sl.count, 'তারিখ': s.date, 'জিও': s.geo,
+        'পরিচর্যাকারী': s.caretakerName, 'মোবাইল': s.caretakerMobile,
+        'এসএএও': s.saaoName, 'অফিসার': s.officerName, 'NDVI': s.ndvi, 'মন্তব্য': s.remarks
+      });
+    });
+  });
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Data');
+  XLSX.writeFile(wb, 'plantation_general_' + new Date().toISOString().slice(0,10) + '.xlsx');
+  showBanner('সাধারণ Excel ডাউনলোড হয়েছে!');
+}
+
+function exportCSV() {
+  if (!state.submissions.length) { showBanner('কোনো ডাটা নেই', 'error'); return; }
+  const headers = ['slNo','village','block','union','upazila','district','species','category','count','date','geo','caretakerName','caretakerMobile','saaoName','saaoMobile','officerName','officerMobile','ndvi','remarks'];
+  const rows = [headers.join(',')];
+  state.submissions.forEach(s => {
+    s.seedlings.forEach(sl => {
+      rows.push([s.slNo,s.village,s.block,s.union,s.upazila,s.district,sl.name,sl.category,sl.count,s.date,s.geo,s.caretakerName,s.caretakerMobile,s.saaoName,s.saaoMobile,s.officerName,s.officerMobile,s.ndvi,s.remarks].map(v => `"${(v||'').toString().replace(/"/g,'""')}"`).join(','));
+    });
+  });
+  const blob = new Blob(['\uFEFF' + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'plantation_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  showBanner('CSV ডাউনলোড হয়েছে!');
+}
+
+function exportJSON() {
+  if (!state.submissions.length) { showBanner('কোনো ডাটা নেই', 'error'); return; }
+  const blob = new Blob([JSON.stringify(state.submissions, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'kobo_export_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  showBanner('JSON ডাউনলোড হয়েছে!');
+}
+
+function exportPDF() {
+  // Simple printable HTML report
+  const total = state.submissions.length;
+  const trees = state.submissions.reduce((sum, s) => sum + s.seedlings.reduce((a, sl) => a + sl.count, 0), 0);
+  
+  const w = window.open('', '_blank');
+  w.document.write(`
+    <html><head><title>বৃক্ষরোপণ রিপোর্ট</title>
+    <style>body{font-family:'Hind Siliguri',sans-serif;padding:20px;} table{width:100%;border-collapse:collapse;margin-top:20px;} th,td{border:1px solid #ddd;padding:8px;text-align:right;} th{background:#10b981;color:white;} h1{color:#10b981;}</style>
+    </head><body>
+    <h1>🌳 বৃক্ষরোপণ কর্মসূচি - সারাংশ রিপোর্ট</h1>
+    <p>তারিখ: ${new Date().toLocaleDateString('bn-BD')}</p>
+    <p><b>মোট এন্ট্রি:</b> ${total} | <b>মোট চারা:</b> ${trees}</p>
+    <table>
+      <tr><th>ক্র.</th><th>গ্রাম</th><th>উপজেলা</th><th>জেলা</th><th>প্রজাতি</th><th>সংখ্যা</th><th>তারিখ</th></tr>
+      ${state.submissions.map(s => s.seedlings.map(sl => `<tr><td>${s.slNo}</td><td>${s.village}</td><td>${s.upazila}</td><td>${s.district}</td><td>${sl.name}</td><td>${sl.count}</td><td>${s.date}</td></tr>`).join('')).join('')}
+    </table>
+    </body></html>
+  `);
+  w.document.close();
+  setTimeout(() => w.print(), 500);
+}
+
+// ============ SHARING ============
+async function shareApp() {
+  const data = {
+    title: 'বৃক্ষরোপণ তথ্য সংগ্রহ',
+    text: '০৫ বছরে ২৫ কোটি বৃক্ষ রোপণ কর্মসূচি - অ্যাপ',
+    url: window.location.href
+  };
+  try {
+    if (navigator.share) await navigator.share(data);
+    else {
+      await navigator.clipboard.writeText(window.location.href);
+      showBanner('লিংক কপি হয়েছে!');
+    }
+  } catch (e) {}
+}
+
+// ============ INIT ============
+document.getElementById('fDate').value = new Date().toISOString().slice(0,10);
+renderSeedlingList();
+renderDashboard();
+</script>
+
+</body>
 </html>
