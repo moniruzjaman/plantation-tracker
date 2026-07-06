@@ -2,7 +2,7 @@
 // Handles CORS and proxies requests to Google Earth Engine API
 // Falls back to simulated data if GEE credentials are not configured
 
-export const config = { runtime: 'nodejs22.x' };
+export const config = { runtime: 'nodejs' };
 
 export default async function handler(req, res) {
   // Handle CORS preflight
