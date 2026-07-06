@@ -1676,10 +1676,10 @@ async function runGEEAnalysis() {
     const ndvi = (0.35 + Math.random() * 0.35).toFixed(3);
     const healthy = Math.round(Math.random()*30+55);
     const stress = Math.round(Math.random()*20+10);
-    const bare = 100 - healthy - stress;
+    let bare = 100 - healthy - stress;
+    if (bare < 0) bare = 0;
     const area = state.submissions.length ? (state.submissions.length * 0.5 + Math.random()*3).toFixed(2) : (Math.random()*5+0.5).toFixed(2);
     document.getElementById('sim-ndvi').textContent = ndvi;
-    if (bare < 0) bare = 0;
     geeLog('Analysis complete (simulated). NDVI: '+ndvi+' | Healthy: '+healthy+'% | Stress: '+stress+'% | Area: '+area+' ha', 'success');
   }
 
@@ -1854,7 +1854,7 @@ async function sendCopilotMessage(){
   var contents=[{role:'user',parts:[{text:sysCtx}]},{role:'model',parts:[{text:'ঠিক আছে, আমি বৃক্ষরোপণ সম্পর্কে সাহায্য করবো।'}]}].concat(copilotHistory);
   var models=['gemini-2.5-flash-preview-05-20','gemini-2.0-flash'];
   var apiKey=null;
-try{apiKey=import.meta.env.VITE_GEMINI_API_KEY;}catch(e){}
+try{apiKey=__GEMINI_API_KEY__;}catch(e){}
 if(!apiKey)try{apiKey=window.__GEMINI_API_KEY__;}catch(e){}
   if(!apiKey||apiKey==='MY_GEMINI_API_KEY'){hideCopilotTyping();addCopilotMsg('ai','⚠️ Gemini API Key সেটআপ করা হয়নি। Vercel-এ <code>GEMINI_API_KEY</code> Environment Variable যোগ করুন।');return;}
   var ok=false;
