@@ -1462,7 +1462,7 @@ const BD_DISTRICTS = {
   'চাঁপাইনবাবগঞ্জ':{lat:24.6841,lng:88.2776,z:11},'যশোর':{lat:23.1666,lng:89.2202,z:11},
   'সাতক্ষীরা':{lat:22.6988,lng:89.0679,z:11},'খুলনা':{lat:22.8456,lng:89.5403,z:11},
   'বাগেরহাট':{lat:22.6517,lng:89.7833,z:11},'ঝিনাইদহ':{lat:23.5434,lng:89.1858,z:11},
-  'কুষ্টিয়া':{lat:23.7035,lng:89.1243,z:11),'মেহেরপুর':{lat:23.7570,lng:88.6327,z:11},
+  'কুষ্টিয়া':{lat:23.7035,lng:89.1243,z:11},'মেহেরপুর':{lat:23.7570,lng:88.6327,z:11},
   'চুয়াডাঙ্গা':{lat:23.6806,lng:88.8424,z:11},'ফেনী':{lat:23.0232,lng:91.4136,z:11},
   'কক্সবাজার':{lat:21.4272,lng:92.0058,z:10},'রাঙ্গামাটি':{lat:22.6478,lng:92.1759,z:11},
   'খাগড়াছড়ি':{lat:23.1175,lng:92.0505,z:11},'বান্দরবান':{lat:22.1953,lng:92.2205,z:11},
@@ -1878,8 +1878,7 @@ async function sendCopilotMessage(){
   var contents=[{role:'user',parts:[{text:sysCtx}]},{role:'model',parts:[{text:'ঠিক আছে, আমি বৃক্ষরোপণ সম্পর্কে সাহায্য করবো।'}]}].concat(copilotHistory);
   var models=['gemini-2.5-flash-preview-05-20','gemini-2.0-flash'];
   var apiKey=null;
-try{apiKey=__GEMINI_API_KEY__;}catch(e){}
-if(!apiKey)try{apiKey=window.__GEMINI_API_KEY__;}catch(e){}
+if(typeof window.__GEMINI_API_KEY__!=='undefined')apiKey=window.__GEMINI_API_KEY__;
   if(!apiKey||apiKey==='MY_GEMINI_API_KEY'){hideCopilotTyping();addCopilotMsg('ai','⚠️ Gemini API Key সেটআপ করা হয়নি। Vercel-এ <code>GEMINI_API_KEY</code> Environment Variable যোগ করুন।');return;}
   var ok=false;
   for(var i=0;i<models.length;i++){
