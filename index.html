@@ -34,8 +34,11 @@
   <style>
     * { font-family: 'Hind Siliguri', sans-serif; }
     body { background: #f3f4f6; }
-    .tab-active { background: linear-gradient(135deg, #10b981, #059669); color: white; box-shadow: 0 4px 6px rgba(16,185,129,0.3); }
-    .tab-inactive { background: white; color: #374151; }
+    .tab-active { background: linear-gradient(135deg, #10b981, #059669); color: white; box-shadow: 0 4px 6px rgba(16,185,129,0.3); cursor: pointer; }
+    .tab-inactive { background: white; color: #374151; cursor: pointer; }
+    #topNav { position: relative; z-index: 50; }
+    #banner { pointer-events: none; }
+    #banner > * { pointer-events: auto; }
     .banner { position: fixed; top: 1rem; right: 1rem; z-index: 9999; padding: 1rem 1.5rem; border-radius: 0.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: none; animation: slideIn 0.3s ease; }
     @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     .banner.success { background: #10b981; color: white; }
@@ -74,12 +77,33 @@
     </div>
     
     <!-- Tab Navigation -->
-    <nav class="flex gap-1 mt-3 overflow-x-auto scrollbar-hide">
-      <button onclick="switchTab('form')" id="tab-form" class="tab-active px-4 py-2 rounded-t-lg text-sm font-semibold whitespace-nowrap transition">📝 ফর্ম</button>
-      <button onclick="switchTab('map')" id="tab-map" class="tab-inactive px-4 py-2 rounded-t-lg text-sm font-semibold whitespace-nowrap transition">🗺️ ম্যাপ</button>
-      <button onclick="switchTab('profile')" id="tab-profile" class="tab-inactive px-4 py-2 rounded-t-lg text-sm font-semibold whitespace-nowrap transition">👤 প্রোফাইল</button>
-      <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-inactive px-4 py-2 rounded-t-lg text-sm font-semibold whitespace-nowrap transition">📊 ড্যাশবোর্ড</button>
+    <nav id="topNav" class="flex gap-1 mt-3 overflow-x-auto scrollbar-hide">
+      <button data-tab="form" id="tab-form" class="tab-active px-4 py-2 rounded-t-lg text-sm font-semibold whitespace-nowrap transition">📝 ফর্ম</button>
+      <button data-tab="map" id="tab-map" class="tab-inactive px-4 py-2 rounded-t-lg text-sm font-semibold whitespace-nowrap transition">🗺️ ম্যাপ</button>
+      <button data-tab="profile" id="tab-profile" class="tab-inactive px-4 py-2 rounded-t-lg text-sm font-semibold whitespace-nowrap transition">👤 প্রোফাইল</button>
+      <button data-tab="dashboard" id="tab-dashboard" class="tab-inactive px-4 py-2 rounded-t-lg text-sm font-semibold whitespace-nowrap transition">📊 ড্যাশবোর্ড</button>
     </nav>
+    <script>
+    // Standalone tab navigation — works even if main script fails
+    (function(){
+      var tabs = ['form','map','profile','dashboard'];
+      document.getElementById('topNav').addEventListener('click', function(e){
+        var btn = e.target.closest('[data-tab]');
+        if(!btn) return;
+        var tab = btn.getAttribute('data-tab');
+        tabs.forEach(function(t){
+          var page = document.getElementById('page-'+t);
+          var tabBtn = document.getElementById('tab-'+t);
+          if(page) page.classList.toggle('hidden', t !== tab);
+          if(tabBtn) tabBtn.className = (t===tab?'tab-active':'tab-inactive') + ' px-4 py-2 rounded-t-lg text-sm font-semibold whitespace-nowrap transition';
+        });
+        // Trigger map init on first map tab click
+        if(tab === 'map' && typeof initMainMap === 'function') setTimeout(initMainMap, 100);
+        if(tab === 'dashboard' && typeof renderDashboard === 'function') renderDashboard();
+        if(tab === 'profile' && typeof renderProfile === 'function') renderProfile();
+      });
+    })();
+    </script>
   </div>
 </header>
 
