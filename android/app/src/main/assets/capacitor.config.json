@@ -1,5 +1,5 @@
 {
 	"appId": "com.nursery.app",
 	"appName": "plantation-tracker",
-	"webDir": "dist"
+	"webDir": "build"
 }
