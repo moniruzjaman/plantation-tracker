@@ -18,16 +18,11 @@
   <meta property="og:image:height" content="630" />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://plantation-tracker.vercel.app/" />
-  <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="630" />
-  <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://plantation-tracker.vercel.app/" />
-  
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="০৫ বছরে ২৫ কোটি বৃক্ষ রোপণ কর্মসূচি - অ্যাপ" />
   <meta name="twitter:description" content="স্বয়ংক্রিয় জিও-কোঅর্ডিনেট সংগ্রহ | স্বয়ংক্রিয় ফর্ম পূরণ | লোকাল স্টোরেজ (অফলাইন) | অটো সিঙ্ক | সার্ভার/Kobo/ODK সিঙ্ক (আসন্ন)" />
-  <meta name="twitter:image" content="/og-image-large.png" />
+  <meta name="twitter:image" content="https://plantation-tracker.vercel.app/og-share-v2.png" />
   
   <!-- Libraries -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -1322,125 +1317,9 @@ function exportPDF() {
     <table>
       <tr><th>ক্র.</th><th>গ্রাম</th><th>উপজেলা</th><th>জেলা</th><th>প্রজাতি</th><th>সংখ্যা</th><th>তারিখ</th></tr>
       ${state.submissions.map(s => s.seedlings.map(sl => `<tr><td>${s.slNo}</td><td>${s.village}</td><td>${s.upazila}</td><td>${s.district}</td><td>${sl.name}</td><td>${sl.count}</td><td>${s.date}</td></tr>`).join('')).join('')}
-    </table>
-    
 
-<!-- ============ AI COPILOT (Gemini 3.5 → 2.0 Fallback) ============ -->
-<div id="copilotWrapper" style="position:fixed;bottom:24px;right:24px;z-index:9999;font-family:'Noto Sans Bengali','Hind Siliguri',sans-serif;">
-  <button id="copilotBtn" onclick="toggleCopilot()" style="width:60px;height:60px;border-radius:50%;border:none;cursor:pointer;background:linear-gradient(135deg,#15803d,#059669);color:white;font-size:28px;box-shadow:0 6px 24px rgba(21,128,61,0.45);display:flex;align-items:center;justify-content:center;transition:transform 0.2s,box-shadow 0.2s;outline:none;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-  </button>
-  <div id="copilotPanel" style="display:none;position:absolute;bottom:74px;right:0;width:380px;height:560px;max-height:75vh;border-radius:20px;overflow:hidden;box-shadow:0 12px 48px rgba(0,0,0,0.25);flex-direction:column;background:#f9fafb;animation:copilotSlideUp 0.3s ease-out;">
-    <div style="background:linear-gradient(135deg,#1a2332,#1e293b);padding:14px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;">
-      <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#15803d,#059669);display:flex;align-items:center;justify-content:center;">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-      </div>
-      <div style="flex:1;">
-        <div style="color:white;font-size:14px;font-weight:600;">কৃত্রিম মেধা সহ-সহযোগ</div>
-        <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">
-          <span id="copilotModelBadge" style="background:#15803d;color:white;font-size:10px;font-weight:700;padding:1px 8px;border-radius:10px;">GEMINI 3.5</span>
-          <span style="color:#94a3b8;font-size:11px;">AI Assistant</span>
-        </div>
-      </div>
-      <button onclick="clearCopilotChat()" style="background:none;border:none;cursor:pointer;color:#94a3b8;padding:4px;" title="মুছুন">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-      </button>
-      <button onclick="toggleCopilot()" style="background:none;border:none;cursor:pointer;color:#94a3b8;padding:4px;" title="বন্ধ করুন">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <div id="copilotMessages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;background:#f9fafb;">
-      <div style="display:flex;gap:8px;align-items:flex-start;">
-        <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#15803d,#059669);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-        </div>
-        <div style="background:white;border-radius:4px 16px 16px 16px;padding:12px 14px;max-width:85%;box-shadow:0 1px 4px rgba(0,0,0,0.06);font-size:13.5px;line-height:1.65;color:#1f2937;">
-          আসসালামু আলাইকুম! 🌿 আমি আপনার বৃক্ষরোপণ ট্র্যাকারের AI সহকারী। ছবি, PDF বা টেক্সট প্রশ্ন পাঠান — আমি সাহায্য করবো।
-        </div>
-      </div>
-    </div>
-    <div id="copilotSuggestions" style="padding:0 16px 10px;display:flex;flex-wrap:wrap;gap:6px;flex-shrink:0;">
-      <button onclick="sendCopilotSuggestion(this)" style="background:white;border:1px solid #d1d5db;border-radius:20px;padding:6px 14px;font-size:12px;color:#374151;cursor:pointer;font-family:inherit;">বৃক্ষরোপণের নিয়মাবলি</button>
-      <button onclick="sendCopilotSuggestion(this)" style="background:white;border:1px solid #d1d5db;border-radius:20px;padding:6px 14px;font-size:12px;color:#374151;cursor:pointer;font-family:inherit;">ফর্ম কিভাবে পূরণ করবো?</button>
-      <button onclick="sendCopilotSuggestion(this)" style="background:white;border:1px solid #d1d5db;border-radius:20px;padding:6px 14px;font-size:12px;color:#374151;cursor:pointer;font-family:inherit;">অফলাইনে ডেটা সেভ</button>
-    </div>
-    <div id="copilotFilePreview" style="display:none;padding:0 16px 8px;flex-shrink:0;">
-      <div style="background:white;border:1px solid #e5e7eb;border-radius:12px;padding:8px;display:flex;align-items:center;gap:10px;">
-        <div id="copilotThumb" style="width:44px;height:44px;border-radius:8px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:20px;overflow:hidden;"></div>
-        <div style="flex:1;min-width:0;">
-          <div id="copilotFileName" style="font-size:12px;font-weight:600;color:#1f2937;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
-          <div id="copilotFileSize" style="font-size:11px;color:#9ca3af;"></div>
-        </div>
-        <button onclick="removeCopilotFile()" style="background:none;border:none;cursor:pointer;color:#ef4444;padding:2px;flex-shrink:0;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </div>
-    </div>
-    <div style="padding:10px 16px 14px;background:white;border-top:1px solid #e5e7eb;display:flex;align-items:center;gap:8px;flex-shrink:0;">
-      <button onclick="document.getElementById('copilotFileInput').click()" style="background:none;border:none;cursor:pointer;color:#6b7280;padding:4px;flex-shrink:0;" title="ছবি বা PDF যোগ করুন">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-      </button>
-      <input type="file" id="copilotFileInput" accept="image/*,.pdf" style="display:none;" onchange="handleCopilotFile(event)" />
-      <input id="copilotInput" type="text" placeholder="প্রশ্নটি লিখুন..." style="flex:1;border:1px solid #e5e7eb;border-radius:12px;padding:10px 14px;font-size:13.5px;outline:none;font-family:inherit;background:#f9fafb;color:#1f2937;" onfocus="this.style.borderColor='#86efac'" onblur="this.style.borderColor='#e5e7eb'" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendCopilotMessage()}" />
-      <button onclick="sendCopilotMessage()" style="width:40px;height:40px;border-radius:50%;border:none;cursor:pointer;background:linear-gradient(135deg,#15803d,#059669);color:white;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(21,128,61,0.35);">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-      </button>
-    </div>
-  </div>
-</div>
-<style>
-  @keyframes copilotSlideUp{from{opacity:0;transform:translateY(20px) scale(0.95)}to{opacity:1;transform:translateY(0) scale(1)}}
-  #copilotMessages::-webkit-scrollbar{width:4px}
-  #copilotMessages::-webkit-scrollbar-track{background:transparent}
-  #copilotMessages::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:4px}
-  @media(max-width:440px){#copilotPanel{width:calc(100vw - 32px)!important;right:-12px!important;height:70vh!important;max-height:70vh!important;bottom:68px!important}}
-</style>
-<script>
-var copilotOpen=false,copilotHistory=[],copilotAttachedFile=null;
-function toggleCopilot(){copilotOpen=!copilotOpen;var p=document.getElementById('copilotPanel'),b=document.getElementById('copilotBtn');if(copilotOpen){p.style.display='flex';b.style.display='none';document.getElementById('copilotInput').focus();}else{p.style.display='none';b.style.display='flex';}}
-function sendCopilotSuggestion(el){document.getElementById('copilotInput').value=el.textContent;sendCopilotMessage();}
-function handleCopilotFile(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(ev){var b64=ev.target.result.split(',')[1];copilotAttachedFile={type:f.type,data:b64,name:f.name,size:f.size};document.getElementById('copilotFilePreview').style.display='block';document.getElementById('copilotFileName').textContent=f.name;document.getElementById('copilotFileSize').textContent=(f.size/1024).toFixed(1)+' KB';var t=document.getElementById('copilotThumb');if(f.type.startsWith('image/')){t.innerHTML='<img src="'+ev.target.result+'" style="width:44px;height:44px;border-radius:8px;object-fit:cover;">';}else{t.innerHTML='📄';}};r.readAsDataURL(f);e.target.value='';}
-function removeCopilotFile(){copilotAttachedFile=null;document.getElementById('copilotFilePreview').style.display='none';}
-function addCopilotMsg(role,html){var c=document.getElementById('copilotMessages'),d=document.createElement('div');if(role==='user'){d.style.cssText='display:flex;justify-content:flex-end;';d.innerHTML='<div style="background:linear-gradient(135deg,#15803d,#059669);color:white;border-radius:16px 4px 16px 16px;padding:10px 14px;max-width:85%;font-size:13.5px;line-height:1.65;box-shadow:0 1px 4px rgba(0,0,0,0.1);">'+html+'</div>';}else{d.style.cssText='display:flex;gap:8px;align-items:flex-start;';d.innerHTML='<div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#15803d,#059669);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="white"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div><div style="background:white;border-radius:4px 16px 16px 16px;padding:12px 14px;max-width:85%;box-shadow:0 1px 4px rgba(0,0,0,0.06);font-size:13.5px;line-height:1.65;color:#1f2937;">'+html+'</div>';}c.appendChild(d);c.scrollTop=c.scrollHeight;}
-function showCopilotTyping(){var c=document.getElementById('copilotMessages'),d=document.createElement('div');d.id='copilotTyping';d.style.cssText='display:flex;gap:8px;align-items:flex-start;';d.innerHTML='<div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#15803d,#059669);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="white"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div><div style="background:white;border-radius:4px 16px 16px 16px;padding:14px 18px;box-shadow:0 1px 4px rgba(0,0,0,0.06);"><div style="display:flex;gap:4px;align-items:center;"><span style="width:7px;height:7px;background:#15803d;border-radius:50%;animation:cpB 1.2s infinite 0s"></span><span style="width:7px;height:7px;background:#15803d;border-radius:50%;animation:cpB 1.2s infinite .2s"></span><span style="width:7px;height:7px;background:#15803d;border-radius:50%;animation:cpB 1.2s infinite .4s"></span></div></div>';c.appendChild(d);c.scrollTop=c.scrollHeight;}
-function hideCopilotTyping(){var e=document.getElementById('copilotTyping');if(e)e.remove();}
-function escapeHtml(t){var d=document.createElement('div');d.textContent=t;return d.innerHTML;}
-async function sendCopilotMessage(){
-  var input=document.getElementById('copilotInput'),text=input.value.trim();
-  if(!text&&!copilotAttachedFile)return;
-  var userHtml=escapeHtml(text);
-  if(copilotAttachedFile&&copilotAttachedFile.type.startsWith('image/')){userHtml='<img src="data:'+copilotAttachedFile.type+';base64,'+copilotAttachedFile.data+'" style="max-width:100%;border-radius:8px;margin-bottom:6px;">'+userHtml;}else if(copilotAttachedFile){userHtml='📄 <b>'+escapeHtml(copilotAttachedFile.name)+'</b><br>'+userHtml;}
-  addCopilotMsg('user',userHtml);
-  var parts=[];if(text)parts.push({text:text});
-  if(copilotAttachedFile){if(copilotAttachedFile.type==='application/pdf'){parts.push({inlineData:{mimeType:'application/pdf',data:copilotAttachedFile.data}});}else if(copilotAttachedFile.type.startsWith('image/')){parts.push({inlineData:{mimeType:copilotAttachedFile.type,data:copilotAttachedFile.data}});}}
-  copilotHistory.push({role:'user',parts:parts});input.value='';removeCopilotFile();
-  var sug=document.getElementById('copilotSuggestions');if(sug)sug.style.display='none';
-  showCopilotTyping();
-  var sysCtx='তুমি "০৫ বছরে ২৫ কোটি বৃক্ষরোপণ" কর্মসূচির বৃক্ষরোপণ ট্র্যাকার অ্যাপের AI সহকারী। বাংলায় সংক্ষেপে উত্তর দাও।';
-  var contents=[{role:'user',parts:[{text:sysCtx}]},{role:'model',parts:[{text:'ঠিক আছে, আমি বৃক্ষরোপণ সম্পর্কে সাহায্য করবো।'}]}].concat(copilotHistory);
-  var models=['gemini-2.5-flash-preview-05-20','gemini-2.0-flash'];
-  var apiKey=process.env.GEMINI_API_KEY;
-  if(!apiKey||apiKey==='MY_GEMINI_API_KEY'){hideCopilotTyping();addCopilotMsg('ai','⚠️ Gemini API Key সেটআপ করা হয়নি। Vercel-এ <code>GEMINI_API_KEY</code> Environment Variable যোগ করুন।');return;}
-  var ok=false;
-  for(var i=0;i<models.length;i++){
-    var model=models[i];
-    try{
-      var badge=document.getElementById('copilotModelBadge');if(badge)badge.textContent=model.includes('2.5')?'GEMINI 3.5':'GEMINI 2.0';
-      var res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+apiKey,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:contents,generationConfig:{maxOutputTokens:1024,temperature:0.7}})});
-      if(res.status===429){if(i===0){hideCopilotTyping();addCopilotMsg('ai','⏳ Gemini 3.5 কোটা অতিক্রম হয়েছে, 2.0 তে চেষ্টা করা হচ্ছে...');showCopilotTyping();}continue;}
-      hideCopilotTyping();
-      if(!res.ok){var ed=await res.json().catch(function(){return{};});addCopilotMsg('ai','❌ ত্রুটি: '+(ed.error?ed.error.message:res.status));return;}
-      var data=await res.json();var reply=data&&data.candidates&&data.candidates[0]&&data.candidates[0].content&&data.candidates[0].content.parts&&data.candidates[0].content.parts[0]?data.candidates[0].content.parts[0].text:'দুঃখিত, উত্তর পাওয়া যায়নি।';
-      copilotHistory.push({role:'model',parts:[{text:reply}]});addCopilotMsg('ai',escapeHtml(reply).replace(/\\n/g,'<br>'));ok=true;break;
-    }catch(err){hideCopilotTyping();if(i<models.length-1){showCopilotTyping();continue;}addCopilotMsg('ai','❌ সংযোগ ত্রুটি: '+err.message);return;}
-  }
-  if(!ok){hideCopilotTyping();addCopilotMsg('ai','❌ সকল Gemini মডেলে কোটা অতিক্রম হয়েছে। কিছুক্ষণ পর আবার চেষ্টা করুন।');}
-}
-function clearCopilotChat(){copilotHistory=[];var c=document.getElementById('copilotMessages');c.innerHTML='';var d=document.createElement('div');d.style.cssText='display:flex;gap:8px;align-items:flex-start;';d.innerHTML='<div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#15803d,#059669);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="white"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div><div style="background:white;border-radius:4px 16px 16px 16px;padding:12px 14px;max-width:85%;box-shadow:0 1px 4px rgba(0,0,0,0.06);font-size:13.5px;line-height:1.65;color:#1f2937;">আসসালামু আলাইকুম! 🌿 আমি আপনার বৃক্ষরোপণ ট্র্যাকারের AI সহকারী। ছবি, PDF বা টেক্সট প্রশ্ন পাঠান — আমি সাহায্য করবো।</div>';c.appendChild(d);var s=document.getElementById('copilotSuggestions');if(s)s.style.display='flex';removeCopilotFile();}
-</script>
-<style>@keyframes cpB{0%,80%,100%{transform:scale(.6);opacity:.4}40%{transform:scale(1);opacity:1}}</style>
-
-</body></html>
+    </body>
+    </html>
   `);
   w.document.close();
   setTimeout(() => w.print(), 500);
@@ -1564,7 +1443,9 @@ async function sendCopilotMessage(){
   var sysCtx='তুমি "০৫ বছরে ২৫ কোটি বৃক্ষরোপণ" কর্মসূচির বৃক্ষরোপণ ট্র্যাকার অ্যাপের AI সহকারী। বাংলায় সংক্ষেপে উত্তর দাও।';
   var contents=[{role:'user',parts:[{text:sysCtx}]},{role:'model',parts:[{text:'ঠিক আছে, আমি বৃক্ষরোপণ সম্পর্কে সাহায্য করবো।'}]}].concat(copilotHistory);
   var models=['gemini-2.5-flash-preview-05-20','gemini-2.0-flash'];
-  var apiKey=process.env.GEMINI_API_KEY;
+  var apiKey=null;
+try{apiKey=import.meta.env.VITE_GEMINI_API_KEY;}catch(e){}
+if(!apiKey)try{apiKey=window.__GEMINI_API_KEY__;}catch(e){}
   if(!apiKey||apiKey==='MY_GEMINI_API_KEY'){hideCopilotTyping();addCopilotMsg('ai','⚠️ Gemini API Key সেটআপ করা হয়নি। Vercel-এ <code>GEMINI_API_KEY</code> Environment Variable যোগ করুন।');return;}
   var ok=false;
   for(var i=0;i<models.length;i++){
