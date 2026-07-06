@@ -1319,7 +1319,245 @@ function exportPDF() {
       <tr><th>ক্র.</th><th>গ্রাম</th><th>উপজেলা</th><th>জেলা</th><th>প্রজাতি</th><th>সংখ্যা</th><th>তারিখ</th></tr>
       ${state.submissions.map(s => s.seedlings.map(sl => `<tr><td>${s.slNo}</td><td>${s.village}</td><td>${s.upazila}</td><td>${s.district}</td><td>${sl.name}</td><td>${sl.count}</td><td>${s.date}</td></tr>`).join('')).join('')}
     </table>
-    </body></html>
+    <!-- ============ AI COPILOT (Gemini 3.5) ============ -->
+<div id="copilotWrapper" style="position:fixed;bottom:24px;right:24px;z-index:9999;font-family:'Noto Sans Bengali','Hind Siliguri',sans-serif;">
+
+  <!-- Floating Button -->
+  <button id="copilotBtn" onclick="toggleCopilot()" style="width:60px;height:60px;border-radius:50%;border:none;cursor:pointer;background:linear-gradient(135deg,#15803d,#059669);color:white;font-size:28px;box-shadow:0 6px 24px rgba(21,128,61,0.45);display:flex;align-items:center;justify-content:center;transition:transform 0.2s,box-shadow 0.2s;outline:none;" onmouseover="this.style.transform='scale(1.1)';this.style.boxShadow='0 8px 30px rgba(21,128,61,0.55)'" onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 6px 24px rgba(21,128,61,0.45)'">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+  </button>
+
+  <!-- Chat Panel -->
+  <div id="copilotPanel" style="display:none;position:absolute;bottom:74px;right:0;width:380px;height:560px;max-height:75vh;border-radius:20px;overflow:hidden;box-shadow:0 12px 48px rgba(0,0,0,0.25);flex-direction:column;background:#f9fafb;animation:copilotSlideUp 0.3s ease-out;">
+
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#1a2332,#1e293b);padding:14px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;">
+      <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#15803d,#059669);display:flex;align-items:center;justify-content:center;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      </div>
+      <div style="flex:1;">
+        <div style="color:white;font-size:14px;font-weight:600;">কৃত্রিম মেধা সহ-সহযোগ</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">
+          <span style="background:#15803d;color:white;font-size:10px;font-weight:700;padding:1px 8px;border-radius:10px;">GEMINI 2.5</span>
+          <span style="color:#94a3b8;font-size:11px;">AI Assistant</span>
+        </div>
+      </div>
+      <button onclick="clearCopilotChat()" style="background:none;border:none;cursor:pointer;color:#94a3b8;padding:4px;" title="চ্যাট মুছুন">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+      </button>
+      <button onclick="toggleCopilot()" style="background:none;border:none;cursor:pointer;color:#94a3b8;padding:4px;" title="বন্ধ করুন">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <!-- Messages Area -->
+    <div id="copilotMessages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;background:#f9fafb;">
+      <!-- Welcome message -->
+      <div style="display:flex;gap:8px;align-items:flex-start;">
+        <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#15803d,#059669);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </div>
+        <div style="background:white;border-radius:4px 16px 16px 16px;padding:12px 14px;max-width:85%;box-shadow:0 1px 4px rgba(0,0,0,0.06);font-size:13.5px;line-height:1.65;color:#1f2937;">
+          আসসালামু আলাইকুম! 🌿 আমি আপনার বৃক্ষরোপণ ট্র্যাকারের AI সহকারী। বৃক্ষরোপণ, গাছের যত্ন, ডেটা এন্ট্রি বা অ্যাপ ব্যবহার সম্পর্কে যেকোনো প্রশ্ন করুন।
+        </div>
+      </div>
+    </div>
+
+    <!-- Suggestions -->
+    <div id="copilotSuggestions" style="padding:0 16px 10px;display:flex;flex-wrap:wrap;gap:6px;flex-shrink:0;">
+      <button onclick="sendCopilotSuggestion(this)" style="background:white;border:1px solid #d1d5db;border-radius:20px;padding:6px 14px;font-size:12px;color:#374151;cursor:pointer;font-family:inherit;transition:all 0.15s;" onmouseover="this.style.background='#f0fdf4';this.style.borderColor='#86efac'" onmouseout="this.style.background='white';this.style.borderColor='#d1d5db'">বৃক্ষরোপণের নিয়মাবলি</button>
+      <button onclick="sendCopilotSuggestion(this)" style="background:white;border:1px solid #d1d5db;border-radius:20px;padding:6px 14px;font-size:12px;color:#374151;cursor:pointer;font-family:inherit;transition:all 0.15s;" onmouseover="this.style.background='#f0fdf4';this.style.borderColor='#86efac'" onmouseout="this.style.background='white';this.style.borderColor='#d1d5db'">ফর্ম কিভাবে পূরণ করবো?</button>
+      <button onclick="sendCopilotSuggestion(this)" style="background:white;border:1px solid #d1d5db;border-radius:20px;padding:6px 14px;font-size:12px;color:#374151;cursor:pointer;font-family:inherit;transition:all 0.15s;" onmouseover="this.style.background='#f0fdf4';this.style.borderColor='#86efac'" onmouseout="this.style.background='white';this.style.borderColor='#d1d5db'">অফলাইনে ডেটা সেভ করুন</button>
+    </div>
+
+    <!-- Input Area -->
+    <div style="padding:10px 16px 14px;background:white;border-top:1px solid #e5e7eb;display:flex;align-items:center;gap:10px;flex-shrink:0;">
+      <button onclick="clearCopilotChat()" style="background:none;border:none;cursor:pointer;color:#9ca3af;padding:4px;flex-shrink:0;" title="চ্যাট মুছুন">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+      </button>
+      <input id="copilotInput" type="text" placeholder="প্রশ্নটি লিখুন অথবা ছবি আপলোড করুন" style="flex:1;border:1px solid #e5e7eb;border-radius:12px;padding:10px 14px;font-size:13.5px;outline:none;font-family:inherit;background:#f9fafb;color:#1f2937;transition:border-color 0.15s;" onfocus="this.style.borderColor='#86efac';this.style.background='white'" onblur="this.style.borderColor='#e5e7eb';this.style.background='#f9fafb'" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendCopilotMessage()}" />
+      <button onclick="sendCopilotMessage()" style="width:40px;height:40px;border-radius:50%;border:none;cursor:pointer;background:linear-gradient(135deg,#15803d,#059669);color:white;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(21,128,61,0.35);transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+  @keyframes copilotSlideUp {
+    from { opacity: 0; transform: translateY(20px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  #copilotMessages::-webkit-scrollbar { width: 4px; }
+  #copilotMessages::-webkit-scrollbar-track { background: transparent; }
+  #copilotMessages::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+  @media (max-width: 440px) {
+    #copilotPanel { width: calc(100vw - 32px) !important; right: -12px !important; height: 70vh !important; max-height: 70vh !important; bottom: 68px !important; }
+  }
+</style>
+
+<script>
+// ============ AI COPILOT LOGIC ============
+let copilotOpen = false;
+let copilotHistory = [];
+
+function toggleCopilot() {
+  copilotOpen = !copilotOpen;
+  const panel = document.getElementById('copilotPanel');
+  const btn = document.getElementById('copilotBtn');
+  if (copilotOpen) {
+    panel.style.display = 'flex';
+    btn.style.display = 'none';
+    document.getElementById('copilotInput').focus();
+  } else {
+    panel.style.display = 'none';
+    btn.style.display = 'flex';
+  }
+}
+
+function sendCopilotSuggestion(el) {
+  const text = el.textContent;
+  document.getElementById('copilotInput').value = text;
+  sendCopilotMessage();
+}
+
+function addCopilotMsg(role, text) {
+  const container = document.getElementById('copilotMessages');
+  const div = document.createElement('div');
+
+  if (role === 'user') {
+    div.style.cssText = 'display:flex;justify-content:flex-end;';
+    div.innerHTML = `<div style="background:linear-gradient(135deg,#15803d,#059669);color:white;border-radius:16px 4px 16px 16px;padding:10px 14px;max-width:85%;font-size:13.5px;line-height:1.65;box-shadow:0 1px 4px rgba(0,0,0,0.1);">${escapeHtml(text)}</div>`;
+  } else {
+    div.style.cssText = 'display:flex;gap:8px;align-items:flex-start;';
+    div.innerHTML = `
+      <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#15803d,#059669);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      </div>
+      <div style="background:white;border-radius:4px 16px 16px 16px;padding:12px 14px;max-width:85%;box-shadow:0 1px 4px rgba(0,0,0,0.06);font-size:13.5px;line-height:1.65;color:#1f2937;">${text}</div>`;
+  }
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function escapeHtml(t) {
+  const d = document.createElement('div');
+  d.textContent = t;
+  return d.innerHTML;
+}
+
+function showCopilotTyping() {
+  const container = document.getElementById('copilotMessages');
+  const div = document.createElement('div');
+  div.id = 'copilotTyping';
+  div.style.cssText = 'display:flex;gap:8px;align-items:flex-start;';
+  div.innerHTML = `
+    <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#15803d,#059669);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    </div>
+    <div style="background:white;border-radius:4px 16px 16px 16px;padding:14px 18px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+      <div style="display:flex;gap:4px;align-items:center;">
+        <span style="width:7px;height:7px;background:#15803d;border-radius:50%;animation:cpBounce 1.2s infinite 0s;"></span>
+        <span style="width:7px;height:7px;background:#15803d;border-radius:50%;animation:cpBounce 1.2s infinite 0.2s;"></span>
+        <span style="width:7px;height:7px;background:#15803d;border-radius:50%;animation:cpBounce 1.2s infinite 0.4s;"></span>
+      </div>
+    </div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function hideCopilotTyping() {
+  const el = document.getElementById('copilotTyping');
+  if (el) el.remove();
+}
+
+async function sendCopilotMessage() {
+  const input = document.getElementById('copilotInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+
+  addCopilotMsg('user', text);
+  copilotHistory.push({ role: 'user', parts: [{ text }] });
+
+  // Hide suggestions after first message
+  const sug = document.getElementById('copilotSuggestions');
+  if (sug) sug.style.display = 'none';
+
+  showCopilotTyping();
+
+  try {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') {
+      hideCopilotTyping();
+      addCopilotMsg('ai', '⚠️ Gemini API Key সেটআপ করা হয়নি। `.env` ফাইলে `GEMINI_API_KEY` দিন।');
+      return;
+    }
+
+    const systemContext = `তুমি "০৫ বছরে ২৫ কোটি বৃক্ষরোপণ" কর্মসূচির বৃক্ষরোপণ ট্র্যাকার অ্যাপের AI সহকারী। তুমি বাংলায় উত্তর দেবে। বৃক্ষরোপণ, গাছের যত্ন, সার, সেচ, ডেটা এন্ট্রি, অফলাইন ব্যবহার, GPS, ম্যাপ এবং অ্যাপের ফিচার সম্পর্কে সাহায্য করো। সংক্ষেপে ও সহজে উত্তর দাও।`;
+
+    const contents = [
+      { role: 'user', parts: [{ text: systemContext }] },
+      { role: 'model', parts: [{ text: 'ঠিক আছে, আমি আপনাকে বৃক্ষরোপণ সম্পর্কে সাহায্য করবো। কী জানতে চান?' }] },
+      ...copilotHistory
+    ];
+
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents, generationConfig: { maxOutputTokens: 512, temperature: 0.7 } })
+    });
+
+    hideCopilotTyping();
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      addCopilotMsg('ai', `❌ ত্রুটি: ${err?.error?.message || res.status}`);
+      return;
+    }
+
+    const data = await res.json();
+    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'দুঃখিত, উত্তর পাওয়া যায়নি।';
+    copilotHistory.push({ role: 'model', parts: [{ text: reply }] });
+
+    // Format: convert newlines to <br>
+    const formatted = escapeHtml(reply).replace(/\n/g, '<br>');
+    addCopilotMsg('ai', formatted);
+
+  } catch (err) {
+    hideCopilotTyping();
+    addCopilotMsg('ai', `❌ সংযোগ ত্রুটি: ${err.message}`);
+  }
+}
+
+function clearCopilotChat() {
+  copilotHistory = [];
+  const container = document.getElementById('copilotMessages');
+  container.innerHTML = '';
+  // Re-add welcome message
+  const div = document.createElement('div');
+  div.style.cssText = 'display:flex;gap:8px;align-items:flex-start;';
+  div.innerHTML = `
+    <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#15803d,#059669);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    </div>
+    <div style="background:white;border-radius:4px 16px 16px 16px;padding:12px 14px;max-width:85%;box-shadow:0 1px 4px rgba(0,0,0,0.06);font-size:13.5px;line-height:1.65;color:#1f2937;">
+      আসসালামু আলাইকুম! 🌿 আমি আপনার বৃক্ষরোপণ ট্র্যাকারের AI সহকারী। বৃক্ষরোপণ, গাছের যত্ন, ডেটা এন্ট্রি বা অ্যাপ ব্যবহার সম্পর্কে যেকোনো প্রশ্ন করুন।
+    </div>`;
+  container.appendChild(div);
+  // Show suggestions again
+  const sug = document.getElementById('copilotSuggestions');
+  if (sug) sug.style.display = 'flex';
+}
+</script>
+<style>
+@keyframes cpBounce {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+</style>
+
+</body></html>
   `);
   w.document.close();
   setTimeout(() => w.print(), 500);
@@ -1346,6 +1584,244 @@ document.getElementById('fDate').value = new Date().toISOString().slice(0,10);
 renderSeedlingList();
 renderDashboard();
 </script>
+
+<!-- ============ AI COPILOT (Gemini 3.5) ============ -->
+<div id="copilotWrapper" style="position:fixed;bottom:24px;right:24px;z-index:9999;font-family:'Noto Sans Bengali','Hind Siliguri',sans-serif;">
+
+  <!-- Floating Button -->
+  <button id="copilotBtn" onclick="toggleCopilot()" style="width:60px;height:60px;border-radius:50%;border:none;cursor:pointer;background:linear-gradient(135deg,#15803d,#059669);color:white;font-size:28px;box-shadow:0 6px 24px rgba(21,128,61,0.45);display:flex;align-items:center;justify-content:center;transition:transform 0.2s,box-shadow 0.2s;outline:none;" onmouseover="this.style.transform='scale(1.1)';this.style.boxShadow='0 8px 30px rgba(21,128,61,0.55)'" onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 6px 24px rgba(21,128,61,0.45)'">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+  </button>
+
+  <!-- Chat Panel -->
+  <div id="copilotPanel" style="display:none;position:absolute;bottom:74px;right:0;width:380px;height:560px;max-height:75vh;border-radius:20px;overflow:hidden;box-shadow:0 12px 48px rgba(0,0,0,0.25);flex-direction:column;background:#f9fafb;animation:copilotSlideUp 0.3s ease-out;">
+
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#1a2332,#1e293b);padding:14px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;">
+      <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#15803d,#059669);display:flex;align-items:center;justify-content:center;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      </div>
+      <div style="flex:1;">
+        <div style="color:white;font-size:14px;font-weight:600;">কৃত্রিম মেধা সহ-সহযোগ</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">
+          <span style="background:#15803d;color:white;font-size:10px;font-weight:700;padding:1px 8px;border-radius:10px;">GEMINI 2.5</span>
+          <span style="color:#94a3b8;font-size:11px;">AI Assistant</span>
+        </div>
+      </div>
+      <button onclick="clearCopilotChat()" style="background:none;border:none;cursor:pointer;color:#94a3b8;padding:4px;" title="চ্যাট মুছুন">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+      </button>
+      <button onclick="toggleCopilot()" style="background:none;border:none;cursor:pointer;color:#94a3b8;padding:4px;" title="বন্ধ করুন">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <!-- Messages Area -->
+    <div id="copilotMessages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;background:#f9fafb;">
+      <!-- Welcome message -->
+      <div style="display:flex;gap:8px;align-items:flex-start;">
+        <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#15803d,#059669);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </div>
+        <div style="background:white;border-radius:4px 16px 16px 16px;padding:12px 14px;max-width:85%;box-shadow:0 1px 4px rgba(0,0,0,0.06);font-size:13.5px;line-height:1.65;color:#1f2937;">
+          আসসালামু আলাইকুম! 🌿 আমি আপনার বৃক্ষরোপণ ট্র্যাকারের AI সহকারী। বৃক্ষরোপণ, গাছের যত্ন, ডেটা এন্ট্রি বা অ্যাপ ব্যবহার সম্পর্কে যেকোনো প্রশ্ন করুন।
+        </div>
+      </div>
+    </div>
+
+    <!-- Suggestions -->
+    <div id="copilotSuggestions" style="padding:0 16px 10px;display:flex;flex-wrap:wrap;gap:6px;flex-shrink:0;">
+      <button onclick="sendCopilotSuggestion(this)" style="background:white;border:1px solid #d1d5db;border-radius:20px;padding:6px 14px;font-size:12px;color:#374151;cursor:pointer;font-family:inherit;transition:all 0.15s;" onmouseover="this.style.background='#f0fdf4';this.style.borderColor='#86efac'" onmouseout="this.style.background='white';this.style.borderColor='#d1d5db'">বৃক্ষরোপণের নিয়মাবলি</button>
+      <button onclick="sendCopilotSuggestion(this)" style="background:white;border:1px solid #d1d5db;border-radius:20px;padding:6px 14px;font-size:12px;color:#374151;cursor:pointer;font-family:inherit;transition:all 0.15s;" onmouseover="this.style.background='#f0fdf4';this.style.borderColor='#86efac'" onmouseout="this.style.background='white';this.style.borderColor='#d1d5db'">ফর্ম কিভাবে পূরণ করবো?</button>
+      <button onclick="sendCopilotSuggestion(this)" style="background:white;border:1px solid #d1d5db;border-radius:20px;padding:6px 14px;font-size:12px;color:#374151;cursor:pointer;font-family:inherit;transition:all 0.15s;" onmouseover="this.style.background='#f0fdf4';this.style.borderColor='#86efac'" onmouseout="this.style.background='white';this.style.borderColor='#d1d5db'">অফলাইনে ডেটা সেভ করুন</button>
+    </div>
+
+    <!-- Input Area -->
+    <div style="padding:10px 16px 14px;background:white;border-top:1px solid #e5e7eb;display:flex;align-items:center;gap:10px;flex-shrink:0;">
+      <button onclick="clearCopilotChat()" style="background:none;border:none;cursor:pointer;color:#9ca3af;padding:4px;flex-shrink:0;" title="চ্যাট মুছুন">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+      </button>
+      <input id="copilotInput" type="text" placeholder="প্রশ্নটি লিখুন অথবা ছবি আপলোড করুন" style="flex:1;border:1px solid #e5e7eb;border-radius:12px;padding:10px 14px;font-size:13.5px;outline:none;font-family:inherit;background:#f9fafb;color:#1f2937;transition:border-color 0.15s;" onfocus="this.style.borderColor='#86efac';this.style.background='white'" onblur="this.style.borderColor='#e5e7eb';this.style.background='#f9fafb'" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendCopilotMessage()}" />
+      <button onclick="sendCopilotMessage()" style="width:40px;height:40px;border-radius:50%;border:none;cursor:pointer;background:linear-gradient(135deg,#15803d,#059669);color:white;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(21,128,61,0.35);transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+  @keyframes copilotSlideUp {
+    from { opacity: 0; transform: translateY(20px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  #copilotMessages::-webkit-scrollbar { width: 4px; }
+  #copilotMessages::-webkit-scrollbar-track { background: transparent; }
+  #copilotMessages::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+  @media (max-width: 440px) {
+    #copilotPanel { width: calc(100vw - 32px) !important; right: -12px !important; height: 70vh !important; max-height: 70vh !important; bottom: 68px !important; }
+  }
+</style>
+
+<script>
+// ============ AI COPILOT LOGIC ============
+let copilotOpen = false;
+let copilotHistory = [];
+
+function toggleCopilot() {
+  copilotOpen = !copilotOpen;
+  const panel = document.getElementById('copilotPanel');
+  const btn = document.getElementById('copilotBtn');
+  if (copilotOpen) {
+    panel.style.display = 'flex';
+    btn.style.display = 'none';
+    document.getElementById('copilotInput').focus();
+  } else {
+    panel.style.display = 'none';
+    btn.style.display = 'flex';
+  }
+}
+
+function sendCopilotSuggestion(el) {
+  const text = el.textContent;
+  document.getElementById('copilotInput').value = text;
+  sendCopilotMessage();
+}
+
+function addCopilotMsg(role, text) {
+  const container = document.getElementById('copilotMessages');
+  const div = document.createElement('div');
+
+  if (role === 'user') {
+    div.style.cssText = 'display:flex;justify-content:flex-end;';
+    div.innerHTML = `<div style="background:linear-gradient(135deg,#15803d,#059669);color:white;border-radius:16px 4px 16px 16px;padding:10px 14px;max-width:85%;font-size:13.5px;line-height:1.65;box-shadow:0 1px 4px rgba(0,0,0,0.1);">${escapeHtml(text)}</div>`;
+  } else {
+    div.style.cssText = 'display:flex;gap:8px;align-items:flex-start;';
+    div.innerHTML = `
+      <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#15803d,#059669);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      </div>
+      <div style="background:white;border-radius:4px 16px 16px 16px;padding:12px 14px;max-width:85%;box-shadow:0 1px 4px rgba(0,0,0,0.06);font-size:13.5px;line-height:1.65;color:#1f2937;">${text}</div>`;
+  }
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function escapeHtml(t) {
+  const d = document.createElement('div');
+  d.textContent = t;
+  return d.innerHTML;
+}
+
+function showCopilotTyping() {
+  const container = document.getElementById('copilotMessages');
+  const div = document.createElement('div');
+  div.id = 'copilotTyping';
+  div.style.cssText = 'display:flex;gap:8px;align-items:flex-start;';
+  div.innerHTML = `
+    <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#15803d,#059669);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    </div>
+    <div style="background:white;border-radius:4px 16px 16px 16px;padding:14px 18px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+      <div style="display:flex;gap:4px;align-items:center;">
+        <span style="width:7px;height:7px;background:#15803d;border-radius:50%;animation:cpBounce 1.2s infinite 0s;"></span>
+        <span style="width:7px;height:7px;background:#15803d;border-radius:50%;animation:cpBounce 1.2s infinite 0.2s;"></span>
+        <span style="width:7px;height:7px;background:#15803d;border-radius:50%;animation:cpBounce 1.2s infinite 0.4s;"></span>
+      </div>
+    </div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function hideCopilotTyping() {
+  const el = document.getElementById('copilotTyping');
+  if (el) el.remove();
+}
+
+async function sendCopilotMessage() {
+  const input = document.getElementById('copilotInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+
+  addCopilotMsg('user', text);
+  copilotHistory.push({ role: 'user', parts: [{ text }] });
+
+  // Hide suggestions after first message
+  const sug = document.getElementById('copilotSuggestions');
+  if (sug) sug.style.display = 'none';
+
+  showCopilotTyping();
+
+  try {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') {
+      hideCopilotTyping();
+      addCopilotMsg('ai', '⚠️ Gemini API Key সেটআপ করা হয়নি। `.env` ফাইলে `GEMINI_API_KEY` দিন।');
+      return;
+    }
+
+    const systemContext = `তুমি "০৫ বছরে ২৫ কোটি বৃক্ষরোপণ" কর্মসূচির বৃক্ষরোপণ ট্র্যাকার অ্যাপের AI সহকারী। তুমি বাংলায় উত্তর দেবে। বৃক্ষরোপণ, গাছের যত্ন, সার, সেচ, ডেটা এন্ট্রি, অফলাইন ব্যবহার, GPS, ম্যাপ এবং অ্যাপের ফিচার সম্পর্কে সাহায্য করো। সংক্ষেপে ও সহজে উত্তর দাও।`;
+
+    const contents = [
+      { role: 'user', parts: [{ text: systemContext }] },
+      { role: 'model', parts: [{ text: 'ঠিক আছে, আমি আপনাকে বৃক্ষরোপণ সম্পর্কে সাহায্য করবো। কী জানতে চান?' }] },
+      ...copilotHistory
+    ];
+
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents, generationConfig: { maxOutputTokens: 512, temperature: 0.7 } })
+    });
+
+    hideCopilotTyping();
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      addCopilotMsg('ai', `❌ ত্রুটি: ${err?.error?.message || res.status}`);
+      return;
+    }
+
+    const data = await res.json();
+    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'দুঃখিত, উত্তর পাওয়া যায়নি।';
+    copilotHistory.push({ role: 'model', parts: [{ text: reply }] });
+
+    // Format: convert newlines to <br>
+    const formatted = escapeHtml(reply).replace(/\n/g, '<br>');
+    addCopilotMsg('ai', formatted);
+
+  } catch (err) {
+    hideCopilotTyping();
+    addCopilotMsg('ai', `❌ সংযোগ ত্রুটি: ${err.message}`);
+  }
+}
+
+function clearCopilotChat() {
+  copilotHistory = [];
+  const container = document.getElementById('copilotMessages');
+  container.innerHTML = '';
+  // Re-add welcome message
+  const div = document.createElement('div');
+  div.style.cssText = 'display:flex;gap:8px;align-items:flex-start;';
+  div.innerHTML = `
+    <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#15803d,#059669);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    </div>
+    <div style="background:white;border-radius:4px 16px 16px 16px;padding:12px 14px;max-width:85%;box-shadow:0 1px 4px rgba(0,0,0,0.06);font-size:13.5px;line-height:1.65;color:#1f2937;">
+      আসসালামু আলাইকুম! 🌿 আমি আপনার বৃক্ষরোপণ ট্র্যাকারের AI সহকারী। বৃক্ষরোপণ, গাছের যত্ন, ডেটা এন্ট্রি বা অ্যাপ ব্যবহার সম্পর্কে যেকোনো প্রশ্ন করুন।
+    </div>`;
+  container.appendChild(div);
+  // Show suggestions again
+  const sug = document.getElementById('copilotSuggestions');
+  if (sug) sug.style.display = 'flex';
+}
+</script>
+<style>
+@keyframes cpBounce {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+</style>
 
 </body>
 </html>
