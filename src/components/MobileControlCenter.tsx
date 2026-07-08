@@ -47,19 +47,31 @@ export default function MobileControlCenter({ networkState, geoState, submission
   const districtMap: { [key: string]: number } = {};
 
   submissions.forEach(s => {
-    const countCategory = (list?: any[]) => {
-      let sum = 0;
-      if (list && Array.isArray(list)) {
-        list.forEach(item => {
-          sum += (parseInt(item.count) || 0) + (parseInt(item.graftingCount) || 0);
-        });
-      }
-      return sum;
-    };
-
-    const f = countCategory(s.fruitSeedlings);
-    const fo = countCategory(s.forestSeedlings);
-    const m = countCategory(s.medicinalSeedlings);
+    // v2 flat seedlings array (preferred), with v1 legacy fallback.
+    let f = 0, fo = 0, m = 0;
+    if (Array.isArray(s.seedlings) && s.seedlings.length) {
+      s.seedlings.forEach(item => {
+        const qty = parseInt(String(item.quantity)) || 0;
+        const cat = (item.category || '').trim();
+        if (cat.indexOf('ফল') === 0 || cat === 'fruit') f += qty;
+        else if (cat.indexOf('বন') === 0 || cat === 'forest') fo += qty;
+        else if (cat.indexOf('ঔষ') === 0 || cat === 'medicinal') m += qty;
+        else f += qty;
+      });
+    } else {
+      const countCategory = (list?: any[]) => {
+        let sum = 0;
+        if (list && Array.isArray(list)) {
+          list.forEach(item => {
+            sum += (parseInt(item.count) || 0) + (parseInt(item.graftingCount) || 0);
+          });
+        }
+        return sum;
+      };
+      f = countCategory(s.fruitSeedlings);
+      fo = countCategory(s.forestSeedlings);
+      m = countCategory(s.medicinalSeedlings);
+    }
 
     fruitCount += f;
     forestCount += fo;

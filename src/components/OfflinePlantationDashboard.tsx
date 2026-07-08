@@ -15,6 +15,8 @@ import {
   Globe2
 } from 'lucide-react';
 
+// Legacy seedling shape (3 fixed category arrays). Kept for backward-compat
+// with submissions saved before the v2 upgrade.
 export interface Seedling {
   name: string;
   age: string;
@@ -22,23 +24,56 @@ export interface Seedling {
   graftingCount: string | number;
 }
 
+// New flat seedling shape (v2). One row per species — directly maps to one
+// GAS row in the App_Entry sheet.
+export interface FlatSeedling {
+  speciesName: string;
+  category: string;       // "ফলদ" | "বনজ" | "ঔষধি" | "অন্যান্য"
+  quantity: number;
+}
+
 export interface Submission {
+  // Identity
   id: string;
-  region: string;
+  submissionId?: string;            // v2 — same as id, used in the GAS sheet
+  // Location
+  division?: string;                // v2 — administrative division (8 in BD)
+  region: string;                   // DAE agricultural zone (legacy)
   district: string;
   upazila: string;
-  nurseryName: string;
-  mobile: string;
-  caretakerName?: string;
-  caretakerMobile?: string;
+  union?: string;                   // v2
+  village?: string;                 // v2
+  locationType?: string;            // v2
   address?: string;
-  geoLocation?: string;
+  geoLocation?: string;             // legacy "lat, lng" combined string
+  latitude?: string;                // v2
+  longitude?: string;               // v2
   plantingDate?: string;
   submittedAt?: string;
+  // People
+  farmerName?: string;              // v2 (legacy field: nurseryName)
+  farmerMobile?: string;            // v2 (legacy field: mobile)
+  saaoName?: string;                // v2
+  saaoMobile?: string;              // v2
+  officerName?: string;             // v2 (legacy field: caretakerName)
+  officerMobile?: string;           // v2 (legacy field: caretakerMobile)
+  // Legacy aliases (kept so older code keeps working)
+  nurseryName?: string;
+  mobile?: string;
+  caretakerName?: string;
+  caretakerMobile?: string;
+  // Data
+  ndvi?: string;                    // v2
+  photoBase64?: string;             // v2
+  remarks?: string;
+  // Seedlings — new flat array (v2) + legacy 3-array shape (v1)
+  seedlings?: FlatSeedling[];       // v2 (preferred)
+  fruitSeedlings?: Seedling[];      // v1 (legacy)
+  forestSeedlings?: Seedling[];     // v1 (legacy)
+  medicinalSeedlings?: Seedling[];  // v1 (legacy)
+  // Sync state
   synced?: boolean;
-  fruitSeedlings?: Seedling[];
-  forestSeedlings?: Seedling[];
-  medicinalSeedlings?: Seedling[];
+  syncedAt?: string;
 }
 
 interface OfflinePlantationDashboardProps {
@@ -109,20 +144,33 @@ export default function OfflinePlantationDashboard({ onStateChange }: OfflinePla
   const districtMap: { [key: string]: number } = {};
 
   submissions.forEach(s => {
-    // Calculate seedling counts
-    const countCategory = (list?: Seedling[]) => {
-      let sum = 0;
-      if (list && Array.isArray(list)) {
-        list.forEach(item => {
-          sum += (parseInt(item.count as string) || 0) + (parseInt(item.graftingCount as string) || 0);
-        });
-      }
-      return sum;
-    };
-
-    const f = countCategory(s.fruitSeedlings);
-    const fo = countCategory(s.forestSeedlings);
-    const m = countCategory(s.medicinalSeedlings);
+    // Calculate seedling counts.
+    // v2: flat `seedlings` array with category field.
+    // v1 (legacy): 3 fixed arrays fruitSeedlings/forestSeedlings/medicinalSeedlings.
+    let f = 0, fo = 0, m = 0;
+    if (Array.isArray(s.seedlings) && s.seedlings.length) {
+      s.seedlings.forEach(item => {
+        const qty = parseInt(String(item.quantity)) || 0;
+        const cat = (item.category || '').trim();
+        if (cat.indexOf('ফল') === 0 || cat === 'fruit') f += qty;
+        else if (cat.indexOf('বন') === 0 || cat === 'forest') fo += qty;
+        else if (cat.indexOf('ঔষ') === 0 || cat === 'medicinal') m += qty;
+        else f += qty;
+      });
+    } else {
+      const countCategory = (list?: Seedling[]) => {
+        let sum = 0;
+        if (list && Array.isArray(list)) {
+          list.forEach(item => {
+            sum += (parseInt(item.count as string) || 0) + (parseInt(item.graftingCount as string) || 0);
+          });
+        }
+        return sum;
+      };
+      f = countCategory(s.fruitSeedlings);
+      fo = countCategory(s.forestSeedlings);
+      m = countCategory(s.medicinalSeedlings);
+    }
 
     fruitCount += f;
     forestCount += fo;
