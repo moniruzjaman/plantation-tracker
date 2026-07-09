@@ -438,7 +438,7 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <p class="font-semibold text-gray-700 mb-3 text-sm">🗺️ রোপণ লোকেশন ফিল্টার করুন</p>
 <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
 <select id="mapRegion" onchange="onMapFilterChange()" class="border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব অঞ্চল</option></select>
-<select id="mapDistrict" onchange="onMapFilterChange()" class="border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব জেলা</option></select>
+<select id="mapDistrict" onchange="onMapDistrictChange()" class="border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব জেলা</option></select>
 <select id="mapUpazila" onchange="onMapUpazilaChange()" class="border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব উপজেলা</option></select>
 <button onclick="zoomToMyGeoLocation()" class="text-white px-4 py-2 rounded-lg text-sm font-semibold transition hover:bg-green-800 flex items-center justify-center gap-1.5" style="background:#15803d">
 <svg id="geoIcon" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
@@ -454,12 +454,10 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <div id="leafletMap" class="w-full h-[450px] sm:h-[550px] rounded-lg border border-gray-200" style="z-index: 10;"></div>
 <div class="mt-3 flex flex-wrap justify-between items-center text-xs text-gray-500 gap-2 px-1">
 <div>
-<span class="inline-flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-orange-500 inline-block"></span> ফলদ/বৃক্ষ সংখ্যা > ১০,০০০ (বৃহৎ)</span>
-<span class="inline-flex items-center gap-2 ml-3"><span class="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> ৫,০০০ - ১০,০০০ চারা</span>
-<span class="inline-flex items-center gap-2 ml-3"><span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span> < ৫,০০০ চারা</span>
-<span class="inline-flex items-center gap-2 ml-3"><span class="w-3 h-3 rounded-full bg-gray-400 inline-block"></span> এই ডিভাইসে (আনসিঙ্কড)</span>
+<span class="inline-flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-gray-400 inline-block"></span> এই ডিভাইসে (আনসিঙ্কড)</span>
 <span class="inline-flex items-center gap-2 ml-3"><span class="w-3 h-3 rounded-full inline-block" style="background:#a855f7"></span> আমার এন্ট্রি</span>
 </div>
+<div id="mapUpazilaLegend" class="hidden mt-1 flex flex-wrap items-center text-xs text-gray-500 gap-1 px-1"></div>
 <div id="mapStatsText" class="font-semibold text-green-700"></div>
 </div>
 </div>
@@ -1027,7 +1025,10 @@ window.handleUpazilaAddNew=function(selectEl){
 
 
 // ── Cascading ──
+// Region change → repopulate districts (resets district selection) + reset upazila + render
 window.onMapFilterChange=function(){populateDistrictDD(document.getElementById("mapDistrict"),document.getElementById("mapRegion").value);populateMapUpazilaDD();renderMap()};
+// District change → repopulate upazila from chosen district + render (do NOT re-populate districts)
+window.onMapDistrictChange=function(){populateMapUpazilaDD();renderMap()};
 window.onMapUpazilaChange=function(){renderMap()};
 function populateMapUpazilaDD(selected){
   var dd=document.getElementById("mapUpazila");
@@ -1037,6 +1038,25 @@ function populateMapUpazilaDD(selected){
     BD_UPAZILA[district].forEach(function(u){var o=document.createElement("option");o.value=u;o.textContent=u;if(u===selected)o.selected=true;dd.appendChild(o)});
     getCustomUpazilas(district).forEach(function(u){var o=document.createElement("option");o.value=u;o.textContent=u+" (নতুন যোগ)";if(u===selected)o.selected=true;dd.appendChild(o)});
   }
+}
+
+// ── Per-upazila color palette ──
+// Deterministic hash → one of 24 visually distinct colors so the same
+// upazila always gets the same color across re-renders.
+var UPAZILA_PALETTE=[
+  '#e11d48','#db2777','#c026d3','#9333ea','#7c3aed','#4f46e5',
+  '#2563eb','#0284c7','#0891b2','#0d9488','#059669','#16a34a',
+  '#65a30d','#ca8a04','#d97706','#ea580c','#dc2626','#be185d',
+  '#6d28d9','#4338ca','#1d4ed8','#0369a1','#0e7490','#047857'
+];
+var _upazilaColorCache={};
+function upazilaColor(name){
+  if(!name)return'#6b7280';
+  if(_upazilaColorCache[name])return _upazilaColorCache[name];
+  var h=0;for(var i=0;i<name.length;i++)h=((h<<5)-h)+name.charCodeAt(i);
+  var idx=Math.abs(h)%UPAZILA_PALETTE.length;
+  _upazilaColorCache[name]=UPAZILA_PALETTE[idx];
+  return _upazilaColorCache[name];
 }
 window.onDashFilterChange=function(){populateDistrictDD(document.getElementById("dashDistrict"),document.getElementById("dashRegion").value);renderDashboard()};
 window.onFormDivisionChange=function(){/* placeholder for future division→region cascade */};
@@ -2400,8 +2420,9 @@ window.renderMap = function() {
       fetchNationalEntries().then(function() { renderMap(); });
     }
     
-    // Get filtered submissions (local + national App_Entry, deduped, district/region filtered)
+    // Get filtered submissions (local + national App_Entry, deduped, district/region/upazila filtered)
     var subs = getMapEntries();
+    var _mapUpazilaLegend = {}; // rebuilt each render for the dynamic legend
     
     var bounds = [];
     var mappedCount = 0;
@@ -2447,16 +2468,11 @@ window.renderMap = function() {
       detailsHtml += '<button onclick="parent.window.editMySubmission ? parent.window.editMySubmission(\''+_sid+'\') : editMySubmission(\''+_sid+'\')" style="width:100%; margin-top:8px; background:#dbeafe; color:#1d4ed8; border:none; padding:5px; border-radius:6px; font-weight:700; cursor:pointer; font-size:11px;">✏️ তথ্য সম্পাদনা</button>';
       detailsHtml += '</div>';
       
-      // Marker color logic: Larger is Orange, Medium is Blue, Small is Emerald
-      // — unless the entry hasn't reached the App_Entry sheet yet (this
-      // device only), in which case it's shown gray regardless of size.
-      var markerBg = '#10b981'; // Green
-      if (totalScCount >= 10000) markerBg = '#f97316'; // Orange
-      else if (totalScCount >= 5000) markerBg = '#3b82f6'; // Blue
-      if (s._source === "local") markerBg = '#9ca3af'; // Gray — not yet synced to App_Entry
-
-      // Highlight entries made by the current user (profile mobile matches
-      // saaoMobile or officerMobile) with a distinct purple marker.
+      // Marker color logic: each upazila gets a distinct color from the
+      // palette — this makes it easy to visually cluster by upazila on the map.
+      // Special overrides: local-unsynced = gray, current user's own entry = purple.
+      var markerBg = upazilaColor(s.upazila);
+      if (s._source === "local") markerBg = '#9ca3af'; // Gray — not yet synced
       var myProfile = getProfile();
       if (!s._isMine) {
         var pm = myProfile && myProfile.mobile;
@@ -2464,8 +2480,13 @@ window.renderMap = function() {
       }
       if (s._source === "local" || s._isMine) markerBg = '#a855f7'; // Purple — my entry
       
+      // Track upazila→color for the dynamic legend
+      if (s.upazila && s._source !== "local" && !s._isMine) {
+        _mapUpazilaLegend[s.upazila] = markerBg;
+      }
+
       var customIcon = L.divIcon({
-        html: '<div style="background-color: ' + markerBg + '; width: 28px; height: 28px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); transform: scale(1);" title="' + s.nurseryName + '">🌳</div>',
+        html: '<div style="background-color: ' + markerBg + '; width: 28px; height: 28px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); transform: scale(1);" title="' + (s.upazila||'') + '">🌳</div>',
         className: 'custom-tree-icon',
         iconSize: [28, 28],
         iconAnchor: [14, 14]
@@ -2475,6 +2496,20 @@ window.renderMap = function() {
       mapMarkers.push(marker);
     });
     
+    // Build dynamic upazila color legend
+    var legendEl = document.getElementById("mapUpazilaLegend");
+    if (legendEl) {
+      var keys = Object.keys(_mapUpazilaLegend).sort();
+      if (keys.length > 0) {
+        legendEl.innerHTML = keys.map(function(u) {
+          return '<span class="inline-flex items-center gap-1 ml-3"><span class="w-3 h-3 rounded-full inline-block" style="background:' + _mapUpazilaLegend[u] + '"></span>' + u + '</span>';
+        }).join('');
+        legendEl.classList.remove('hidden');
+      } else {
+        legendEl.classList.add('hidden');
+      }
+    }
+
     // Update footer text statistics
     var statsText = document.getElementById("mapStatsText");
     if (statsText) {
