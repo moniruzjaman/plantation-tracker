@@ -102,8 +102,8 @@ export default function PWAInstaller() {
           onClick={handleInstallClick}
           className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full shadow-lg border backdrop-blur-sm transition-all text-xs font-semibold cursor-pointer ${
             hasDirectInstall 
-              ? 'bg-gradient-to-r from-green-600/95 to-emerald-600/95 text-white border-green-500 hover:from-green-700 hover:to-emerald-700' 
-              : 'bg-white/95 border-gray-150 text-gray-700 hover:bg-gray-50'
+              ? 'bg-accent-500 text-white border-accent-400 hover:bg-accent-600' 
+              : 'bg-container/95 border-gray-150 text-gray-700 hover:bg-surface'
           }`}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
@@ -111,7 +111,7 @@ export default function PWAInstaller() {
           {hasDirectInstall ? (
             <Download className="w-4 h-4 text-white animate-bounce" id="iconPWADownload" />
           ) : (
-            <Smartphone className="w-4 h-4 text-emerald-600" id="iconPWASmartphone" />
+            <Smartphone className="w-4 h-4 text-primary-500" id="iconPWASmartphone" />
           )}
 
           <span>
@@ -128,12 +128,12 @@ export default function PWAInstaller() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -8, scale: 0.95 }}
               transition={{ duration: 0.12 }}
-              className="w-72 bg-white border border-gray-150 rounded-2xl p-4 shadow-xl text-gray-800 text-xs flex flex-col gap-3"
+              className="w-72 bg-container border border-gray-150 rounded-xl p-4 shadow-xl text-gray-800 text-xs flex flex-col gap-3"
             >
               {/* Header */}
               <div className="border-b border-gray-100 pb-2 flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-gray-700">
-                  <Smartphone className="w-4 h-4 text-emerald-600" />
+                  <Smartphone className="w-4 h-4 text-primary-500" />
                   <span className="font-semibold text-sm">অ্যাপ ইনস্টলেশন গাইড</span>
                 </div>
                 <button 
@@ -150,31 +150,31 @@ export default function PWAInstaller() {
                   <div className="flex flex-col gap-2">
                     <p className="font-semibold text-gray-800">আইফোন/আইপ্যাড (Safari) ব্যবহারকারীদের জন্য:</p>
                     <ol className="list-decimal pl-4 space-y-1">
-                      <li>সফারি ব্রাউজারের নিচে থাকা <span className="font-bold text-blue-600">Share (শেয়ার)</span> বুটনে ক্লিক করুন।</li>
-                      <li>মেনুটি স্ক্রোল করে নিচের দিকে যান এবং <span className="font-bold text-emerald-700">Add to Home Screen</span> অপশনটি বেছে নিন।</li>
-                      <li>উপরে ডান কোণায় <span className="font-bold text-emerald-700">Add</span> বাটনে চাপ দিন।</li>
+                      <li>সফারি ব্রাউজারের নিচে থাকা <span className="font-bold text-blue-600">Share (শেয়ার)</span> বুটনে ক্লিক করুন।</li>
+                      <li>মেনুটি স্ক্রোল করে নিচের দিকে যান এবং <span className="font-bold text-primary-600">Add to Home Screen</span> অপশনটি বেছে নিন।</li>
+                      <li>উপরে ডান কোণায় <span className="font-bold text-primary-600">Add</span> বাটনে চাপ দিন।</li>
                     </ol>
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2">
                     <p className="font-semibold text-gray-800">অ্যান্ড্রয়েড/ক্রোম ব্যবহারকারীদের জন্য:</p>
-                    <p>সরাসরি ইনস্টল প্রম্পটটি সচল হতে কিছু মুহূর্ত সময় লাগতে পারে। আপনি নিচের পদ্ধতিতে ইনস্টল করতে পারেন:</p>
+                    <p>সরাসরি ইন্সটল প্রম্পটটি সচল হতে কিছু মুহূর্ত সময় লাগতে পারে। আপনি নিচের পদ্ধতিতে ইন্সটল করতে পারেন:</p>
                     <ol className="list-decimal pl-4 space-y-1">
                       <li>ব্রাউজারের উপরের ডানদিকের <span className="font-bold">৩ ডট (মেনু)</span>-এ প্রেস করুন।</li>
-                      <li><span className="font-bold text-emerald-700">Install app</span> অথবা <span className="font-bold text-emerald-700">Add to Home screen</span>-এ ক্লিক করুন।</li>
+                      <li><span className="font-bold text-primary-600">Install app</span> অথবা <span className="font-bold text-primary-600">Add to Home screen</span>-এ ক্লিক করুন।</li>
                     </ol>
                   </div>
                 )}
 
-                <div className="p-2.5 bg-emerald-50 border border-emerald-100/80 rounded-xl text-emerald-800 text-[10.5px]">
-                  ইনস্টল করার পর আপনার মোবাইলের হোম স্ক্রিন থেকে কোনো ক্রোম/ব্রাউজার ওপেন করা ছাড়াই সরাসরি অ্যাপ হিসেবে যেকোনো সময় ব্যবহার করতে পারবেন।
+                <div className="p-2.5 bg-primary-50 border border-primary-100/80 rounded-xl text-primary-700 text-[10.5px]">
+                  ইনস্টল করার পর আপনার মোবাইলের হোম স্ক্রিন থেকে কোনো ক্রোম/ব্রাউজার ওপেন করা ছাড়াই সরাসরি অ্যাপ হিসেবে যেকোনো সময় ব্যবহার করতে পারবেন।
                 </div>
               </div>
 
               {/* Action Close */}
               <button
                 onClick={() => setShowTooltip(false)}
-                className="w-full bg-gray-800 hover:bg-gray-950 text-white font-bold py-1.5 rounded-lg text-xs tracking-wide transition cursor-pointer border-none shadow-md mt-1"
+                className="w-full bg-primary-500 hover:bg-primary-600 text-white font-bold py-1.5 rounded-lg text-xs tracking-wide transition cursor-pointer border-none shadow-md mt-1"
               >
                 বুঝেছি
               </button>

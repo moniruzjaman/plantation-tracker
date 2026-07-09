@@ -106,7 +106,7 @@ export default function MobileControlCenter({ networkState, geoState, submission
         guideBtn.click();
         // Reset classes
         setTimeout(() => {
-           guideBtn.setAttribute('class', 'hidden md:flex absolute top-[112px] right-4 z-45 items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/95 border border-gray-150 hover:bg-gray-50 shadow-md text-gray-600 font-medium text-xs cursor-pointer transition-all hover:scale-102 pointer-events-auto');
+           guideBtn.setAttribute('class', 'hidden md:flex absolute top-[112px] right-4 z-45 items-center gap-1.5 px-3 py-1.5 rounded-full bg-container/95 border border-gray-150 hover:bg-surface shadow-md text-gray-600 font-medium text-xs cursor-pointer transition-all hover:scale-102 pointer-events-auto');
         }, 100);
       }
     }, 200);
@@ -125,13 +125,13 @@ export default function MobileControlCenter({ networkState, geoState, submission
 
   // GPS precision rating
   const getGpsPrecisionBN = (meters: number) => {
-    if (meters < 30) return { label: 'অত্যন্ত নির্ভুল', color: 'text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100' };
+    if (meters < 30) return { label: 'অত্যন্ত নির্ভুল', color: 'text-primary-500 bg-primary-50 px-2 py-0.5 rounded border border-primary-100' };
     if (meters < 100) return { label: 'সাধারণ সিগন্যাল', color: 'text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100' };
     return { label: 'দুর্বল সিগন্যাল', color: 'text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-100' };
   };
 
   const getGpsPrecisionEN = (meters: number) => {
-    if (meters < 30) return { label: 'High Precision', color: 'text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100' };
+    if (meters < 30) return { label: 'High Precision', color: 'text-primary-500 bg-primary-50 px-2 py-0.5 rounded border border-primary-100' };
     if (meters < 100) return { label: 'Medium Signal', color: 'text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100' };
     return { label: 'Weak Signal', color: 'text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-100' };
   };
@@ -145,13 +145,13 @@ export default function MobileControlCenter({ networkState, geoState, submission
     guide: language === 'bn' ? 'ব্যবহার নির্দেশিকা' : 'Help Guide',
     offlineSub: language === 'bn' ? 'মোট অফলাইন রেকর্ড' : 'Total Offline Batches',
     totalPlanted: language === 'bn' ? 'মোট রোপণকৃত চারা' : 'Total Seedlings Planted',
-    fruit: language === 'bn' ? '果 ফলদ চারা' : 'Fruit Seedlings',
-    forest: language === 'bn' ? '🌲 বনজ চারা' : 'Forest Seedlings',
-    medicinal: language === 'bn' ? '💊 ঔষধি চারা' : 'Medicinal',
+    fruit: language === 'bn' ? 'ফলদ চারা' : 'Fruit Seedlings',
+    forest: language === 'bn' ? 'বনজ চারা' : 'Forest Seedlings',
+    medicinal: language === 'bn' ? 'ঔষধি চারা' : 'Medicinal',
     districts: language === 'bn' ? 'শীর্ষ অঞ্চলসমূহ' : 'Top Areas',
     conStat: language === 'bn' ? 'ইন্টারনেট সংযোগ:' : 'Connection:',
     syncEngine: language === 'bn' ? 'সিঙ্ক সিস্টেম:' : 'Sync Manager:',
-    activeSafe: language === 'bn' ? 'সক্রিয় ও সুরক্ষিত' : 'Active & Secured',
+    activeSafe: language === 'bn' ? 'সক্রিয় ও সুরক্ষিত' : 'Active & Secured',
     localEnv: language === 'bn' ? 'লোকাল স্টোরেজ' : 'Local Storage',
     browserSupport: language === 'bn' ? 'ব্রাউজার মোড' : 'Web Fallback',
     diskUsed: language === 'bn' ? 'ডিভাইস স্টোরেজ স্পেস:' : 'App Storage:',
@@ -160,7 +160,7 @@ export default function MobileControlCenter({ networkState, geoState, submission
     gpsPerm: language === 'bn' ? 'জিপিএস অনুমতি:' : 'GPS Permission:',
     loading: language === 'bn' ? 'লোকেশন ট্র্যাক করা হচ্ছে...' : 'Tracking GPS position...',
     okPerm: language === 'bn' ? 'অনুমোদিত' : 'Granted',
-    noPerm: language === 'bn' ? 'অনুমতি প্রয়োজন' : 'Action Required',
+    noPerm: language === 'bn' ? 'অনুমতি প্রয়োজন' : 'Action Required',
     guideLaunchText: language === 'bn' ? 'অ্যাপ্লিকেশন ব্যবহার নির্দেশিকা' : 'Interactive Launch Guide',
     guideDesc: language === 'bn' ? 'কিভাবে তথ্য অফলাইনে সংরক্ষণ ও সিঙ্ক করতে হবে তা বিস্তারিত জানুন।' : 'Learn step-by-step how to log plantations offline and sync manually.',
     openGuideBtn: language === 'bn' ? 'ইউজার গাইড খুলুন' : 'Open Manual Guide',
@@ -180,7 +180,7 @@ export default function MobileControlCenter({ networkState, geoState, submission
           onClick={() => setIsOpen(!isOpen)}
           className={`flex items-center gap-1.5 px-3 py-2.5 rounded-full shadow-2xl border backdrop-blur-md transition-all text-[11px] font-bold cursor-pointer ${
             totalLogs > 0
-              ? 'bg-emerald-600 border-emerald-500 text-white'
+              ? 'bg-primary-500 border-primary-400 text-white'
               : 'bg-slate-900 border-slate-800 text-white'
           }`}
           whileHover={{ scale: 1.05 }}
@@ -196,7 +196,7 @@ export default function MobileControlCenter({ networkState, geoState, submission
             )}
             {/* Network dot */}
             {isOnline ? (
-              <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 border border-white" />
+              <span className="inline-block w-2 h-2 rounded-full bg-primary-300 border border-white" />
             ) : (
               <span className="inline-block w-2 h-2 rounded-full bg-amber-400 border border-white animate-pulse" />
             )}
@@ -206,7 +206,7 @@ export default function MobileControlCenter({ networkState, geoState, submission
             ) : geoState?.loading ? (
               <span className="inline-block w-2 h-2 rounded-full bg-cyan-400 border border-white" />
             ) : (
-              <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 border border-white" />
+              <span className="inline-block w-2 h-2 rounded-full bg-primary-300 border border-white" />
             )}
           </span>
 
@@ -235,13 +235,13 @@ export default function MobileControlCenter({ networkState, geoState, submission
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 15, scale: 0.95 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 280 }}
-                className="w-[88vw] max-w-sm bg-white/95 border border-gray-200 shadow-2xl rounded-2xl p-4 flex flex-col gap-3 max-h-[80vh] overflow-y-auto"
+                className="w-[88vw] max-w-sm bg-container/95 border border-gray-200 shadow-2xl rounded-xl p-4 flex flex-col gap-3 max-h-[80vh] overflow-y-auto"
               >
                 {/* Drawer Header Navbar */}
                 <div className="flex items-center justify-between border-b border-gray-100 pb-2.5">
                   <div className="flex flex-col">
                     <span className="font-extrabold text-gray-800 text-xs tracking-tight uppercase flex items-center gap-1.5">
-                      <Activity className="w-4 h-4 text-emerald-600 animate-pulse" />
+                      <Activity className="w-4 h-4 text-primary-500 animate-pulse" />
                       {t.title}
                     </span>
                     <span className="text-[9.5px] text-gray-400 mt-0.5 uppercase tracking-wider">
@@ -254,7 +254,7 @@ export default function MobileControlCenter({ networkState, geoState, submission
                     <button
                       id="mobileCenterLangToggle"
                       onClick={() => setLanguage(language === 'bn' ? 'en' : 'bn')}
-                      className="px-2 py-0.5 rounded border border-gray-200 bg-white text-[10px] font-semibold text-gray-600 active:bg-gray-50 flex items-center gap-1"
+                      className="px-2 py-0.5 rounded border border-gray-200 bg-container text-[10px] font-semibold text-gray-600 active:bg-surface flex items-center gap-1"
                     >
                       <Globe className="w-3 h-3 text-gray-400" />
                       {language === 'bn' ? 'English' : 'বাংলা'}
@@ -271,13 +271,13 @@ export default function MobileControlCenter({ networkState, geoState, submission
                 </div>
 
                 {/* Grid Tabs Selection Row */}
-                <div className="grid grid-cols-3 gap-1 bg-gray-50 border border-gray-100 p-1 rounded-xl">
+                <div className="grid grid-cols-3 gap-1 bg-surface border border-gray-100 p-1 rounded-xl">
                   {/* Tab 1: DB */}
                   <button
                     onClick={() => setActiveTab('db')}
                     className={`py-1.5 rounded-lg text-[10.5px] font-semibold flex flex-col items-center justify-center gap-1 transition-all ${
                       activeTab === 'db'
-                        ? 'bg-emerald-600 text-white shadow-sm'
+                        ? 'bg-primary-500 text-white shadow-sm'
                         : 'text-gray-600 active:bg-gray-100'
                     }`}
                   >
@@ -290,7 +290,7 @@ export default function MobileControlCenter({ networkState, geoState, submission
                     onClick={() => setActiveTab('net')}
                     className={`py-1.5 rounded-lg text-[10.5px] font-semibold flex flex-col items-center justify-center gap-1 transition-all ${
                       activeTab === 'net'
-                        ? 'bg-emerald-600 text-white shadow-sm'
+                        ? 'bg-primary-500 text-white shadow-sm'
                         : 'text-gray-600 active:bg-gray-100'
                     }`}
                   >
@@ -303,7 +303,7 @@ export default function MobileControlCenter({ networkState, geoState, submission
                     onClick={() => setActiveTab('gps')}
                     className={`py-1.5 rounded-lg text-[10.5px] font-semibold flex flex-col items-center justify-center gap-1 transition-all ${
                       activeTab === 'gps'
-                        ? 'bg-emerald-600 text-white shadow-sm'
+                        ? 'bg-primary-500 text-white shadow-sm'
                         : 'text-gray-600 active:bg-gray-100'
                     }`}
                   >
@@ -322,9 +322,9 @@ export default function MobileControlCenter({ networkState, geoState, submission
                       {/* Grid Metrics */}
                       <div className="grid grid-cols-2 gap-2">
                         {/* Batches count */}
-                        <div className="bg-emerald-50/50 border border-emerald-100 p-2.5 rounded-xl text-center flex flex-col items-center justify-center">
-                          <span className="text-[10px] text-emerald-800 font-bold uppercase tracking-wider opacity-80">{t.offlineSub}</span>
-                          <span className="text-xl font-extrabold text-emerald-700 mt-0.5">{toBnNum(totalLogs)}</span>
+                        <div className="bg-primary-50/50 border border-primary-100 p-2.5 rounded-xl text-center flex flex-col items-center justify-center">
+                          <span className="text-[10px] text-primary-700 font-bold uppercase tracking-wider opacity-80">{t.offlineSub}</span>
+                          <span className="text-xl font-extrabold text-primary-600 mt-0.5">{toBnNum(totalLogs)}</span>
                         </div>
                         {/* Seedlings count */}
                         <div className="bg-lime-50/50 border border-lime-100 p-2.5 rounded-xl text-center flex flex-col items-center justify-center">
@@ -334,7 +334,7 @@ export default function MobileControlCenter({ networkState, geoState, submission
                       </div>
 
                       {/* Seedling varieties bar tracker */}
-                      <div className="flex flex-col gap-2 bg-gray-50 border border-gray-100 p-3 rounded-xl">
+                      <div className="flex flex-col gap-2 bg-surface border border-gray-100 p-3 rounded-xl">
                         
                         {/* Fruit seedlings */}
                         <div className="flex flex-col gap-0.5">
@@ -350,11 +350,11 @@ export default function MobileControlCenter({ networkState, geoState, submission
                         {/* Forest seedlings */}
                         <div className="flex flex-col gap-0.5">
                           <div className="flex justify-between items-center text-[10px] font-bold">
-                            <span className="text-emerald-700">{t.forest}</span>
+                            <span className="text-primary-600">{t.forest}</span>
                             <span className="text-gray-700">{toBnNum(forestCount)}</span>
                           </div>
                           <div className="w-full h-1 bg-gray-200 rounded-full overflow-hidden">
-                            <div className="bg-emerald-600 h-full rounded" style={{ width: `${totalSeedlings > 0 ? (forestCount / totalSeedlings) * 100 : 0}%` }} />
+                            <div className="bg-primary-500 h-full rounded" style={{ width: `${totalSeedlings > 0 ? (forestCount / totalSeedlings) * 100 : 0}%` }} />
                           </div>
                         </div>
 
@@ -377,9 +377,9 @@ export default function MobileControlCenter({ networkState, geoState, submission
                           <span className="text-[10px] text-gray-500 font-black uppercase tracking-wider">{t.districts}</span>
                           <div className="flex flex-col gap-1">
                             {sortedDistricts.map(([name, val]) => (
-                              <div key={name} className="flex items-center justify-between px-2.5 py-1.5 bg-gray-50 border border-gray-100 rounded-lg text-[11px]">
+                              <div key={name} className="flex items-center justify-between px-2.5 py-1.5 bg-surface border border-gray-100 rounded-lg text-[11px]">
                                 <span className="font-semibold text-gray-600">{name}</span>
-                                <span className="bg-white px-2 py-0.5 rounded border border-gray-200 font-bold text-emerald-700 text-[10px]">
+                                <span className="bg-container px-2 py-0.5 rounded border border-gray-200 font-bold text-primary-600 text-[10px]">
                                   {toBnNum(val)} {language === 'bn' ? 'টি এন্ট্রি' : 'entries'}
                                 </span>
                               </div>
@@ -405,13 +405,13 @@ export default function MobileControlCenter({ networkState, geoState, submission
                     <div className="flex flex-col gap-3 animate-in hover:shadow-none" id="mobileControlCenterTabNet">
                       
                       {/* Live items stat list */}
-                      <div className="flex flex-col gap-2.5 bg-gray-50 border border-gray-100 p-3 rounded-xl">
+                      <div className="flex flex-col gap-2.5 bg-surface border border-gray-100 p-3 rounded-xl">
                         
                         {/* Online or offline status */}
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-gray-500 font-medium">{t.conStat}</span>
-                          <span className={`font-black uppercase tracking-wide flex items-center gap-1.5 ${isOnline ? 'text-emerald-600' : 'text-amber-600'}`}>
-                            <CircleDot className={`w-3.5 h-3.5 ${isOnline ? 'text-emerald-500' : 'text-amber-500 animate-pulse'}`} />
+                          <span className={`font-black uppercase tracking-wide flex items-center gap-1.5 ${isOnline ? 'text-primary-500' : 'text-amber-600'}`}>
+                            <CircleDot className={`w-3.5 h-3.5 ${isOnline ? 'text-primary-400' : 'text-amber-500 animate-pulse'}`} />
                             {isOnline ? (language === 'bn' ? 'সংযুক্ত' : 'Connected') : (language === 'bn' ? 'সংযোগ বিচ্ছিন্ন' : 'Offline')}
                           </span>
                         </div>
@@ -441,7 +441,7 @@ export default function MobileControlCenter({ networkState, geoState, submission
                               </span>
                             </div>
                             <div className="w-full h-1 bg-gray-200 rounded-full overflow-hidden mt-0.5">
-                              <div className="bg-emerald-600 h-full rounded" style={{ width: `${networkState.storageEstimate.percent}%` }} />
+                              <div className="bg-primary-500 h-full rounded" style={{ width: `${networkState.storageEstimate.percent}%` }} />
                             </div>
                           </div>
                         )}
@@ -451,14 +451,14 @@ export default function MobileControlCenter({ networkState, geoState, submission
                       {/* Visual sync info box depending on mode */}
                       <div className={`p-3 rounded-xl border text-[10px] leading-relaxed flex gap-2 ${
                         isOnline 
-                          ? 'bg-emerald-50/50 border-emerald-100 text-emerald-800' 
+                          ? 'bg-primary-50/50 border-primary-100 text-primary-700' 
                           : 'bg-amber-50/50 border-amber-100 text-amber-800'
                       }`}>
                         <Info className="w-4 h-4 shrink-0 mt-0.5 text-current" />
                         <div className="flex flex-col gap-0.5">
                           <strong className="font-black">
                             {isOnline 
-                              ? (language === 'bn' ? 'সংযুক্ত নেটওয়ার্ক মোড' : 'Online Sync Active') 
+                              ? (language === 'bn' ? 'সংযুক্ত নেটওয়ার্ক মোড' : 'Online Sync Active') 
                               : t.warningOffline}
                           </strong>
                           <span>
@@ -476,7 +476,7 @@ export default function MobileControlCenter({ networkState, geoState, submission
                   {activeTab === 'gps' && (
                     <div className="flex flex-col gap-3 animate-in" id="mobileControlCenterTabGPS">
                       
-                      <div className="flex flex-col gap-2.5 bg-gray-50 border border-gray-100 p-3 rounded-xl">
+                      <div className="flex flex-col gap-2.5 bg-surface border border-gray-100 p-3 rounded-xl">
                         
                         {/* Coords detail */}
                         <div className="flex items-center justify-between text-xs">
@@ -488,10 +488,10 @@ export default function MobileControlCenter({ networkState, geoState, submission
                               </span>
                               <button
                                 onClick={handleCopyCoords}
-                                className="p-1 rounded bg-white border border-gray-200 active:bg-gray-100 text-gray-500 active:text-gray-800"
+                                className="p-1 rounded bg-container border border-gray-200 active:bg-gray-100 text-gray-500 active:text-gray-800"
                                 title="স্থানাঙ্ক কপি করুন"
                               >
-                                {copied ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
+                                {copied ? <Check className="w-3 h-3 text-primary-500" /> : <Copy className="w-3 h-3" />}
                               </button>
                             </div>
                           ) : (
@@ -525,7 +525,7 @@ export default function MobileControlCenter({ networkState, geoState, submission
                         <div className="flex items-center justify-between text-xs border-t border-gray-200/50 pt-2">
                           <span className="text-gray-500 font-medium">{t.gpsPerm}</span>
                           <span className={`font-bold flex items-center gap-1 text-[11px] ${
-                            geoState?.error ? 'text-red-600' : 'text-emerald-700'
+                            geoState?.error ? 'text-red-600' : 'text-primary-600'
                           }`}>
                             <CircleDot className="w-3.5 h-3.5" />
                             {geoState?.error ? t.noPerm : t.okPerm}
@@ -558,10 +558,10 @@ export default function MobileControlCenter({ networkState, geoState, submission
 
                 {/* Subfooter: Core User Guide button (Manual trigger) */}
                 <div className="border-t border-gray-100 pt-2.5 flex flex-col gap-2">
-                  <div className="flex items-center justify-between bg-emerald-50/30 border border-emerald-100/40 p-2.5 rounded-xl">
+                  <div className="flex items-center justify-between bg-primary-50/30 border border-primary-100/40 p-2.5 rounded-xl">
                     <div className="flex flex-col gap-0.5">
                       <span className="font-bold text-gray-800 text-[11px] flex items-center gap-1.5">
-                        <HelpCircle className="w-4 h-4 text-green-600" />
+                        <HelpCircle className="w-4 h-4 text-primary-500" />
                         {t.guideLaunchText}
                       </span>
                       <span className="text-[10px] text-gray-500 leading-normal">
@@ -572,7 +572,7 @@ export default function MobileControlCenter({ networkState, geoState, submission
                     <button
                       id="mobileCenterGuideLauncher"
                       onClick={handleOpenUserGuide}
-                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10.5px] transition-colors shadow flex items-center gap-0.5 cursor-pointer shrink-0"
+                      className="px-3 py-1.5 rounded-lg bg-primary-500 hover:bg-primary-600 text-white font-bold text-[10.5px] transition-colors shadow flex items-center gap-0.5 cursor-pointer shrink-0"
                     >
                       {language === 'bn' ? 'টিউটোরিয়াল' : 'Tutorial'}
                       <ChevronRight className="w-3.5 h-3.5" />

@@ -74,7 +74,7 @@ export default function GeolocationIndicator({ onStateChange }: GeolocationIndic
               setGeo(prev => ({
                 ...prev,
                 loading: false,
-                error: "অ্যাপের জিপিএস ব্যবহারের অনুমতি দেওয়া হয়নি। অনুগ্রহ করে সেটিংসে গিয়ে অনুমতি চালু করুন।"
+                error: "অ্যাপের জিপিএস ব্যবহারের অনুমতি দেওয়া হয়নি। অনুগ্রহ করে সেটিংসে গিয়ে অনুমতি চালু করুন।"
               }));
             }
             return;
@@ -160,7 +160,7 @@ export default function GeolocationIndicator({ onStateChange }: GeolocationIndic
             setGeo(prev => ({
               ...prev,
               loading: false,
-              error: "এই ব্রাউজারটিতে জিপিএস সিঙ্ক সুবিধা সমর্থিত নয়"
+              error: "এই ব্রাউজারটিতে জিপিএস সিঙ্ক সুবিধা সমর্থিত নয়"
             }));
           }
           return;
@@ -200,13 +200,13 @@ export default function GeolocationIndicator({ onStateChange }: GeolocationIndic
 
         const handleError = (error: GeolocationPositionError) => {
           if (!isMounted) return;
-          let msg = "লোকেশন সনাক্ত করতে সমস্যা হয়েছে";
+          let msg = "লোকেশন সনাক্ত করতে সমস্যা হয়েছে";
           if (error.code === error.PERMISSION_DENIED) {
-            msg = "জিপিএস ব্যবহারের অনুমতি দেওয়া হয়নি। অনুগ্রহ করে অনুমতি চালু করুন";
+            msg = "জিপিএস ব্যবহারের অনুমতি দেওয়া হয়নি। অনুগ্রহ করে অনুমতি চালু করুন";
           } else if (error.code === error.POSITION_UNAVAILABLE) {
-            msg = "ডিভাইসের জিপিএস সংকেত উপলব্ধ নয়";
+            msg = "ডিভাইসের জিপিএস সংকেত উপলব্ধ নয়";
           } else if (error.code === error.TIMEOUT) {
-            msg = "জিপিএস অবস্থান সনাক্তকরণ সময় উত্তীর্ণ হয়েছে";
+            msg = "জিপিএস অবস্থান সনাক্তকরণ সময় উত্তীর্ণ হয়েছে";
           }
           setGeo(prev => ({
             ...prev,
@@ -251,8 +251,8 @@ export default function GeolocationIndicator({ onStateChange }: GeolocationIndic
 
   // Accuracy badge mapping (Meters)
   const getAccuracyTier = (meters: number) => {
-    if (meters < 10) return { label: 'খুবই সূক্ষ্ম জিপিএস সংকেত', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' };
-    if (meters < 30) return { label: 'ভালো জিপিএস সংকেত', color: 'bg-teal-100 text-teal-800 border-teal-200' };
+    if (meters < 10) return { label: 'খুবই সূক্ষ্ম জিপিএস সংকেত', color: 'bg-primary-100 text-primary-700 border-primary-200' };
+    if (meters < 30) return { label: 'ভালো জিপিএস সংকেত', color: 'bg-primary-100 text-primary-700 border-primary-200' };
     if (meters < 100) return { label: 'মাঝারি জিপিএস সংকেত', color: 'bg-blue-100 text-blue-800 border-blue-200' };
     return { label: 'দুর্বল জিপিএস সংকেত', color: 'bg-amber-100 text-amber-800 border-amber-200' };
   };
@@ -270,7 +270,7 @@ export default function GeolocationIndicator({ onStateChange }: GeolocationIndic
               ? 'bg-red-50/95 border-red-200 text-red-800 hover:bg-red-100/95' 
               : geo.loading 
               ? 'bg-cyan-50/95 border-cyan-200 text-cyan-800 hover:bg-cyan-100/95' 
-              : 'bg-emerald-50/95 border-emerald-200 text-emerald-800 hover:bg-emerald-100/95'
+              : 'bg-primary-50/95 border-primary-200 text-primary-700 hover:bg-primary-100/95'
           }`}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
@@ -281,8 +281,8 @@ export default function GeolocationIndicator({ onStateChange }: GeolocationIndic
             <AlertCircle className="w-4 h-4 text-red-500" />
           ) : (
             <div className="relative flex items-center justify-center">
-              <span className="absolute animate-ping h-2.5 w-2.5 rounded-full bg-emerald-400 opacity-75"></span>
-              <MapPin className="relative w-4 h-4 text-emerald-600" />
+              <span className="absolute animate-ping h-2.5 w-2.5 rounded-full bg-primary-300 opacity-75"></span>
+              <MapPin className="relative w-4 h-4 text-primary-500" />
             </div>
           )}
 
@@ -304,12 +304,12 @@ export default function GeolocationIndicator({ onStateChange }: GeolocationIndic
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -8, scale: 0.95 }}
               transition={{ duration: 0.12 }}
-              className="w-72 bg-white border border-gray-150 rounded-2xl p-4 shadow-xl text-gray-800 text-xs flex flex-col gap-3"
+              className="w-72 bg-container border border-gray-150 rounded-xl p-4 shadow-xl text-gray-800 text-xs flex flex-col gap-3"
             >
               {/* Header */}
               <div className="border-b border-gray-100 pb-2 flex items-center justify-between">
                 <div className="flex items-center gap-1 text-gray-700">
-                  <Navigation className="w-3.5 h-3.5 text-emerald-600 rotate-45" />
+                  <Navigation className="w-3.5 h-3.5 text-primary-500 rotate-45" />
                   <span className="font-semibold text-sm">ডিভাইস লাইভ জিপিএস ট্র্যাকার</span>
                 </div>
                 <span className="text-[10px] text-gray-400 uppercase tracking-widest font-mono">TELEMETRY</span>
@@ -325,7 +325,7 @@ export default function GeolocationIndicator({ onStateChange }: GeolocationIndic
                 <div className="flex flex-col gap-2 p-2.5 bg-red-50 border border-red-100 rounded-xl text-red-800 leading-relaxed text-[11px]">
                   <div className="flex gap-1.5 font-semibold">
                     <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
-                    <span>জিপিএস পাওয়া যায়নি</span>
+                    <span>জিপিএস পাওয়া যায়নি</span>
                   </div>
                   <p className="pl-5">{geo.error}</p>
                   <p className="text-[10px] text-red-600 pl-5 leading-normal">মোবাইলের লোকেশন/জিপিএস সার্ভিস এবং ব্রাউজারে সাইটের পারমিশন সচল আছে কিনা পরীক্ষা করুন।</p>
@@ -339,7 +339,7 @@ export default function GeolocationIndicator({ onStateChange }: GeolocationIndic
                   </div>
 
                   {/* Grid fields */}
-                  <div className="grid grid-cols-2 gap-2 bg-gray-50 p-2.5 rounded-xl border border-gray-100">
+                  <div className="grid grid-cols-2 gap-2 bg-surface p-2.5 rounded-xl border border-gray-100">
                     <div className="flex flex-col">
                       <span className="text-[10px] text-gray-400 font-medium">অক্ষাংশ (LATITUDE)</span>
                       <span className="text-sm font-bold font-mono text-cyan-800 mt-0.5">
@@ -365,21 +365,21 @@ export default function GeolocationIndicator({ onStateChange }: GeolocationIndic
                   </div>
 
                   {/* Operational instructions */}
-                  <div className="flex gap-2 text-[10.5px] text-gray-500 leading-relaxed bg-emerald-50/50 border border-emerald-100 p-2 rounded-lg">
-                    <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <p>অ্যাপ্লিকেশনটিতে বৃক্ষরোপণ লগ জমা করার সময় এই নির্ভুল জিপিএস কোঅর্ডিনেটটি স্বয়ংক্রিয়ভাবে সিঙ্ক হয়ে যাবে এবং মানচিত্রে চিহ্নিত করবে।</p>
+                  <div className="flex gap-2 text-[10.5px] text-gray-500 leading-relaxed bg-primary-50/50 border border-primary-100 p-2 rounded-lg">
+                    <CheckCircle className="w-4 h-4 text-primary-500 shrink-0 mt-0.5" />
+                    <p>অ্যাপ্লিকেশনটিতে বৃক্ষরোপণ লগ জমা করার সময় এই নির্ভুল জিপিএস কোঅর্ডিনেটটি স্বয়ংক্রিয়ভাবে সিঙ্ক হয়ে যাবে এবং মানচিত্রে চিহ্নিত করবে।</p>
                   </div>
 
                   {/* Copy button */}
                   <button
                     onClick={handleCopy}
                     id="btnCopyCoordinates"
-                    className="flex items-center justify-center gap-1.5 w-full bg-gray-800 hover:bg-gray-950 text-white font-bold py-1.5 rounded-lg text-xs tracking-wide transition cursor-pointer border-none shadow-md"
+                    className="flex items-center justify-center gap-1.5 w-full bg-primary-500 hover:bg-primary-600 text-white font-bold py-1.5 rounded-lg text-xs tracking-wide transition cursor-pointer border-none shadow-md"
                   >
                     {copied ? (
                       <>
-                        <Check className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>কপি হয়েছে!</span>
+                        <Check className="w-3.5 h-3.5 text-primary-300" />
+                        <span>কপি হয়েছে!</span>
                       </>
                     ) : (
                       <>

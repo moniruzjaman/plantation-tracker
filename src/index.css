@@ -1,9 +1,46 @@
 @import "tailwindcss";
 
+@theme {
+  /* ── Primary: Deep Bangladesh Green #006A4E ── */
+  --color-primary-50: #edf6f2;
+  --color-primary-100: #d0e8dc;
+  --color-primary-200: #a3d7bb;
+  --color-primary-300: #6fbc96;
+  --color-primary-400: #3fa270;
+  --color-primary-500: #006A4E;
+  --color-primary-600: #005a42;
+  --color-primary-700: #004a36;
+  --color-primary-800: #003b2b;
+  --color-primary-900: #002c20;
+  --color-primary-950: #001a13;
+
+  /* ── Accent: Vibrant Red #D90429 ── */
+  --color-accent-50: #fde8ec;
+  --color-accent-100: #fcc5cf;
+  --color-accent-200: #f99dae;
+  --color-accent-300: #f5758e;
+  --color-accent-400: #f24d6d;
+  --color-accent-500: #D90429;
+  --color-accent-600: #c00424;
+  --color-accent-700: #a80320;
+  --color-accent-800: #8f021b;
+  --color-accent-900: #760217;
+  --color-accent-950: #4e0111;
+
+  /* ── Surface & Container ── */
+  --color-surface: #FCF9F8;
+  --color-container: #FFFFFF;
+
+  /* ── Font Family: Hanken Grotesk + Bengali fallback ── */
+  --font-sans: 'Hanken Grotesk', 'Noto Sans Bengali', system-ui, sans-serif;
+}
+
 html, body, #root {
   margin: 0;
   padding: 0;
   height: 100%;
   width: 100%;
   overflow: hidden;
+  font-family: 'Hanken Grotesk', 'Noto Sans Bengali', system-ui, sans-serif;
+  background-color: #FCF9F8;
 }
