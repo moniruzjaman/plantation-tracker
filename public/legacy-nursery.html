@@ -332,23 +332,88 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 
 <!-- ========== TAB: DASHBOARD ========== -->
 <section id="tab-dashboard" class="tab-content hidden">
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-<div class="card-stat bg-white rounded-xl shadow p-4" style="border-left:4px solid #22c55e"><p class="text-xs sm:text-sm text-gray-500">মোট জমা</p><p id="statTotal" class="text-2xl sm:text-3xl font-bold text-green-700">0</p></div>
-<div class="card-stat bg-white rounded-xl shadow p-4" style="border-left:4px solid #3b82f6"><p class="text-xs sm:text-sm text-gray-500">মোট রোপণকারী</p><p id="statNurseries" class="text-2xl sm:text-3xl font-bold text-blue-700">0</p></div>
-<div class="card-stat bg-white rounded-xl shadow p-4" style="border-left:4px solid #f97316"><p class="text-xs sm:text-sm text-gray-500">মোট চারা</p><p id="statSeedlings" class="text-2xl sm:text-3xl font-bold text-orange-700">0</p></div>
-<div class="card-stat bg-white rounded-xl shadow p-4" style="border-left:4px solid #a855f7"><p class="text-xs sm:text-sm text-gray-500">মোট কলম</p><p id="statGrafts" class="text-2xl sm:text-3xl font-bold text-purple-700">0</p></div>
+
+<!-- ── Data source badge + last sync ── -->
+<div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+  <div class="flex items-center gap-2">
+    <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full" style="background:#ecfdf5;color:#047857">
+      <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+      App_Entry (সকল ডিভাইস)
+    </span>
+    <span id="dashDataSourceNote" class="text-xs text-gray-400">লোকাল + জাতীয় ডাটা মার্জ করা হয়েছে</span>
+  </div>
+  <button onclick="refreshDashNationalData()" class="text-xs font-semibold px-3 py-1.5 rounded-md border cursor-pointer hover:bg-gray-50 transition" style="border-color:#15803d;color:#15803d" id="dashRefreshBtn">🔄 রিফ্রেশ</button>
 </div>
+
+<!-- ── KPI Cards ── -->
+<div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4 mb-6">
+  <div class="card-stat bg-white rounded-xl shadow p-4" style="border-left:4px solid #15803d">
+    <p class="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wide font-semibold">মোট এন্ট্রি</p>
+    <p id="statTotal" class="text-xl sm:text-2xl font-bold text-green-800 mt-1">০</p>
+    <p id="statTotalLocal" class="text-[10px] text-gray-400 mt-0.5"></p>
+  </div>
+  <div class="card-stat bg-white rounded-xl shadow p-4" style="border-left:4px solid #2563eb">
+    <p class="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wide font-semibold">রোপণকারী</p>
+    <p id="statNurseries" class="text-xl sm:text-2xl font-bold text-blue-800 mt-1">০</p>
+    <p id="statOfficers" class="text-[10px] text-gray-400 mt-0.5"></p>
+  </div>
+  <div class="card-stat bg-white rounded-xl shadow p-4" style="border-left:4px solid #ea580c">
+    <p class="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wide font-semibold">মোট চারা</p>
+    <p id="statSeedlings" class="text-xl sm:text-2xl font-bold text-orange-700 mt-1">০</p>
+    <p id="statCatBreakdown" class="text-[10px] text-gray-400 mt-0.5"></p>
+  </div>
+  <div class="card-stat bg-white rounded-xl shadow p-4" style="border-left:4px solid #7c3aed">
+    <p class="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wide font-semibold">প্রজাতি সংখ্যা</p>
+    <p id="statSpecies" class="text-xl sm:text-2xl font-bold text-purple-800 mt-1">০</p>
+    <p id="statTopSpecies" class="text-[10px] text-gray-400 mt-0.5 truncate"></p>
+  </div>
+  <div class="card-stat bg-white rounded-xl shadow p-4" style="border-left:4px solid #0891b2">
+    <p class="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wide font-semibold">কভারেজ</p>
+    <p id="statCoverage" class="text-xl sm:text-2xl font-bold text-cyan-800 mt-1">০ / ০</p>
+    <p id="statCoverageDetail" class="text-[10px] text-gray-400 mt-0.5"></p>
+  </div>
+  <div class="card-stat bg-white rounded-xl shadow p-4" style="border-left:4px solid #dc2626">
+    <p class="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wide font-semibold">গড় চারা/এন্ট্রি</p>
+    <p id="statAvg" class="text-xl sm:text-2xl font-bold text-red-700 mt-1">০</p>
+    <p id="statMaxEntry" class="text-[10px] text-gray-400 mt-0.5 truncate"></p>
+  </div>
+</div>
+
+<!-- ── Filters ── -->
 <div class="bg-white rounded-xl shadow p-4 mb-6">
-<p class="font-semibold text-gray-700 mb-3 text-sm">🔍 ফিল্টার করুন</p>
-<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-<select id="dashRegion" onchange="onDashFilterChange()" class="border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব অঞ্চল</option></select>
-<select id="dashDistrict" onchange="onDashFilterChange()" class="border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব জেলা</option></select>
+  <p class="font-semibold text-gray-700 mb-3 text-sm">🔍 ফিল্টার করুন</p>
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+    <select id="dashRegion" onchange="onDashFilterChange()" class="border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব অঞ্চল</option></select>
+    <select id="dashDistrict" onchange="onDashDistrictChange()" class="border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব জেলা</option></select>
+    <select id="dashUpazila" onchange="renderDashboard()" class="border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব উপজেলা</option></select>
+  </div>
 </div>
-</div>
+
+<!-- ── Charts Row 1: Region bar + Category doughnut ── -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-<div class="bg-white rounded-xl shadow p-4"><p class="font-semibold text-gray-700 mb-3 text-sm">অঞ্চল অনুযায়ী জমা</p><canvas id="chartDivision" height="220"></canvas></div>
-<div class="bg-white rounded-xl shadow p-4"><p class="font-semibold text-gray-700 mb-3 text-sm">চারার ধরন অনুযায়ী</p><canvas id="chartCategory" height="220"></canvas></div>
+  <div class="bg-white rounded-xl shadow p-4">
+    <p class="font-semibold text-gray-700 mb-3 text-sm">📊 অঞ্চল অনুযায়ী এন্ট্রি ও চারা</p>
+    <canvas id="chartDivision" height="220"></canvas>
+  </div>
+  <div class="bg-white rounded-xl shadow p-4">
+    <p class="font-semibold text-gray-700 mb-3 text-sm">🥧 চারার শ্রেণী অনুযায়ী</p>
+    <canvas id="chartCategory" height="220"></canvas>
+  </div>
 </div>
+
+<!-- ── Charts Row 2: District bar + Top 10 Species ── -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+  <div class="bg-white rounded-xl shadow p-4">
+    <p class="font-semibold text-gray-700 mb-3 text-sm">🏙️ জেলা অনুযায়ী চারা সংখ্যা</p>
+    <canvas id="chartDistrict" height="220"></canvas>
+  </div>
+  <div class="bg-white rounded-xl shadow p-4">
+    <p class="font-semibold text-gray-700 mb-3 text-sm">🌿 শীর্ষ ১০ প্রজাতি</p>
+    <canvas id="chartSpecies" height="220"></canvas>
+  </div>
+</div>
+
+<!-- ── Data Table ── -->
 <div class="bg-white rounded-xl shadow p-4 mb-6 overflow-x-auto">
 <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
 <div class="flex items-center gap-2 flex-wrap">
@@ -359,9 +424,9 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 </div>
 </div>
 <div class="flex gap-2">
-<button onclick="exportToGovExcel('dash')" class="text-white text-xs sm:text-sm px-4 py-2 rounded-lg shadow transition font-semibold hover:opacity-90 cursor-pointer" style="background:#0284c7">📥 সরকারি ছকে ডাউনলোড (Official)</button>
-<button onclick="exportToExcel('dash')" class="text-white text-xs sm:text-sm px-4 py-2 rounded-lg shadow transition font-semibold hover:opacity-90 cursor-pointer" style="background:#15803d">📥 সাধারণ Excel ডাউনলোড</button>
-<button onclick="exportToCSV('dash')" class="text-white text-xs sm:text-sm px-4 py-2 rounded-lg shadow transition font-semibold hover:opacity-90 cursor-pointer" style="background:#4f46e5">📥 CSV ডাউনলোড</button>
+<button onclick="exportToGovExcel('dash')" class="text-white text-xs sm:text-sm px-4 py-2 rounded-lg shadow transition font-semibold hover:opacity-90 cursor-pointer" style="background:#0284c7">📥 সরকারি ছক (Official)</button>
+<button onclick="exportToExcel('dash')" class="text-white text-xs sm:text-sm px-4 py-2 rounded-lg shadow transition font-semibold hover:opacity-90 cursor-pointer" style="background:#15803d">📥 Excel</button>
+<button onclick="exportToCSV('dash')" class="text-white text-xs sm:text-sm px-4 py-2 rounded-lg shadow transition font-semibold hover:opacity-90 cursor-pointer" style="background:#4f46e5">📥 CSV</button>
 </div>
 </div>
 <div class="overflow-x-auto"><table class="w-full text-sm" id="dashTable">
@@ -968,7 +1033,7 @@ window.autoSelectAdminFromGeo=function(addr){
     }
   }catch(e){console.error("Auto admin-select failed:",e)}
 };
-var chartDiv=null,chartCat=null,isAdmin=false;
+var chartDiv=null,chartCat=null,chartDist=null,chartSpec=null,isAdmin=false;
 
 function getSubmissions(){try{return JSON.parse(localStorage.getItem(LS_KEY)||"[]")}catch(e){return[]}}
 function saveSubmissions(d){localStorage.setItem(LS_KEY,JSON.stringify(d))}
@@ -1058,7 +1123,7 @@ function upazilaColor(name){
   _upazilaColorCache[name]=UPAZILA_PALETTE[idx];
   return _upazilaColorCache[name];
 }
-window.onDashFilterChange=function(){populateDistrictDD(document.getElementById("dashDistrict"),document.getElementById("dashRegion").value);renderDashboard()};
+window.onDashFilterChange=function(){/* defined near renderDashboard */};
 window.onFormDivisionChange=function(){/* placeholder for future division→region cascade */};
 window.onFormRegionChange=function(){populateDistrictDD(document.getElementById("fDistrict"),document.getElementById("fRegion").value);document.getElementById("fUpazila").innerHTML='<option value="">উপজেলা নির্বাচন করুন</option>'};
 window.onFormDistrictChange=function(){populateUpazilaDD(document.getElementById("fUpazila"),document.getElementById("fDistrict").value)};
@@ -1555,13 +1620,37 @@ document.getElementById("tab-form").scrollIntoView({behavior:"smooth"});
 };
 window.deleteMySubmission=function(id){if(!confirm("আপনি কি নিশ্চিত?"))return;saveSubmissions(getSubmissions().filter(function(s){return s.id!==id&&s.submissionId!==id}));lookupSubmissions()};
 
-// ── Dashboard ──
+// ── Dashboard data: merge national + local, same pattern as Map tab ──
+function getDashEntries(){
+  var r=document.getElementById("dashRegion")&&document.getElementById("dashRegion").value;
+  var d=document.getElementById("dashDistrict")&&document.getElementById("dashDistrict").value;
+  var u=document.getElementById("dashUpazila")&&document.getElementById("dashUpazila").value;
+  var byId={},merged=[];
+  (_nationalEntries||[]).forEach(function(s){var key=s.submissionId||s.id;if(key)byId[key]=true;merged.push(s)});
+  getSubmissions().forEach(function(s){var key=s.submissionId||s.id;if(key&&byId[key])return;s._source=s._source||"local";merged.push(s)});
+  return merged.filter(function(s){if(r&&s.region!==r)return false;if(d&&s.district!==d)return false;if(u&&s.upazila!==u)return false;return true});
+}
 function getFiltered(prefix){
 var r=document.getElementById(prefix+"Region")&&document.getElementById(prefix+"Region").value;
 var d=document.getElementById(prefix+"District")&&document.getElementById(prefix+"District").value;
 return getSubmissions().filter(function(s){if(r&&s.region!==r)return false;if(d&&s.district!==d)return false;return true});
 }
 window.currentDashboardViewMode = "gov";
+window.onDashFilterChange=function(){populateDistrictDD(document.getElementById("dashDistrict"),document.getElementById("dashRegion").value);populateDashUpazilaDD();renderDashboard()};
+window.onDashDistrictChange=function(){populateDashUpazilaDD();renderDashboard()};
+function populateDashUpazilaDD(selected){
+  var dd=document.getElementById("dashUpazila");
+  var district=document.getElementById("dashDistrict").value;
+  dd.innerHTML='<option value="">সব উপজেলা</option>';
+  if(district&&BD_UPAZILA[district]){
+    BD_UPAZILA[district].forEach(function(u){var o=document.createElement("option");o.value=u;o.textContent=u;if(u===selected)o.selected=true;dd.appendChild(o)});
+    getCustomUpazilas(district).forEach(function(u){var o=document.createElement("option");o.value=u;o.textContent=u+" (নতুন যোগ)";if(u===selected)o.selected=true;dd.appendChild(o)});
+  }
+}
+window.refreshDashNationalData=function(){
+  var btn=document.getElementById("dashRefreshBtn");if(btn){btn.disabled=true;btn.textContent="রিফ্রেশ হচ্ছে...";}
+  fetchNationalEntries(true).then(function(){if(btn){btn.disabled=false;btn.textContent="🔄 রিফ্রেশ";}renderDashboard()});
+};
 window.setDashboardViewMode = function(mode) {
   window.currentDashboardViewMode = mode;
   var btnGov = document.getElementById("btnViewGov");
@@ -1580,125 +1669,186 @@ window.setDashboardViewMode = function(mode) {
 
 window.renderDashboard=function(){
 try{
-var subs=getFiltered("dash");var totalS=0,totalG=0,nurs=new Set();
-subs.forEach(function(s){nurs.add(s.nurseryName);CATEGORIES.forEach(function(c){(s[c.key]||[]).forEach(function(e){totalS+=(parseInt(e.count)||0);totalG+=(parseInt(e.graftingCount)||0)})})});
-document.getElementById("statTotal").textContent=subs.length;document.getElementById("statNurseries").textContent=nurs.size;
-document.getElementById("statSeedlings").textContent=totalS.toLocaleString("bn-BD");document.getElementById("statGrafts").textContent=totalG.toLocaleString("bn-BD");
+  if(!_nationalEntries&&!_nationalEntriesLoading){fetchNationalEntries().then(function(){renderDashboard()})}
 
-if(typeof Chart!=="undefined"){
-var divC={};Object.keys(BD).forEach(function(d){divC[d]=0});subs.forEach(function(s){if(divC[s.region]!==undefined)divC[s.region]++});
-if(chartDiv)chartDiv.destroy();
-chartDiv=new Chart(document.getElementById("chartDivision"),{type:"bar",data:{labels:Object.keys(divC),datasets:[{label:"জমা",data:Object.values(divC),backgroundColor:["#15803d","#2563eb","#dc2626","#7c3aed","#ea580c","#0891b2","#be185d","#4d7c0f"]}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}}});
-var catC=[0,0,0];subs.forEach(function(s){CATEGORIES.forEach(function(c,i){(s[c.key]||[]).forEach(function(e){catC[i]+=(parseInt(e.count)||0)+(parseInt(e.graftingCount)||0)})})});
-if(chartCat)chartCat.destroy();
-chartCat=new Chart(document.getElementById("chartCategory"),{type:"doughnut",data:{labels:CATEGORIES.map(function(c){return c.label}),datasets:[{data:catC,backgroundColor:CATEGORIES.map(function(c){return c.color})}]},options:{responsive:true,plugins:{legend:{position:"bottom"}}}});
-}
+  var subs=getDashEntries();
 
-var th=document.getElementById("dashTableHead"),tb=document.getElementById("dashTableBody"),nd=document.getElementById("dashNoData");
-if(!subs.length){if(tb)tb.innerHTML="";if(th)th.innerHTML="";if(nd)nd.classList.remove("hidden");return}
-if(nd)nd.classList.add("hidden");
+  var totalFruit=0,totalForest=0,totalMedicinal=0;
+  var planters=new Set(), officers=new Set(), speciesMap={}, districtSet=new Set(), upazilaSet=new Set();
+  var maxQty=0, maxName="";
+  var localCount=0;
 
-if(!window.currentDashboardViewMode) window.currentDashboardViewMode = "gov";
-
-if(window.currentDashboardViewMode === "gov") {
-  if (th) {
-    th.innerHTML = '<tr style="background:#0284c7;color:#ffffff">' +
-      '<th class="px-2 py-2 text-left whitespace-nowrap">ক্র. নং</th>' +
-      '<th class="px-2 py-2 text-left whitespace-nowrap">জেলা, উপজেলা ও গ্রাম/অবস্থান</th>' +
-      '<th class="px-2 py-2 text-left whitespace-nowrap">রোপণকৃত প্রজাতির নাম</th>' +
-      '<th class="px-2 py-2 text-left whitespace-nowrap">রোপণকৃত বৃক্ষের সংখ্যা</th>' +
-      '<th class="px-2 py-2 text-left whitespace-nowrap">বৃক্ষরোপণের তারিখ</th>' +
-      '<th class="px-2 py-2 text-left whitespace-nowrap">সুনির্দিষ্ট এলাকা (জিওغرافিক্যাল কোঅর্ডিনেটসহ)</th>' +
-      '<th class="px-2 py-2 text-left whitespace-nowrap">তদারককারী / মনিটরিং অফিসার ও ফোন</th>' +
-      '<th class="px-2 py-2 text-left whitespace-nowrap">মন্তব্য</th>' +
-      '</tr>';
-  }
-  
-  var rowsHtml = [];
-  var rowIndex = 1;
-  subs.forEach(function(s) {
-    var pD = s.plantingDate ? new Date(s.plantingDate).toLocaleDateString("bn-BD") : (s.submittedAt ? new Date(s.submittedAt).toLocaleDateString("bn-BD") : "");
-    var fullLocation = "জেলা: " + s.district + ", উপজেলা: " + s.upazila + (s.address ? ", গ্রাম/অবস্থান: " + s.address : "");
-    var geoLoc = s.geoLocation || "কোনো কোঅর্ডিনেট নেই";
-    
-    var caretakerInfo = "";
-    if (s.caretakerName) {
-      caretakerInfo = s.caretakerName + (s.caretakerMobile ? " (" + s.caretakerMobile + ")" : "");
+  subs.forEach(function(s){
+    if(s._source==="local") localCount++;
+    var c=countSeedlings(s);
+    totalFruit+=c.fruit; totalForest+=c.forest; totalMedicinal+=c.medicinal;
+    var name=s.farmerName||s.nurseryName||"";
+    if(name) planters.add(name);
+    var offName=s.officerName||s.caretakerName||"";
+    if(offName) officers.add(offName);
+    if(s.district) districtSet.add(s.district);
+    if(s.upazila) upazilaSet.add(s.upazila);
+    var seedlings=s.seedlings;
+    if(!seedlings||!seedlings.length){
+      CATEGORIES.forEach(function(cat){(s[cat.key]||[]).forEach(function(e){
+        var n=e.name||"নামহীন"; var q=(parseInt(e.count)||0)+(parseInt(e.graftingCount)||0);
+        if(!speciesMap[n]) speciesMap[n]=0; speciesMap[n]+=q;
+      })});
     } else {
-      caretakerInfo = s.nurseryName + (s.mobile ? " (" + s.mobile + ")" : "");
-    }
-    
-    var remarks = s.remarks || "";
-    var has = (s.fruitSeedlings && s.fruitSeedlings.length || 0) + 
-              (s.forestSeedlings && s.forestSeedlings.length || 0) + 
-              (s.medicinalSeedlings && s.medicinalSeedlings.length || 0);
-
-    if (!has) {
-      rowsHtml.push('<tr class="border-b hover:bg-gray-50 transition" style="font-size:12px">' +
-        '<td class="px-2 py-2">' + rowIndex.toLocaleString("bn-BD") + '</td>' +
-        '<td class="px-2 py-2">' + fullLocation + '</td>' +
-        '<td class="px-2 py-2 text-gray-400 font-medium">কোনো চারা রোপণ বিবরণী নেই</td>' +
-        '<td class="px-2 py-2">০</td>' +
-        '<td class="px-2 py-2">' + pD + '</td>' +
-        '<td class="px-2 py-2 font-mono text-cyan-700">' + geoLoc + '</td>' +
-        '<td class="px-2 py-2 font-semibold text-sky-800">' + caretakerInfo + '</td>' +
-        '<td class="px-2 py-2 text-gray-500">' + remarks + '</td>' +
-        '</tr>');
-      rowIndex++;
-    } else {
-      CATEGORIES.forEach(function(cat) {
-        (s[cat.key] || []).forEach(function(e) {
-          var countVal = (parseInt(e.count) || 0) + (parseInt(e.graftingCount) || 0);
-          rowsHtml.push('<tr class="border-b hover:bg-gray-50 transition" style="font-size:12px">' +
-            '<td class="px-2 py-2">' + rowIndex.toLocaleString("bn-BD") + '</td>' +
-            '<td class="px-2 py-2">' + fullLocation + '</td>' +
-            '<td class="px-2 py-2 font-semibold text-gray-800">' + (e.name || "নামহীন প্রজাতি") + ' <span class="text-xs text-gray-400">(' + cat.label + ')</span></td>' +
-            '<td class="px-2 py-2 font-bold text-green-700">' + countVal.toLocaleString("bn-BD") + '</td>' +
-            '<td class="px-2 py-2">' + pD + '</td>' +
-            '<td class="px-2 py-2 font-mono text-cyan-700">' + geoLoc + '</td>' +
-            '<td class="px-2 py-2 font-semibold text-sky-800">' + caretakerInfo + '</td>' +
-            '<td class="px-2 py-2 text-gray-500">' + remarks + '</td>' +
-            '</tr>');
-          rowIndex++;
-        });
+      seedlings.forEach(function(e){
+        var n=e.speciesName||"নামহীন"; var q=parseInt(e.quantity)||0;
+        if(!speciesMap[n]) speciesMap[n]=0; speciesMap[n]+=q;
       });
     }
+    var t=c.fruit+c.forest+c.medicinal;
+    if(t>maxQty){maxQty=t;maxName=name}
   });
-  if (tb) tb.innerHTML = rowsHtml.join("");
-} else {
-  if (th) {
-    th.innerHTML = '<tr style="background:#f0fdf4;color:#166534">' +
-      '<th class="px-2 py-2 text-left whitespace-nowrap">ক্রম</th>' +
-      '<th class="px-2 py-2 text-left whitespace-nowrap">অঞ্চল</th>' +
-      '<th class="px-2 py-2 text-left whitespace-nowrap">জেলা</th>' +
-      '<th class="px-2 py-2 text-left whitespace-nowrap">উপজেলা</th>' +
-      '<th class="px-2 py-2 text-left whitespace-nowrap">রোপণকারীর নাম</th>' +
-      '<th class="px-2 py-2 text-left whitespace-nowrap">মোবাইল</th>' +
-      '<th class="px-2 py-2 text-left whitespace-nowrap" style="color:#b45309">ফলদ</th>' +
-      '<th class="px-2 py-2 text-left whitespace-nowrap" style="color:#047857">বনজ</th>' +
-      '<th class="px-2 py-2 text-left whitespace-nowrap" style="color:#1d4ed8">ঔষধি</th>' +
-      '<th class="px-2 py-2 text-left whitespace-nowrap">রোপণের তারিখ</th>' +
-      '</tr>';
+
+  var totalSeedlings=totalFruit+totalForest+totalMedicinal;
+  var speciesKeys=Object.keys(speciesMap);
+  var sortedSpecies=speciesKeys.slice().sort(function(a,b){return speciesMap[b]-speciesMap[a]});
+
+  var el=function(id){return document.getElementById(id)};
+  if(el("statTotal")) el("statTotal").textContent=subs.length.toLocaleString("bn-BD");
+  if(el("statTotalLocal")) el("statTotalLocal").textContent=localCount?"এই ডিভাইস: "+localCount.toLocaleString("bn-BD"):"";
+  if(el("statNurseries")) el("statNurseries").textContent=planters.size.toLocaleString("bn-BD");
+  if(el("statOfficers")) el("statOfficers").textContent=officers.size?officers.size.toLocaleString("bn-BD")+" অফিসার":"";
+  if(el("statSeedlings")) el("statSeedlings").textContent=totalSeedlings.toLocaleString("bn-BD");
+  if(el("statCatBreakdown")) el("statCatBreakdown").textContent="ফলদ "+totalFruit.toLocaleString("bn-BD")+" · বনজ "+totalForest.toLocaleString("bn-BD")+" · ঔষধি "+totalMedicinal.toLocaleString("bn-BD");
+  if(el("statSpecies")) el("statSpecies").textContent=speciesKeys.length.toLocaleString("bn-BD");
+  if(el("statTopSpecies")) el("statTopSpecies").textContent=sortedSpecies[0]||"";
+  if(el("statCoverage")) el("statCoverage").textContent=districtSet.size.toLocaleString("bn-BD")+" জেলা, "+upazilaSet.size.toLocaleString("bn-BD")+" উপজেলা";
+  if(el("statCoverageDetail")) el("statCoverageDetail").textContent=officers.size?officers.size.toLocaleString("bn-BD")+" অফিসার সক্রিয়":"";
+  if(el("statAvg")) el("statAvg").textContent=subs.length?(totalSeedlings/subs.length).toFixed(0).toLocaleString("bn-BD"):"०";
+  if(el("statMaxEntry")) el("statMaxEntry").textContent=maxName?("সর্বোচ্চ: "+maxName+" ("+maxQty.toLocaleString("bn-BD")+")"):"";
+
+  if(el("dashDataSourceNote")){
+    if(_nationalEntries){
+      var t=_nationalEntriesAt?_nationalEntriesAt.toLocaleTimeString("bn-BD"):"";
+      el("dashDataSourceNote").textContent=_nationalEntries.length.toLocaleString("bn-BD")+" জাতীয় + "+localCount+" লোকাল এন্ট্রি"+(t?" (সর্বশেষ: "+t+")":"");
+    } else {
+      el("dashDataSourceNote").textContent="জাতীয় ডাটা লোড হচ্ছে...";
+    }
   }
-  if (tb) {
-    tb.innerHTML=subs.map(function(s,i){
-      var c=countSeedlings(s);
+
+  if(typeof Chart!=="undefined"){
+    var regionLabels=[], regionEntryData=[], regionSeedData=[];
+    Object.keys(BD).forEach(function(r){
+      var rSubs=subs.filter(function(s){return s.region===r});
+      regionLabels.push(r); regionEntryData.push(rSubs.length);
+      var rTotal=0; rSubs.forEach(function(s){var c=countSeedlings(s);rTotal+=c.fruit+c.forest+c.medicinal});
+      regionSeedData.push(rTotal);
+    });
+    if(chartDiv) chartDiv.destroy();
+    chartDiv=new Chart(document.getElementById("chartDivision"),{
+      type:"bar",
+      data:{labels:regionLabels,datasets:[
+        {label:"এন্ট্রি",data:regionEntryData,backgroundColor:"rgba(21,128,61,0.7)",borderRadius:4},
+        {label:"চারা সংখ্যা",data:regionSeedData,backgroundColor:"rgba(234,88,12,0.5)",borderRadius:4}
+      ]},
+      options:{responsive:true,plugins:{legend:{position:"bottom",labels:{font:{size:11}}}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}}
+    });
+
+    if(chartCat) chartCat.destroy();
+    chartCat=new Chart(document.getElementById("chartCategory"),{
+      type:"doughnut",
+      data:{labels:["ফলদ চারা","বনজ চারা","ঔষধি চারা"],datasets:[{
+        data:[totalFruit,totalForest,totalMedicinal],
+        backgroundColor:["#f97316","#059669","#2563eb"],borderWidth:2,borderColor:"#fff"
+      }]},
+      options:{responsive:true,plugins:{legend:{position:"bottom",labels:{font:{size:11},padding:12}}}}
+    });
+
+    var distMap={};
+    subs.forEach(function(s){if(!s.district) return;if(!distMap[s.district]) distMap[s.district]=0;var c=countSeedlings(s);distMap[s.district]+=c.fruit+c.forest+c.medicinal});
+    var distSorted=Object.keys(distMap).sort(function(a,b){return distMap[b]-distMap[a]}).slice(0,12);
+    if(chartDist) chartDist.destroy();
+    var distCanvas=el("chartDistrict");
+    if(distCanvas){
+      chartDist=new Chart(distCanvas,{type:"bar",data:{labels:distSorted,datasets:[{label:"চারা সংখ্যা",data:distSorted.map(function(d){return distMap[d]}),backgroundColor:"rgba(37,99,235,0.6)",borderRadius:4}]},options:{indexAxis:"y",responsive:true,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{precision:0}}}}});
+    }
+
+    var top10=sortedSpecies.slice(0,10);
+    if(chartSpec) chartSpec.destroy();
+    var specCanvas=el("chartSpecies");
+    if(specCanvas){
+      chartSpec=new Chart(specCanvas,{type:"bar",data:{labels:top10,datasets:[{label:"সংখ্যা",data:top10.map(function(n){return speciesMap[n]}),backgroundColor:"rgba(5,150,105,0.6)",borderRadius:4}]},options:{indexAxis:"y",responsive:true,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{precision:0}}}}});
+    }
+  }
+
+  var th=el("dashTableHead"),tb=el("dashTableBody"),nd=el("dashNoData");
+  if(!subs.length){if(tb)tb.innerHTML="";if(th)th.innerHTML="";if(nd)nd.classList.remove("hidden");return}
+  if(nd)nd.classList.add("hidden");
+
+  if(!window.currentDashboardViewMode) window.currentDashboardViewMode = "gov";
+
+  if(window.currentDashboardViewMode === "gov") {
+    if (th) {
+      th.innerHTML = '<tr style="background:#0284c7;color:#ffffff">' +
+        '<th class="px-2 py-2 text-left whitespace-nowrap">ক্র. নং</th>' +
+        '<th class="px-2 py-2 text-left whitespace-nowrap">জেলা, উপজেলা ও গ্রাম/অবস্থান</th>' +
+        '<th class="px-2 py-2 text-left whitespace-nowrap">রোপণকৃত প্রজাতির নাম</th>' +
+        '<th class="px-2 py-2 text-left whitespace-nowrap">রোপণকৃত বৃক্ষের সংখ্যা</th>' +
+        '<th class="px-2 py-2 text-left whitespace-nowrap">বৃক্ষরোপণের তারিখ</th>' +
+        '<th class="px-2 py-2 text-left whitespace-nowrap">জিও কোঅর্ডিনেট</th>' +
+        '<th class="px-2 py-2 text-left whitespace-nowrap">মনিটরিং অফিসার ও ফোন</th>' +
+        '<th class="px-2 py-2 text-left whitespace-nowrap">মন্তব্য</th></tr>';
+    }
+    var rowsHtml = [], rowIndex = 1;
+    subs.forEach(function(s) {
       var pD = s.plantingDate ? new Date(s.plantingDate).toLocaleDateString("bn-BD") : (s.submittedAt ? new Date(s.submittedAt).toLocaleDateString("bn-BD") : "");
-      return '<tr class="border-b" style="font-size:12px">' +
-        '<td class="px-2 py-2">'+(i+1).toLocaleString("bn-BD")+'</td>' +
-        '<td class="px-2 py-2">'+s.region+'</td>' +
-        '<td class="px-2 py-2">'+s.district+'</td>' +
-        '<td class="px-2 py-2">'+s.upazila+'</td>' +
-        '<td class="px-2 py-2 font-semibold">'+s.nurseryName+'</td>' +
-        '<td class="px-2 py-2">'+s.mobile+'</td>' +
-        '<td class="px-2 py-2 font-semibold" style="color:#ea580c">'+c.fruit.toLocaleString("bn-BD")+'</td>' +
-        '<td class="px-2 py-2 font-semibold" style="color:#047857">'+c.forest.toLocaleString("bn-BD")+'</td>' +
-        '<td class="px-2 py-2 font-semibold" style="color:#1d4ed8">'+c.medicinal.toLocaleString("bn-BD")+'</td>' +
-        '<td class="px-2 py-2 text-gray-500">'+pD+'</td>' +
-        '</tr>';
-    }).join("");
+      var fullLocation = "জেলা: " + (s.district||"") + ", উপজেলা: " + (s.upazila||"") + (s.address ? ", গ্রাম: " + s.address : "");
+      var geoLoc = s.geoLocation || (s.latitude&&s.longitude?s.latitude+", "+s.longitude:"কোনো কোঅর্ডিনেট নেই");
+      var caretakerInfo = (s.officerName||s.caretakerName||s.farmerName||s.nurseryName||"") +
+        (" (" + (s.officerMobile||s.caretakerMobile||s.farmerMobile||s.mobile||"") + ")");
+      var remarks = s.remarks || "";
+      var items = [];
+      var seedlings = s.seedlings;
+      if(seedlings && seedlings.length){
+        seedlings.forEach(function(e){
+          items.push({name: e.speciesName||"নামহীন প্রজাতি", count: parseInt(e.quantity)||0, catLabel: e.category||""});
+        });
+      } else {
+        CATEGORIES.forEach(function(cat){
+          (s[cat.key]||[]).forEach(function(e){
+            items.push({name: e.name||"নামহীন প্রজাতি", count: (parseInt(e.count)||0)+(parseInt(e.graftingCount)||0), catLabel: cat.label});
+          });
+        });
+      }
+      if(!items.length){
+        rowsHtml.push('<tr class="border-b hover:bg-gray-50 transition" style="font-size:12px"><td class="px-2 py-2">' + rowIndex.toLocaleString("bn-BD") + '</td><td class="px-2 py-2">' + fullLocation + '</td><td class="px-2 py-2 text-gray-400">কোনো চারা রোপণ বিবরণী নেই</td><td class="px-2 py-2">०</td><td class="px-2 py-2">' + pD + '</td><td class="px-2 py-2 font-mono text-cyan-700">' + geoLoc + '</td><td class="px-2 py-2 font-semibold text-sky-800">' + caretakerInfo + '</td><td class="px-2 py-2 text-gray-500">' + remarks + '</td></tr>');
+        rowIndex++;
+      } else {
+        items.forEach(function(e){
+          rowsHtml.push('<tr class="border-b hover:bg-gray-50 transition" style="font-size:12px"><td class="px-2 py-2">' + rowIndex.toLocaleString("bn-BD") + '</td><td class="px-2 py-2">' + fullLocation + '</td><td class="px-2 py-2 font-semibold text-gray-800">' + e.name + (e.catLabel?' <span class="text-xs text-gray-400">('+e.catLabel+')</span>':'') + '</td><td class="px-2 py-2 font-bold text-green-700">' + e.count.toLocaleString("bn-BD") + '</td><td class="px-2 py-2">' + pD + '</td><td class="px-2 py-2 font-mono text-cyan-700">' + geoLoc + '</td><td class="px-2 py-2 font-semibold text-sky-800">' + caretakerInfo + '</td><td class="px-2 py-2 text-gray-500">' + remarks + '</td></tr>');
+          rowIndex++;
+        });
+      }
+    });
+    if (tb) tb.innerHTML = rowsHtml.join("");
+  } else {
+    if (th) {
+      th.innerHTML = '<tr style="background:#f0fdf4;color:#166534">' +
+        '<th class="px-2 py-2 text-left whitespace-nowrap">ক্রম</th>' +
+        '<th class="px-2 py-2 text-left whitespace-nowrap">অঞ্চল</th>' +
+        '<th class="px-2 py-2 text-left whitespace-nowrap">জেলা</th>' +
+        '<th class="px-2 py-2 text-left whitespace-nowrap">উপজেলা</th>' +
+        '<th class="px-2 py-2 text-left whitespace-nowrap">রোপণকারীর নাম</th>' +
+        '<th class="px-2 py-2 text-left whitespace-nowrap">মোবাইল</th>' +
+        '<th class="px-2 py-2 text-left whitespace-nowrap" style="color:#b45309">ফলদ</th>' +
+        '<th class="px-2 py-2 text-left whitespace-nowrap" style="color:#047857">বনজ</th>' +
+        '<th class="px-2 py-2 text-left whitespace-nowrap" style="color:#1d4ed8">ঔষধি</th>' +
+        '<th class="px-2 py-2 text-left whitespace-nowrap">মোট</th>' +
+        '<th class="px-2 py-2 text-left whitespace-nowrap">রোপণের তারিখ</th></tr>';
+    }
+    if (tb) {
+      tb.innerHTML=subs.map(function(s,i){
+        var c=countSeedlings(s);var t=c.fruit+c.forest+c.medicinal;
+        var pD = s.plantingDate ? new Date(s.plantingDate).toLocaleDateString("bn-BD") : (s.submittedAt ? new Date(s.submittedAt).toLocaleDateString("bn-BD") : "");
+        return '<tr class="border-b" style="font-size:12px"><td class="px-2 py-2">'+(i+1).toLocaleString("bn-BD")+'</td><td class="px-2 py-2">'+(s.region||"")+'</td><td class="px-2 py-2">'+(s.district||"")+'</td><td class="px-2 py-2">'+(s.upazila||"")+'</td><td class="px-2 py-2 font-semibold">'+(s.farmerName||s.nurseryName||"")+'</td><td class="px-2 py-2">'+(s.farmerMobile||s.mobile||"")+'</td><td class="px-2 py-2 font-semibold" style="color:#ea580c">'+c.fruit.toLocaleString("bn-BD")+'</td><td class="px-2 py-2 font-semibold" style="color:#047857">'+c.forest.toLocaleString("bn-BD")+'</td><td class="px-2 py-2 font-semibold" style="color:#1d4ed8">'+c.medicinal.toLocaleString("bn-BD")+'</td><td class="px-2 py-2 font-bold text-green-800">'+t.toLocaleString("bn-BD")+'</td><td class="px-2 py-2 text-gray-500">'+pD+'</td></tr>';
+      }).join("");
+    }
   }
-}
 }catch(err){console.error("Dashboard error:",err)}
 };
 
