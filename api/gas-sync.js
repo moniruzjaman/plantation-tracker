@@ -28,15 +28,49 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
   }
+
+  const GAS_URL = process.env.GAS_WEBHOOK_URL;
+  if (!GAS_URL) {
+    return res.status(500).json({ ok: false, error: 'GAS_WEBHOOK_URL not set on server' });
+  }
+
+  // GET is used two ways by the client:
+  //   ?mobile=01XXXXXXXXX  — Profile modal look-up of an already-registered user.
+  //   ?list=1[&district=..&region=..]  — Map tab: every App_Entry row, grouped
+  //     one-object-per-অ্যাপ-জমা-আইডি (submissionId) with a seedlings[] array,
+  //     so the Map can plot every officer's lat/lng (App_Entry columns L, M),
+  //     not just this device's own localStorage. Optional district/region
+  //     narrows the payload; the client also re-filters, so this is just an
+  //     optimization. Requires the doGet(e) "list" branch — see gas/AppsScript.gs.
+  if (req.method === 'GET') {
+    const { mobile, list, district, region } = req.query || {};
+    if (!mobile && !list) {
+      return res.status(400).json({ ok: false, error: 'mobile or list query param required' });
+    }
+    try {
+      const params = new URLSearchParams();
+      if (mobile) params.set('mobile', mobile);
+      if (list) {
+        params.set('list', '1');
+        if (district) params.set('district', district);
+        if (region) params.set('region', region);
+      }
+      const r = await fetch(GAS_URL + '?' + params.toString());
+      const data = await r.json();
+      // Let Vercel's/browser's CDN cache the (potentially large) national
+      // list briefly, since App_Entry doesn't change second-to-second.
+      if (list) res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
+      return res.status(200).json(data);
+    } catch (e) {
+      return res.status(200).json({ ok: false, error: e.message });
+    }
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ ok: false, error: 'Method not allowed' });
   }
 
-  const GAS_URL = process.env.GAS_WEBHOOK_URL;
   const AUTH_SECRET = process.env.AUTH_SECRET || '';
-  if (!GAS_URL) {
-    return res.status(500).json({ ok: false, error: 'GAS_WEBHOOK_URL not set on server' });
-  }
 
   // Normalize to array of records. Each record is one seedling row that
   // will become one row in the App_Entry sheet.

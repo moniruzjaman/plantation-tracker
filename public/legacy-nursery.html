@@ -444,6 +444,10 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 আমার অবস্থান খুঁজুন
 </button>
 </div>
+<div class="mt-3 flex flex-wrap items-center justify-between gap-2">
+<div id="mapSyncStatus" class="text-xs text-gray-500">📡 App_Entry (সকল জেলা) থেকে তথ্য লোড হচ্ছে...</div>
+<button onclick="refreshNationalMapData()" class="text-xs font-semibold px-3 py-1.5 rounded-md border" style="border-color:#15803d;color:#15803d" id="mapRefreshBtn">🔄 তথ্য রিফ্রেশ করুন</button>
+</div>
 </div>
 <div class="bg-white rounded-xl shadow p-3 mb-6 relative">
 <div id="leafletMap" class="w-full h-[450px] sm:h-[550px] rounded-lg border border-gray-200" style="z-index: 10;"></div>
@@ -452,6 +456,7 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <span class="inline-flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-orange-500 inline-block"></span> ফলদ/বৃক্ষ সংখ্যা > ১০,০০০ (বৃহৎ)</span>
 <span class="inline-flex items-center gap-2 ml-3"><span class="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> ৫,০০০ - ১০,০০০ চারা</span>
 <span class="inline-flex items-center gap-2 ml-3"><span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span> < ৫,০০০ চারা</span>
+<span class="inline-flex items-center gap-2 ml-3"><span class="w-3 h-3 rounded-full bg-gray-400 inline-block"></span> এই ডিভাইসে (আনসিঙ্কড)</span>
 </div>
 <div id="mapStatsText" class="font-semibold text-green-700"></div>
 </div>
@@ -2277,6 +2282,83 @@ window.zoomToMyGeoLocation = function() {
   }
 };
 
+// ── National App_Entry sync for the Map tab ──
+// The Map should show every location recorded in the App_Entry sheet
+// (columns L=অক্ষাংশ/latitude, M=দ্রাঘিমাংশ/longitude), across every
+// officer's device — not just this browser's localStorage. The GAS proxy
+// (/api/gas-sync?list=1) fetches and groups the sheet rows server-side
+// (one object per অ্যাপ জমা আইডি, with a seedlings[] array), in the same
+// shape produced locally by buildBaseSubmission()/toGASRows(), so the
+// existing marker-rendering code below needs no special-casing.
+var _nationalEntries = null;        // cache: array | null (not loaded yet)
+var _nationalEntriesAt = null;      // Date of last successful fetch
+var _nationalEntriesLoading = false;
+
+function fetchNationalEntries(force) {
+  if (_nationalEntriesLoading) return Promise.resolve(_nationalEntries || []);
+  if (_nationalEntries && !force) return Promise.resolve(_nationalEntries);
+  _nationalEntriesLoading = true;
+  var statusEl = document.getElementById("mapSyncStatus");
+  if (statusEl) statusEl.textContent = "📡 App_Entry (সকল জেলা) থেকে তথ্য লোড হচ্ছে...";
+  return fetch(GAS_SYNC_ENDPOINT + "?list=1")
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      var rows = (data && data.ok && Array.isArray(data.entries)) ? data.entries : [];
+      _nationalEntries = rows.map(function(r) { r._source = "national"; return r; });
+      _nationalEntriesAt = new Date();
+      if (statusEl) {
+        statusEl.textContent = "✅ App_Entry থেকে " + _nationalEntries.length + " টি এন্ট্রি সিঙ্ক করা হয়েছে (" + _nationalEntriesAt.toLocaleTimeString("bn-BD") + ")";
+      }
+      return _nationalEntries;
+    })
+    .catch(function(err) {
+      console.error("National App_Entry fetch failed:", err);
+      if (statusEl) statusEl.textContent = "⚠️ App_Entry থেকে তথ্য আনা যায়নি — শুধু এই ডিভাইসের তথ্য দেখানো হচ্ছে।";
+      _nationalEntries = _nationalEntries || [];
+      return _nationalEntries;
+    })
+    .finally(function() { _nationalEntriesLoading = false; });
+}
+
+window.refreshNationalMapData = function() {
+  var btn = document.getElementById("mapRefreshBtn");
+  if (btn) { btn.disabled = true; btn.textContent = "🔄 রিফ্রেশ হচ্ছে..."; }
+  fetchNationalEntries(true).then(function() {
+    if (btn) { btn.disabled = false; btn.textContent = "🔄 তথ্য রিফ্রেশ করুন"; }
+    renderMap();
+  });
+};
+
+// Combine this device's local (possibly not-yet-synced) submissions with
+// the national App_Entry list, de-duplicated by অ্যাপ জমা আইডি
+// (submissionId) — preferring the national (sheet-confirmed) copy — then
+// apply the same region/district filters as the rest of the Map tab.
+function getMapEntries() {
+  var r = document.getElementById("mapRegion") && document.getElementById("mapRegion").value;
+  var d = document.getElementById("mapDistrict") && document.getElementById("mapDistrict").value;
+
+  var byId = {};
+  var merged = [];
+
+  (_nationalEntries || []).forEach(function(s) {
+    var key = s.submissionId || s.id;
+    if (key) byId[key] = true;
+    merged.push(s);
+  });
+  getSubmissions().forEach(function(s) {
+    var key = s.submissionId || s.id;
+    if (key && byId[key]) return; // already present via the national (synced) copy
+    s._source = s._source || "local";
+    merged.push(s);
+  });
+
+  return merged.filter(function(s) {
+    if (r && s.region !== r) return false;
+    if (d && s.district !== d) return false;
+    return true;
+  });
+}
+
 window.renderMap = function() {
   try {
     var mapContainer = document.getElementById("leafletMap");
@@ -2297,8 +2379,15 @@ window.renderMap = function() {
     mapMarkers.forEach(function(m) { mapInstance.removeLayer(m); });
     mapMarkers = [];
     
-    // Get filtered submissions
-    var subs = getFiltered("map");
+    // Kick off (or reuse the cached) national App_Entry fetch. First paint
+    // uses whatever is cached/local; once the fetch resolves we re-render
+    // automatically so markers appear without the user having to act.
+    if (!_nationalEntries && !_nationalEntriesLoading) {
+      fetchNationalEntries().then(function() { renderMap(); });
+    }
+    
+    // Get filtered submissions (local + national App_Entry, deduped, district/region filtered)
+    var subs = getMapEntries();
     
     var bounds = [];
     var mappedCount = 0;
@@ -2345,9 +2434,12 @@ window.renderMap = function() {
       detailsHtml += '</div>';
       
       // Marker color logic: Larger is Orange, Medium is Blue, Small is Emerald
+      // — unless the entry hasn't reached the App_Entry sheet yet (this
+      // device only), in which case it's shown gray regardless of size.
       var markerBg = '#10b981'; // Green
       if (totalScCount >= 10000) markerBg = '#f97316'; // Orange
       else if (totalScCount >= 5000) markerBg = '#3b82f6'; // Blue
+      if (s._source === "local") markerBg = '#9ca3af'; // Gray — not yet synced to App_Entry
       
       var customIcon = L.divIcon({
         html: '<div style="background-color: ' + markerBg + '; width: 28px; height: 28px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); transform: scale(1);" title="' + s.nurseryName + '">🌳</div>',
