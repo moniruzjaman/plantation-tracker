@@ -436,9 +436,10 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <section id="tab-map" class="tab-content hidden">
 <div class="bg-white rounded-xl shadow p-4 mb-4">
 <p class="font-semibold text-gray-700 mb-3 text-sm">🗺️ রোপণ লোকেশন ফিল্টার করুন</p>
-<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+<div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
 <select id="mapRegion" onchange="onMapFilterChange()" class="border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব অঞ্চল</option></select>
 <select id="mapDistrict" onchange="onMapFilterChange()" class="border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব জেলা</option></select>
+<select id="mapUpazila" onchange="onMapUpazilaChange()" class="border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব উপজেলা</option></select>
 <button onclick="zoomToMyGeoLocation()" class="text-white px-4 py-2 rounded-lg text-sm font-semibold transition hover:bg-green-800 flex items-center justify-center gap-1.5" style="background:#15803d">
 <svg id="geoIcon" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
 আমার অবস্থান খুঁজুন
@@ -457,6 +458,7 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <span class="inline-flex items-center gap-2 ml-3"><span class="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> ৫,০০০ - ১০,০০০ চারা</span>
 <span class="inline-flex items-center gap-2 ml-3"><span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span> < ৫,০০০ চারা</span>
 <span class="inline-flex items-center gap-2 ml-3"><span class="w-3 h-3 rounded-full bg-gray-400 inline-block"></span> এই ডিভাইসে (আনসিঙ্কড)</span>
+<span class="inline-flex items-center gap-2 ml-3"><span class="w-3 h-3 rounded-full inline-block" style="background:#a855f7"></span> আমার এন্ট্রি</span>
 </div>
 <div id="mapStatsText" class="font-semibold text-green-700"></div>
 </div>
@@ -1025,7 +1027,17 @@ window.handleUpazilaAddNew=function(selectEl){
 
 
 // ── Cascading ──
-window.onMapFilterChange=function(){populateDistrictDD(document.getElementById("mapDistrict"),document.getElementById("mapRegion").value);renderMap()};
+window.onMapFilterChange=function(){populateDistrictDD(document.getElementById("mapDistrict"),document.getElementById("mapRegion").value);populateMapUpazilaDD();renderMap()};
+window.onMapUpazilaChange=function(){renderMap()};
+function populateMapUpazilaDD(selected){
+  var dd=document.getElementById("mapUpazila");
+  var district=document.getElementById("mapDistrict").value;
+  dd.innerHTML='<option value="">সব উপজেলা</option>';
+  if(district&&BD_UPAZILA[district]){
+    BD_UPAZILA[district].forEach(function(u){var o=document.createElement("option");o.value=u;o.textContent=u;if(u===selected)o.selected=true;dd.appendChild(o)});
+    getCustomUpazilas(district).forEach(function(u){var o=document.createElement("option");o.value=u;o.textContent=u+" (নতুন যোগ)";if(u===selected)o.selected=true;dd.appendChild(o)});
+  }
+}
 window.onDashFilterChange=function(){populateDistrictDD(document.getElementById("dashDistrict"),document.getElementById("dashRegion").value);renderDashboard()};
 window.onFormDivisionChange=function(){/* placeholder for future division→region cascade */};
 window.onFormRegionChange=function(){populateDistrictDD(document.getElementById("fDistrict"),document.getElementById("fRegion").value);document.getElementById("fUpazila").innerHTML='<option value="">উপজেলা নির্বাচন করুন</option>'};
@@ -2336,6 +2348,7 @@ window.refreshNationalMapData = function() {
 function getMapEntries() {
   var r = document.getElementById("mapRegion") && document.getElementById("mapRegion").value;
   var d = document.getElementById("mapDistrict") && document.getElementById("mapDistrict").value;
+  var u = document.getElementById("mapUpazila") && document.getElementById("mapUpazila").value;
 
   var byId = {};
   var merged = [];
@@ -2355,6 +2368,7 @@ function getMapEntries() {
   return merged.filter(function(s) {
     if (r && s.region !== r) return false;
     if (d && s.district !== d) return false;
+    if (u && s.upazila !== u) return false;
     return true;
   });
 }
@@ -2440,6 +2454,15 @@ window.renderMap = function() {
       if (totalScCount >= 10000) markerBg = '#f97316'; // Orange
       else if (totalScCount >= 5000) markerBg = '#3b82f6'; // Blue
       if (s._source === "local") markerBg = '#9ca3af'; // Gray — not yet synced to App_Entry
+
+      // Highlight entries made by the current user (profile mobile matches
+      // saaoMobile or officerMobile) with a distinct purple marker.
+      var myProfile = getProfile();
+      if (!s._isMine) {
+        var pm = myProfile && myProfile.mobile;
+        if (pm && (s.saaoMobile === pm || s.officerMobile === pm)) s._isMine = true;
+      }
+      if (s._source === "local" || s._isMine) markerBg = '#a855f7'; // Purple — my entry
       
       var customIcon = L.divIcon({
         html: '<div style="background-color: ' + markerBg + '; width: 28px; height: 28px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); transform: scale(1);" title="' + s.nurseryName + '">🌳</div>',
