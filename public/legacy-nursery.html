@@ -41,6 +41,10 @@ body{font-family:'Noto Sans Bengali','Kalpurush','SolaimanLipi',Arial,sans-serif
 .header-icon-btn:hover{background:rgba(255,255,255,.32)!important;transform:translateY(-1px)}
 .header-icon-btn.danger:hover{background:#b91c1c!important;box-shadow:0 4px 14px rgba(220,38,38,.55)!important}
 .header-icon-btn:active{transform:translateY(0) scale(.94)}
+.header-mini-icon{transition:all .15s ease;opacity:.92}
+.header-mini-icon:hover{opacity:1;transform:translateY(-1px) scale(1.12)}
+.header-mini-icon:active{transform:translateY(0) scale(.96)}
+.header-mini-icon.danger:hover{filter:drop-shadow(0 2px 6px rgba(220,38,38,.55))}
 .share-tile{transition:all .15s ease}
 .share-tile:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(0,0,0,.12)}
 .guide-section{border-left:3px solid #15803d;transition:all .15s}
@@ -69,6 +73,7 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <header class="text-white py-4 px-4 shadow-lg no-print" style="background:linear-gradient(135deg,#0f5132 0%,#166534 45%,#052e16 100%);position:relative;overflow:hidden">
 <div style="position:absolute;inset:0;background:radial-gradient(circle at 88% -20%,rgba(220,38,38,.38) 0%,rgba(220,38,38,0) 55%);pointer-events:none"></div>
 <div class="max-w-6xl mx-auto flex items-center gap-3" style="position:relative;z-index:1">
+<!-- BD Government Logo (Left) -->
 <div style="position:relative;flex-shrink:0">
 <img src="/logo.svg" alt="বাংলাদেশ সরকার" class="w-12 h-12 sm:w-14 sm:h-14 bg-white rounded-full p-1 shadow flex-shrink-0">
 <span style="position:absolute;bottom:-2px;right:-2px;width:13px;height:13px;background:#dc2626;border:2px solid #0f5132;border-radius:50%;box-shadow:0 0 0 1px rgba(255,255,255,.4)"></span>
@@ -78,16 +83,22 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <h1 class="text-xs sm:text-sm md:text-base lg:text-lg font-bold leading-snug">"কৃষি সম্প্রসারণ অধিদপ্তর"</h1>
 <p class="text-xs sm:text-sm mt-0.5 font-medium" style="color:#dcfce7">বৃক্ষরোপণে সাজাব দেশ, সবার আগে বাংলাদেশ</p>
 </div>
-<div class="flex items-center gap-2" style="flex-shrink:0">
-<button onclick="openGuideModal()" title="ব্যবহার নির্দেশিকা" aria-label="ব্যবহার নির্দেশিকা" class="header-icon-btn flex items-center justify-center rounded-full cursor-pointer" style="width:38px;height:38px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28)">
-<span style="font-size:17px;line-height:1">📘</span>
-</button>
-<button onclick="openShareModal()" title="অ্যাপ শেয়ার করুন" aria-label="অ্যাপ শেয়ার করুন" class="header-icon-btn danger flex items-center justify-center rounded-full cursor-pointer" style="width:38px;height:38px;background:rgba(220,38,38,.88);border:1px solid rgba(255,255,255,.35);box-shadow:0 2px 10px rgba(220,38,38,.45)">
-<span style="font-size:16px;line-height:1">📤</span>
-</button>
+<!-- DAE Logo (Right) -->
+<div style="position:relative;flex-shrink:0">
+<img src="/dae-logo.png" alt="কৃষি সম্প্রসারণ অধিদপ্তর লোগো" class="w-12 h-12 sm:w-14 sm:h-14 bg-white rounded-full p-1 shadow flex-shrink-0">
+<span style="position:absolute;bottom:-2px;left:-2px;width:13px;height:13px;background:#15803d;border:2px solid #0f5132;border-radius:50%;box-shadow:0 0 0 1px rgba(255,255,255,.4)"></span>
 </div>
 </div>
 <div style="height:3px;background:linear-gradient(to right,#166534,#dc2626 50%,#166534);margin-top:14px;border-radius:2px;opacity:.9;position:relative;z-index:1"></div>
+<!-- Minimal Guide & Share icons BELOW the line (no round shape, minimum space) -->
+<div class="max-w-6xl mx-auto flex items-center justify-end gap-3" style="position:relative;z-index:1;margin-top:6px;height:20px">
+<button onclick="openGuideModal()" title="ব্যবহার নির্দেশিকা" aria-label="ব্যবহার নির্দেশিকা" class="header-mini-icon flex items-center justify-center cursor-pointer" style="background:transparent;border:none;padding:0 2px;line-height:1">
+<span style="font-size:15px;line-height:1">📘</span>
+</button>
+<button onclick="openShareModal()" title="অ্যাপ শেয়ার করুন" aria-label="অ্যাপ শেয়ার করুন" class="header-mini-icon danger flex items-center justify-center cursor-pointer" style="background:transparent;border:none;padding:0 2px;line-height:1">
+<span style="font-size:15px;line-height:1">📤</span>
+</button>
+</div>
 </header>
 
 <!-- ==================== DESKTOP NAV ==================== -->
