@@ -41,6 +41,7 @@ export default function SyncToast() {
     <div 
       className="fixed top-20 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none flex flex-col gap-2 w-[90%] max-w-sm font-sans"
       id="syncToastContainer"
+      style={{ marginTop: '60px' }}
     >
       <AnimatePresence>
         {toasts.map((toast) => (

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Database, 
@@ -35,6 +35,60 @@ export default function MobileControlCenter({ networkState, geoState, submission
   const [activeTab, setActiveTab] = useState<'db' | 'net' | 'gps'>('db');
   const [language, setLanguage] = useState<'bn' | 'en'>('bn');
   const [copied, setCopied] = useState(false);
+
+  // ── Responsive header-aligned positioning ──
+  // Measures the #headerControlCenterSlot element inside the iframe so the
+  // FAB always sits exactly in the header-bottom row on every device / viewport.
+  const [fabPos, setFabPos] = useState<{ top: number; left: number }>({ top: 84, left: 12 });
+  const posFrameRef = useRef<number>(0);
+
+  const measureSlot = useCallback(() => {
+    try {
+      const iframe = document.querySelector('iframe') as HTMLIFrameElement | null;
+      if (!iframe?.contentDocument) return;
+      const slot = iframe.contentDocument.getElementById('headerControlCenterSlot');
+      if (!slot) return;
+      const iframeRect = iframe.getBoundingClientRect();
+      const slotRect = slot.getBoundingClientRect();
+      // Slot position relative to the React overlay root (which covers the iframe)
+      const top = slotRect.top + (slotRect.height - 32) / 2; // 32px ≈ FAB height
+      const left = slotRect.left + 4; // slight inner padding
+      setFabPos(prev => {
+        if (Math.abs(prev.top - top) < 1 && Math.abs(prev.left - left) < 1) return prev;
+        return { top: Math.max(0, top), left: Math.max(0, left) };
+      });
+    } catch (_) {
+      // Cross-origin fallback — keep last known position
+    }
+  }, []);
+
+  useEffect(() => {
+    // Initial measurement after iframe loads
+    const tryMeasure = () => {
+      measureSlot();
+      // Re-measure periodically (header may shift on resize / orientation change)
+      cancelAnimationFrame(posFrameRef.current);
+      posFrameRef.current = window.requestAnimationFrame(function loop() {
+        measureSlot();
+        posFrameRef.current = window.requestAnimationFrame(loop);
+      });
+    };
+    // Wait for iframe content to be ready
+    const iframe = document.querySelector('iframe');
+    if (iframe) {
+      iframe.addEventListener('load', tryMeasure, { once: true });
+      // If already loaded
+      if (iframe.contentDocument) tryMeasure();
+    }
+    // Also listen for viewport changes
+    window.addEventListener('resize', measureSlot);
+    window.addEventListener('orientationchange', measureSlot);
+    return () => {
+      cancelAnimationFrame(posFrameRef.current);
+      window.removeEventListener('resize', measureSlot);
+      window.removeEventListener('orientationchange', measureSlot);
+    };
+  }, [measureSlot]);
 
   // Compute stats
   const totalLogs = submissions.length;
@@ -171,8 +225,8 @@ export default function MobileControlCenter({ networkState, geoState, submission
   };
 
   return (
-    <div className="md:hidden block fixed bottom-3 right-3 z-50 pointer-events-none font-sans" id="mobileControlCenterLayout">
-      <div className="flex flex-col items-end gap-2 pointer-events-auto">
+    <div className="md:hidden block fixed z-50 pointer-events-none font-sans" id="mobileControlCenterLayout" style={{ top: fabPos.top, left: fabPos.left }}>
+      <div className="flex flex-col items-start gap-2 pointer-events-auto">
         
         {/* Floating Toggle Hub FAB Button */}
         <motion.button
@@ -231,11 +285,11 @@ export default function MobileControlCenter({ networkState, geoState, submission
 
               <motion.div
                 id="mobileControlCenterDrawer"
-                initial={{ opacity: 0, y: 15, scale: 0.95 }}
+                initial={{ opacity: 0, y: -10, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 15, scale: 0.95 }}
+                exit={{ opacity: 0, y: -10, scale: 0.95 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 280 }}
-                className="w-[88vw] max-w-sm bg-container/95 border border-gray-200 shadow-2xl rounded-xl p-4 flex flex-col gap-3 max-h-[80vh] overflow-y-auto"
+                className="w-[88vw] max-w-sm bg-container/95 border border-gray-200 shadow-2xl rounded-xl p-4 flex flex-col gap-3 max-h-[70vh] overflow-y-auto"
               >
                 {/* Drawer Header Navbar */}
                 <div className="flex items-center justify-between border-b border-gray-100 pb-2.5">

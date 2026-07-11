@@ -68,22 +68,27 @@ tbody tr{border-bottom:1px solid #E9ECEF}
 <header class="text-white py-3 px-4 shadow-lg no-print" style="background:linear-gradient(135deg,#004a36 0%,#005a42 45%,#003b2b 100%);position:relative;overflow:hidden">
 <div style="position:absolute;inset:0;background:radial-gradient(circle at 88% -20%,rgba(220,38,38,.38) 0%,rgba(220,38,38,0) 55%);pointer-events:none"></div>
 <div class="max-w-6xl mx-auto flex items-center gap-3" style="position:relative;z-index:1">
-<img src="/logo.svg" alt="বাংলাদেশ সরকার" class="w-11 h-11 sm:w-14 sm:h-14 bg-white rounded-lg p-1 shadow-md flex-shrink-0" style="border-radius:8px">
+<img src="/logo.svg" alt="বাংলাদেশ সরকার" class="w-11 h-11 sm:w-14 sm:h-14 rounded-full p-0.5 shadow-md flex-shrink-0" style="border:2px solid rgba(255,255,255,.45);background:transparent">
 <div class="text-center sm:text-left min-w-0 flex-1">
 <p class="text-xs sm:text-sm" style="color:#a3d7bb">গণপ্রজাতন্ত্রী বাংলাদেশ সরকার</p>
 <h1 class="text-xs sm:text-sm md:text-base lg:text-lg font-bold leading-snug">"কৃষি সম্প্রসারণ অধিদপ্তর"</h1>
 <p class="text-xs sm:text-sm mt-0.5 font-medium" style="color:#d0e8dc">বৃক্ষরোপণে সাজাব দেশ, সবার আগে বাংলাদেশ</p>
 </div>
-<img src="/dae-logo.webp" onerror="this.onerror=null;this.src='/dae-logo.png'" alt="কৃষি সম্প্রসারণ অধিদপ্তর" class="w-11 h-11 sm:w-14 sm:h-14 bg-white rounded-lg p-1 shadow-md flex-shrink-0" style="border-radius:8px">
+<img src="/dae-logo.webp" onerror="this.onerror=null;this.src='/dae-logo.png'" alt="কৃষি সম্প্রসারণ অধিদপ্তর" class="w-11 h-11 sm:w-14 sm:h-14 rounded-full p-0.5 shadow-md flex-shrink-0" style="border:2px solid rgba(255,255,255,.45);background:transparent">
 </div>
 <div style="height:3px;background:linear-gradient(to right,#005a42,#F42A41 50%,#005a42);margin-top:10px;border-radius:2px;opacity:.9;position:relative;z-index:1"></div>
-<div class="max-w-6xl mx-auto flex items-center justify-end gap-4" style="position:relative;z-index:1;margin-top:6px">
+<div class="max-w-6xl mx-auto flex items-center justify-between" style="position:relative;z-index:1;margin-top:6px">
+<!-- Left slot: React MobileControlCenter FAB overlays here dynamically -->
+<div id="headerControlCenterSlot" style="min-height:28px;min-width:10px"></div>
+<!-- Right: Guide & Share -->
+<div class="flex items-center gap-4">
 <button onclick="openGuideModal()" title="ব্যবহার নির্দেশিকা" aria-label="ব্যবহার নির্দেশিকা" class="header-icon-plain flex items-center gap-1 cursor-pointer" style="background:transparent;border:none;color:#d0e8dc;padding:2px 4px">
 <span class="text-[10px] font-semibold">নির্দেশিকা</span>
 </button>
 <button onclick="openShareModal()" title="অ্যাপ শেয়ার করুন" aria-label="অ্যাপ শেয়ার করুন" class="header-icon-plain flex items-center gap-1 cursor-pointer" style="background:transparent;border:none;color:#fecaca;padding:2px 4px">
 <span class="text-[10px] font-semibold">শেয়ার</span>
 </button>
+</div>
 </div>
 </header>
 
@@ -668,7 +673,7 @@ tbody tr{border-bottom:1px solid #E9ECEF}
 <select id="pRole" onchange="onPRoleChange()" class="w-full">
 <option value="SAAO">উপ-সহকারী কৃষি কর্মকর্তা (SAAO)</option>
 <option value="AEO2">কৃষি সম্প্রসারণ কর্মকর্তা (AEO2)</option>
-<option value="AAO">সহকারী কৃষি কর্মকর্তা (AAO)</option>
+<option value="AAO">অতিরিক্ত কৃষি অফিসার (AAO)</option>
 <option value="UAO">উপজেলা কৃষি কর্মকর্তা (UAO)</option>
 <option value="ADD3">অতিরিক্ত উপপরিচালক (ADD3)</option>
 <option value="DTO">জেলা প্রশিক্ষণ কর্মকর্তা (DTO)</option>
@@ -981,7 +986,7 @@ var CATEGORIES=[
 var LS_KEY="nursery_submissions";
 var PW_KEY="nursery_admin_pw";
 var PROFILE_KEY="dae_user_profile";
-var ROLE_LABELS={SAAO:"উপ-সহকারী কৃষি কর্মকর্তা",AEO2:"কৃষি সম্প্রসারণ কর্মকর্তা",AAO:"সহকারী কৃষি কর্মকর্তা",UAO:"উপজেলা কৃষি কর্মকর্তা",ADD3:"অতিরিক্ত উপপরিচালক",DTO:"জেলা প্রশিক্ষণ কর্মকর্তা",DD:"উপপরিচালক"};
+var ROLE_LABELS={SAAO:"উপ-সহকারী কৃষি কর্মকর্তা",AEO2:"কৃষি সম্প্রসারণ কর্মকর্তা",AAO:"অতিরিক্ত কৃষি অফিসার",UAO:"উপজেলা কৃষি কর্মকর্তা",ADD3:"অতিরিক্ত উপপরিচালক",DTO:"জেলা প্রশিক্ষণ কর্মকর্তা",DD:"উপপরিচালক"};
 var OFFICER_ROLES=["AEO2","AAO","UAO","ADD3","DTO","DD"];
 // Posting tiers: District-level officers see only জেলা; Upazila-level
 // officers see জেলা+উপজেলা; SAAO (Block-level) sees the full chain.
@@ -1606,6 +1611,17 @@ try{
  base.id = subs[idx].id;
  subs[idx] = Object.assign({}, subs[idx], base, { seedlings: seedlings, synced: false, syncedAt: null });
  saveSubmissions(subs);
+ // Sync edited submission to GAS (same as new — appends updated rows)
+ var editRows = toGASRows(base, seedlings);
+ var editResult = await sendToGAS(editRows);
+ if(editResult && editResult.ok){
+ var refreshed = getSubmissions();
+ var refIdx = refreshed.findIndex(function(s){return s.id===editId || s.submissionId===editId;});
+ if(refIdx > -1){ refreshed[refIdx].synced = true; refreshed[refIdx].syncedAt = new Date().toISOString(); saveSubmissions(refreshed); }
+ try{ window.parent.postMessage({ type:"offline-synced-success", count: editRows.length }, "*"); }catch(_){}
+ } else {
+ console.warn("Edit GAS sync failed (saved locally):", editResult && editResult.error);
+ }
  }
  document.getElementById("editId").value="";
  showBanner("successBanner");
@@ -3156,6 +3172,42 @@ function checkIframeAndPrompt() {
  }, 2000);
  }
 }
+
+
+// ── Auto-retry sync for unsynced entries ──
+// When the app loads and has connectivity, any entries that failed to sync
+// (or were edited while offline) are automatically retried. This runs once
+// on init and then every 5 minutes while the tab is open.
+window.syncUnsyncedEntries = async function(){
+  try {
+    var subs = getSubmissions();
+    var unsynced = subs.filter(function(s){ return !s.synced; });
+    if(!unsynced.length) return;
+    console.log("[auto-sync] Found " + unsynced.length + " unsynced entries, retrying...");
+    for(var i = 0; i < unsynced.length; i++){
+      var s = unsynced[i];
+      var seedlings = (s.seedlings && s.seedlings.length) ? s.seedlings : [{ speciesName: "", category: "", quantity: 0 }];
+      var rows = toGASRows(s, seedlings);
+      var result = await sendToGAS(rows);
+      if(result && result.ok){
+        var all = getSubmissions();
+        var idx = all.findIndex(function(x){ return x.id === s.id || x.submissionId === s.submissionId; });
+        if(idx > -1){ all[idx].synced = true; all[idx].syncedAt = new Date().toISOString(); saveSubmissions(all); }
+        try{ window.parent.postMessage({ type:"offline-synced-success", count: rows.length }, "*"); }catch(_){}
+        console.log("[auto-sync] Synced entry: " + s.submissionId);
+      } else {
+        console.warn("[auto-sync] Still failed for: " + (s.submissionId || s.id), result && result.error);
+      }
+    }
+  } catch(err){
+    console.error("[auto-sync] Error:", err);
+  }
+};
+// Run on load (after 3s delay to let GAS proxy warm up) and every 5 min
+setTimeout(function(){ window.syncUnsyncedEntries(); }, 3000);
+setInterval(function(){ window.syncUnsyncedEntries(); }, 300000);
+// Also retry immediately when coming back online
+window.addEventListener("online", function(){ setTimeout(function(){ window.syncUnsyncedEntries(); }, 2000); });
 
 // ── Init ──
 try{
