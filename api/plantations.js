@@ -1,6 +1,10 @@
 import { PrismaClient } from '@prisma/client'
 
-const prisma = new PrismaClient()
+// Singleton pattern for Vercel serverless — reuses the client across warm invocations
+// to avoid exhausting database connections on repeated cold starts.
+const globalForPrisma = globalThis;
+const prisma = globalForPrisma.prisma || new PrismaClient();
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
 // GET /api/plantations — list all (latest first, max 200)
 export default async function handler(req, res) {
