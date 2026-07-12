@@ -1202,6 +1202,32 @@ window.autoSelectAdminFromGeo=function(addr){
  if(upaMatch) document.getElementById("fUpazila").value=upaMatch;
  }
  }
+
+ // Union — prefill from Nominatim address data (column G)
+ var unionCandidates = [addr.city_district, addr.municipality, addr.civil_parish, addr.subdistrict, addr.town];
+ var unionVal = "";
+ for(var ui=0; ui<unionCandidates.length; ui++){
+   if(unionCandidates[ui]){
+     var uClean = unionCandidates[ui].replace(/(?:উপজেলা|Upazila|Subdistrict)$/i,"").trim();
+     if(uClean && uClean !== (document.getElementById("fUpazila").value||"")){
+       unionVal = uClean;
+       break;
+     }
+   }
+ }
+ if(unionVal) document.getElementById("fUnion").value = unionVal;
+
+ // Village — prefill from Nominatim address data (column H)
+ var villageCandidates = [addr.village, addr.suburb, addr.neighbourhood, addr.hamlet, addr.road, addr.residential];
+ var villageVal = "";
+ for(var vi=0; vi<villageCandidates.length; vi++){
+   if(villageCandidates[vi]){
+     villageVal = villageCandidates[vi];
+     break;
+   }
+ }
+ if(villageVal) document.getElementById("fVillage").value = villageVal;
+
  }catch(e){console.error("Auto admin-select failed:",e)}
 };
 var chartDiv=null,chartCat=null,chartDist=null,chartSpec=null,isAdmin=false;
@@ -1688,7 +1714,21 @@ window.reverseGeocode = function(lat, lng, targetId) {
  var village = a.village || a.suburb || a.neighbourhood || a.hamlet || a.road || "";
  var upazilaLoc = a.county || a.subdistrict || "";
  var districtLoc = a.state_district || a.district || a.city || "";
+ var unionLoc = a.city_district || a.municipality || a.civil_parish || a.subdistrict || "";
  var postOffice = a.postcode ? "পোস্টকোড: " + a.postcode : "";
+
+ // Directly fill fUnion and fVillage from geocoded data (columns G, H)
+ if (targetId === "fAddress") {
+   var fUnionEl = document.getElementById("fUnion");
+   var fVillageEl = document.getElementById("fVillage");
+   if (fUnionEl && unionLoc) {
+     var unionClean = unionLoc.replace(/(?:উপজেলা|Upazila|Subdistrict)$/i,"").trim();
+     if (unionClean) fUnionEl.value = unionClean;
+   }
+   if (fVillageEl && village) {
+     fVillageEl.value = village;
+   }
+ }
  
  if (village) parts.push(village);
  if (upazilaLoc) parts.push(upazilaLoc);
