@@ -48,7 +48,7 @@ export default defineConfig(({mode}) => {
         manifest: {
           name: 'plantation-tracker',
           short_name: 'বৃক্ষরোপণ ট্র্যাকার',
-          description: '“০৫ বছরে ২৫ কোটি বৃক্ষরোপণ” কর্মসূচী - অ্যাপ | স্বয়ংক্রিয় জিও-কোঅর্ডিনেট, স্বয়ংক্রিয় ফর্ম পূরণ, লোকাল স্টোরেজ, অটো সিঙ্ক, সার্ভার/Kobo/ODK সিঙ্ক (আসন্ন)',
+          description: '"০৫ বছরে ২৫ কোটি বৃক্ষরোপণ" কর্মসূচী - স্বয়ংক্রিয় জিও-কোডিং ও স্যাটেলাইট ট্র্যাকিং',
           theme_color: '#006A4E',
           background_color: '#006A4E',
           display: 'standalone',
@@ -94,6 +94,16 @@ export default defineConfig(({mode}) => {
     },
     build: {
       outDir: 'build',
+      sourcemap: false,
+      minify: 'terser',
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'leaflet': ['leaflet'],
+            'google-genai': ['@google/genai']
+          }
+        }
+      }
     },
     resolve: {
       alias: {
@@ -102,7 +112,7 @@ export default defineConfig(({mode}) => {
     },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
-      // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
+      // Do not modify—file watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
     },
   };
