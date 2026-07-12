@@ -125,6 +125,14 @@
       
       <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
         <div>
+          <label class="text-xs text-gray-600">বিভাগ *</label>
+          <input type="text" id="fDivision" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50" readonly placeholder="স্বয়ংক্রিয়">
+        </div>
+        <div>
+          <label class="text-xs text-gray-600">অঞ্চল *</label>
+          <input type="text" id="fRegion" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50" readonly placeholder="স্বয়ংক্রিয়">
+        </div>
+        <div>
           <label class="text-xs text-gray-600">জেলা *</label>
           <input type="text" id="fDistrict" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50" readonly placeholder="স্বয়ংক্রিয়">
         </div>
@@ -136,26 +144,43 @@
           <label class="text-xs text-gray-600">ইউনিয়ন *</label>
           <input type="text" id="fUnion" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50" readonly placeholder="স্বয়ংক্রিয়">
         </div>
-        <div class="col-span-2 md:col-span-1">
+        <div>
           <label class="text-xs text-gray-600">গ্রামের নাম *</label>
           <input type="text" id="fVillage" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50" readonly placeholder="স্বয়ংক্রিয়">
         </div>
         <div>
-          <label class="text-xs text-gray-600">ব্লক (ঐচ্ছিক)</label>
-          <input type="text" id="fBlock" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="এসএএও এর জন্য">
+          <label class="text-xs text-gray-600">অবস্থানের ধরন</label>
+          <select id="fLocationType" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+            <option value="">নির্বাচন করুন</option>
+            <option value="সড়কপার্শ্ব">সড়কপার্শ্ব</option>
+            <option value="ক্ষেত্র/জমি">ক্ষেত্র/জমি</option>
+            <option value="বাড়ি/আঙিনা">বাড়ি/আঙিনা</option>
+            <option value="প্রাতিষ্ঠানিক">প্রাতিষ্ঠানিক</option>
+            <option value="অন্যান্য">অন্যান্য</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-gray-600">চারার উৎস</label>
+          <select id="fSourceType" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+            <option value="">নির্বাচন করুন</option>
+            <option value="প্রদর্শনী">প্রদর্শনী</option>
+            <option value="প্রণোদনা">প্রণোদনা</option>
+            <option value="নিজস্ব">নিজস্ব</option>
+            <option value="অন্যান্য">অন্যান্য</option>
+          </select>
         </div>
       </div>
       
       <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
-          <label class="text-xs text-gray-600">জিও-কোঅর্ডিনেট</label>
+          <label class="text-xs text-gray-600">জিও-কোঅর্ডিনেট (অক্ষাংশ, দ্রাঘিমাংশ)</label>
           <div class="flex gap-2">
             <input type="text" id="fGeo" readonly class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50" placeholder="অক্ষাংশ, দ্রাঘিমাংশ">
             <button onclick="openMapPicker()" class="px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700" title="ম্যাপে দেখুন/নির্বাচন করুন">🗺️</button>
           </div>
         </div>
         <div>
-          <label class="text-xs text-gray-600">সম্পূর্ণ ঠিকানা</label>
+          <label class="text-xs text-gray-600">সুনির্দিষ্ট ঠিকানা</label>
           <input type="text" id="fAddress" readonly class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50" placeholder="স্বয়ংক্রিয়">
         </div>
       </div>
@@ -215,13 +240,13 @@
               <option value="তুলসী">তুলসী</option>
               <option value="আদা">আদা</option>
               <option value="হলুদ">হলুদ</option>
-              <option value="গাঁজা (ঔষধি)">গাঁজা (ঔষধি)</option>
               <option value="সর্পগন্ধা">সর্পগন্ধা</option>
               <option value="মুখমাত্রা">মুখমাত্রা</option>
               <option value="বহেড়া">বহেড়া</option>
               <option value="অমলকী">অমলকী</option>
               <option value="হরীতকী">হরীতকী</option>
             </optgroup>
+            <option value="অন্যান্য">অন্যান্য</option>
           </select>
         </div>
         <div>
@@ -230,7 +255,7 @@
         </div>
         <div>
           <label class="text-xs text-gray-600">রোপণের তারিখ *</label>
-          <input type="date" id="fDate" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+          <input type="date" id="fPlantingDate" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
         </div>
       </div>
       
@@ -242,19 +267,19 @@
       </button>
     </div>
 
-    <!-- Caretaker Info (Mandatory) -->
+    <!-- Farmer Info (Mandatory) -->
     <div class="bg-white rounded-xl shadow-md p-4">
       <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2">
-        <span class="text-xl">👨‍🌾</span> পরিচর্যাকারীর তথ্য <span class="text-xs text-red-500">(বাধ্যতামূলক)</span>
+        <span class="text-xl">👨‍🌾</span> কৃষকের তথ্য <span class="text-xs text-red-500">(বাধ্যতামূলক)</span>
       </h3>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
-          <label class="text-xs text-gray-600">নাম *</label>
-          <input type="text" id="fCaretakerName" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="পরিচর্যাকারীর নাম">
+          <label class="text-xs text-gray-600">কৃষকের নাম *</label>
+          <input type="text" id="fFarmerName" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="কৃষকের নাম">
         </div>
         <div>
-          <label class="text-xs text-gray-600">মোবাইল *</label>
-          <input type="tel" id="fCaretakerMobile" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="০১XXXXXXXXX">
+          <label class="text-xs text-gray-600">কৃষকের মোবাইল *</label>
+          <input type="tel" id="fFarmerMobile" maxlength="11" inputmode="numeric" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="01XXXXXXXXX">
         </div>
       </div>
     </div>
@@ -266,12 +291,12 @@
       </h3>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
-          <label class="text-xs text-gray-600">সংশ্লিষ্ট এসএএও এর নাম</label>
-          <input type="text" id="fSAAOName" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="এসএএও নাম">
+          <label class="text-xs text-gray-600">SAAO-এর নাম</label>
+          <input type="text" id="fSaaoName" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="উপ-সহকারী কৃষি কর্মকর্তার নাম">
         </div>
         <div>
-          <label class="text-xs text-gray-600">এসএএও মোবাইল</label>
-          <input type="tel" id="fSAOOMobile" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="০১XXXXXXXXX">
+          <label class="text-xs text-gray-600">SAAO-এর মোবাইল</label>
+          <input type="tel" id="fSaaoMobile" maxlength="11" inputmode="numeric" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="01XXXXXXXXX">
         </div>
         <div>
           <label class="text-xs text-gray-600">মনিটরিং অফিসারের নাম</label>
@@ -280,6 +305,24 @@
         <div>
           <label class="text-xs text-gray-600">মনিটরিং অফিসারের মোবাইল</label>
           <input type="tel" id="fOfficerMobile" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="০১XXXXXXXXX">
+        </div>
+      </div>
+    </div>
+
+    <!-- Photo Upload -->
+    <div class="bg-white rounded-xl shadow-md p-4">
+      <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2">
+        <span class="text-xl">📸</span> ছবি (ঐচ্ছিক কিন্তু সুপারিশকৃত)
+      </h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
+        <div>
+          <label class="text-xs text-gray-600">রোপণকৃত স্থানের ছবি</label>
+          <input type="file" id="fPhoto" accept="image/*" capture="environment" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+          <p class="text-xs text-gray-500 mt-1">ছবি স্বয়ংক্রিয়ভাবে সংকুচিত হবে (সর্বোচ্চ ১০২৪px)</p>
+        </div>
+        <div class="hidden" id="fPhotoPreviewWrap">
+          <img id="fPhotoPreview" alt="preview" class="rounded-lg border border-gray-300" style="max-height:140px">
+          <button type="button" onclick="clearPhoto()" class="block mt-2 text-xs text-red-500 hover:underline">✕ ছবি সরান</button>
         </div>
       </div>
     </div>
@@ -293,7 +336,7 @@
         <div>
           <label class="text-xs text-gray-600">NDVI রেটিং (রোপণকালীন)</label>
           <div class="flex gap-2">
-            <input type="text" id="fNDVI" readonly class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50" placeholder="স্বয়ংক্রিয়">
+            <input type="text" id="fNdvi" readonly class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50" placeholder="স্বয়ংক্রিয়">
             <button onclick="fetchNDVI()" class="px-3 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700">🛰️ Fetch</button>
           </div>
           <p class="text-xs text-gray-500 mt-1">উপগ্রহ তথ্য থেকে স্বয়ংক্রিয়</p>
@@ -789,17 +832,58 @@ function getLocation() {
 
 async function reverseGeocode(lat, lng) {
   try {
-    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=bn`, {
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=bn,en`, {
       headers: { 'User-Agent': 'PlantationTracker/1.0' }
     });
     const data = await res.json();
     if (data && data.address) {
       const a = data.address;
-      if (a.state || a.region) document.getElementById('fDistrict').value = a.state || a.region || '';
-      if (a.county || a.city) document.getElementById('fUpazila').value = a.county || a.subdistrict || a.city || '';
-      if (a.subdistrict || a.town) document.getElementById('fUnion').value = a.subdistrict || a.town || '';
-      if (a.village || a.hamlet) document.getElementById('fVillage').value = a.village || a.hamlet || a.suburb || '';
-      if (data.display_name) document.getElementById('fAddress').value = data.display_name;
+
+      // Division (column C) — Nominatim "state" typically contains "X Division" / "X বিভাগ"
+      var divVal = (a.state || a.region || '').replace(/(?:\s*বিভাগ|\s*Division)$/i, '').trim();
+      if (divVal) document.getElementById('fDivision').value = divVal;
+
+      // Region (column D) — Nominatim doesn't provide DAE region directly; 
+      // we use the raw state string as a fallback
+      if (a.state) document.getElementById('fRegion').value = a.state;
+
+      // District (column E)
+      var distVal = a.state_district || a.district || a.city || '';
+      if (distVal) document.getElementById('fDistrict').value = distVal;
+
+      // Upazila (column F)
+      var upzVal = a.county || a.subdistrict || '';
+      if (upzVal) document.getElementById('fUpazila').value = upzVal;
+
+      // Union (column G)
+      var unionCandidates = [a.city_district, a.municipality, a.civil_parish, a.town];
+      var unionVal = '';
+      for (var ui = 0; ui < unionCandidates.length; ui++) {
+        if (unionCandidates[ui]) {
+          var uClean = unionCandidates[ui].replace(/(?:উপজেলা|Upazila|Subdistrict)$/i, '').trim();
+          if (uClean && uClean !== upzVal) { unionVal = uClean; break; }
+        }
+      }
+      if (unionVal) document.getElementById('fUnion').value = unionVal;
+
+      // Village (column H)
+      var villageCandidates = [a.village, a.suburb, a.neighbourhood, a.hamlet, a.road, a.residential];
+      var villageVal = '';
+      for (var vi = 0; vi < villageCandidates.length; vi++) {
+        if (villageCandidates[vi]) { villageVal = villageCandidates[vi]; break; }
+      }
+      if (villageVal) document.getElementById('fVillage').value = villageVal;
+
+      // Address (column K) — composed address
+      if (data.display_name) {
+        var parts = [];
+        if (villageVal) parts.push(villageVal);
+        if (unionVal) parts.push(unionVal);
+        if (upzVal) parts.push(upzVal);
+        if (distVal) parts.push(distVal);
+        if (a.postcode) parts.push('পোস্টকোড: ' + a.postcode);
+        document.getElementById('fAddress').value = parts.length > 0 ? parts.join(', ') : data.display_name;
+      }
     }
   } catch (e) {
     console.error('Reverse geocode error:', e);
@@ -915,6 +999,49 @@ function renderSeedlingList() {
   `).join('');
 }
 
+// ============ PHOTO HANDLING ============
+function clearPhoto() {
+  const wrap = document.getElementById('fPhotoPreviewWrap');
+  if (wrap) wrap.classList.add('hidden');
+  const fileInput = document.getElementById('fPhoto');
+  if (fileInput) fileInput.value = '';
+  window._photoBase64 = '';
+}
+
+// Auto-compress and preview photo
+document.addEventListener('DOMContentLoaded', function() {
+  const photoInput = document.getElementById('fPhoto');
+  if (photoInput) {
+    photoInput.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(ev) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          const MAX = 1024;
+          let w = img.width, h = img.height;
+          if (w > MAX || h > MAX) {
+            if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+            else { w = Math.round(w * MAX / h); h = MAX; }
+          }
+          canvas.width = w;
+          canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          window._photoBase64 = canvas.toDataURL('image/jpeg', 0.7);
+          const preview = document.getElementById('fPhotoPreview');
+          const wrap = document.getElementById('fPhotoPreviewWrap');
+          if (preview) preview.src = window._photoBase64;
+          if (wrap) wrap.classList.remove('hidden');
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+});
+
 // ============ NDVI ============
 function fetchNDVI() {
   if (!state.currentLat || !state.currentLng) {
@@ -922,7 +1049,7 @@ function fetchNDVI() {
     return;
   }
   
-  document.getElementById('fNDVI').value = '⏳ বিশ্লেষণ হচ্ছে...';
+  document.getElementById('fNdvi').value = '⏳ বিশ্লেষণ হচ্ছে...';
   
   // Simulate NDVI fetch (in production, call GEE pipeline)
   setTimeout(() => {
@@ -934,7 +1061,7 @@ function fetchNDVI() {
     else if (ndvi < 0.8) rating = 'ঘন সবুজ';
     else rating = 'অতি ঘন';
     
-    document.getElementById('fNDVI').value = `${ndvi} (${rating})`;
+    document.getElementById('fNdvi').value = `${ndvi} (${rating})`;
     showBanner(`NDVI: ${ndvi} - ${rating}`);
   }, 1500);
 }
@@ -943,19 +1070,20 @@ function fetchNDVI() {
 function submitForm() {
   // Validation
   const required = {
-    village: document.getElementById('fVillage').value,
-    union: document.getElementById('fUnion').value,
-    upazila: document.getElementById('fUpazila').value,
+    division: document.getElementById('fDivision').value,
     district: document.getElementById('fDistrict').value,
-    caretakerName: document.getElementById('fCaretakerName').value,
-    caretakerMobile: document.getElementById('fCaretakerMobile').value
+    upazila: document.getElementById('fUpazila').value,
+    union: document.getElementById('fUnion').value,
+    village: document.getElementById('fVillage').value,
+    farmerName: document.getElementById('fFarmerName').value,
+    farmerMobile: document.getElementById('fFarmerMobile').value
   };
   
   for (const [key, val] of Object.entries(required)) {
     if (!val) {
       const labels = {
-        village:'গ্রামের নাম', union:'ইউনিয়ন', upazila:'উপজেলা', district:'জেলা',
-        caretakerName:'পরিচর্যাকারীর নাম', caretakerMobile:'পরিচর্যাকারীর মোবাইল'
+        division:'বিভাগ', district:'জেলা', upazila:'উপজেলা', union:'ইউনিয়ন',
+        village:'গ্রামের নাম', farmerName:'কৃষকের নাম', farmerMobile:'কৃষকের মোবাইল'
       };
       showBanner(`${labels[key]} আবশ্যক`, 'error');
       return;
@@ -967,26 +1095,37 @@ function submitForm() {
     return;
   }
   
+  // Extract lat/lng from geo field
+  const geoStr = document.getElementById('fGeo').value || '';
+  const geoParts = geoStr.split(',').map(s => s.trim());
+  const lat = geoParts[0] || '';
+  const lng = geoParts[1] || '';
+  
   const entry = {
     id: Date.now(),
-    slNo: state.submissions.length + 1,
-    village: document.getElementById('fVillage').value,
-    block: document.getElementById('fBlock').value,
-    union: document.getElementById('fUnion').value,
-    upazila: document.getElementById('fUpazila').value,
+    submissionId: Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+    division: document.getElementById('fDivision').value,
+    region: document.getElementById('fRegion').value,
     district: document.getElementById('fDistrict').value,
-    seedlings: [...state.pendingSeedlings],
-    date: document.getElementById('fDate').value || new Date().toISOString().slice(0,10),
-    geo: document.getElementById('fGeo').value,
+    upazila: document.getElementById('fUpazila').value,
+    union: document.getElementById('fUnion').value,
+    village: document.getElementById('fVillage').value,
+    locationType: document.getElementById('fLocationType').value,
+    sourceType: document.getElementById('fSourceType').value,
     address: document.getElementById('fAddress').value,
-    caretakerName: document.getElementById('fCaretakerName').value,
-    caretakerMobile: document.getElementById('fCaretakerMobile').value,
-    saaoName: document.getElementById('fSAAOName').value,
-    saaoMobile: document.getElementById('fSAOOMobile').value,
+    latitude: lat,
+    longitude: lng,
+    geoLocation: geoStr,
+    plantingDate: document.getElementById('fPlantingDate').value || new Date().toISOString().slice(0, 10),
+    seedlings: [...state.pendingSeedlings],
+    ndvi: document.getElementById('fNdvi').value,
+    remarks: document.getElementById('fRemarks').value,
+    farmerName: document.getElementById('fFarmerName').value,
+    farmerMobile: document.getElementById('fFarmerMobile').value,
+    saaoName: document.getElementById('fSaaoName').value,
+    saaoMobile: document.getElementById('fSaaoMobile').value,
     officerName: document.getElementById('fOfficerName').value,
     officerMobile: document.getElementById('fOfficerMobile').value,
-    ndvi: document.getElementById('fNDVI').value,
-    remarks: document.getElementById('fRemarks').value,
     submittedAt: new Date().toISOString()
   };
   
@@ -996,11 +1135,16 @@ function submitForm() {
   // Reset form
   state.pendingSeedlings = [];
   renderSeedlingList();
-  ['fCaretakerName','fCaretakerMobile','fSAAOName','fSAOOMobile','fOfficerName','fOfficerMobile','fRemarks','fNDVI','fBlock'].forEach(id => {
-    document.getElementById(id).value = '';
+  ['fFarmerName','fFarmerMobile','fSaaoName','fSaaoMobile','fOfficerName','fOfficerMobile','fRemarks','fNdvi'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
   });
+  document.getElementById('fLocationType').value = '';
+  document.getElementById('fSourceType').value = '';
+  const photoWrap = document.getElementById('fPhotoPreviewWrap');
+  if (photoWrap) photoWrap.classList.add('hidden');
   
-  showBanner(`✅ এন্ট্রি #${entry.slNo} জমা হয়েছে! ${entry.seedlings.length}টি প্রজাতি`);
+  showBanner(`✅ এন্ট্রি জমা হয়েছে! ${entry.seedlings.length}টি প্রজাতি`);
   setTimeout(() => switchTab('dashboard'), 1000);
 }
 
@@ -1018,12 +1162,12 @@ function initMainMap() {
   
   // Add submission markers
   state.submissions.forEach(s => {
-    if (s.geo) {
-      const [lat, lng] = s.geo.split(',').map(x => parseFloat(x.trim()));
+    if (s.geoLocation) {
+      const [lat, lng] = s.geoLocation.split(',').map(x => parseFloat(x.trim()));
       if (lat && lng) {
         const total = s.seedlings.reduce((sum, sl) => sum + sl.count, 0);
         L.marker([lat, lng]).addTo(state.map)
-          .bindPopup(`<b>${s.village}</b><br>${s.district}<br>🌱 ${total} টি চারা<br>📅 ${s.date}`);
+          .bindPopup(`<b>${s.village}</b><br>${s.district}<br>🌱 ${total} টি চারা<br>📅 ${s.plantingDate}`);
       }
     }
   });
@@ -1090,10 +1234,10 @@ function renderMapEntries() {
         <span class="text-lg">📍</span>
         <div>
           <div class="font-semibold text-sm">${s.village}, ${s.upazila}</div>
-          <div class="text-xs text-gray-600">${s.seedlings.length}টি প্রজাতি · ${s.date}</div>
+          <div class="text-xs text-gray-600">${s.seedlings.length}টি প্রজাতি · ${s.plantingDate}</div>
         </div>
       </div>
-      <button onclick="focusOnMap('${s.geo}')" class="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">দেখুন</button>
+      <button onclick="focusOnMap('${s.geoLocation}')" class="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">দেখুন</button>
     </div>
   `).join('');
 }
@@ -1290,9 +1434,9 @@ function renderDashboard() {
       <div class="p-3 bg-gray-50 rounded-lg">
         <div class="flex justify-between items-start">
           <div>
-            <div class="font-bold text-sm">#${s.slNo} ${s.village}</div>
-            <div class="text-xs text-gray-600">${s.upazila}, ${s.district} · ${s.date}</div>
-            <div class="text-xs text-gray-500 mt-1">🌱 ${s.seedlings.length}টি প্রজাতি · 👤 ${s.caretakerName}</div>
+            <div class="font-bold text-sm">#${i + 1} ${s.village}</div>
+            <div class="text-xs text-gray-600">${s.upazila}, ${s.district} · ${s.plantingDate}</div>
+            <div class="text-xs text-gray-500 mt-1">🌱 ${s.seedlings.length}টি প্রজাতি · 👤 ${s.farmerName}</div>
           </div>
           <button onclick="deleteEntry(${subs.length - 1 - i})" class="text-red-500 hover:text-red-700 text-sm">🗑️</button>
         </div>
@@ -1348,9 +1492,9 @@ function exportGovExcel() {
   state.submissions.forEach(s => {
     s.seedlings.forEach(sl => {
       data.push([
-        row++, s.village, s.block, s.union, s.upazila, s.district,
-        sl.name, sl.count, s.date, s.geo,
-        s.caretakerName, s.caretakerMobile,
+        row++, s.village, '', s.union, s.upazila, s.district,
+        sl.name, sl.count, s.plantingDate, s.geoLocation,
+        s.farmerName, s.farmerMobile,
         s.saaoName, s.saaoMobile,
         s.officerName, s.officerMobile,
         `${s.ndvi || ''} ${s.remarks || ''}`.trim()
@@ -1378,13 +1522,13 @@ function exportGovExcel() {
 function exportGeneralExcel() {
   if (!state.submissions.length) { showBanner('কোনো ডাটা নেই', 'error'); return; }
   const rows = [];
-  state.submissions.forEach(s => {
+  state.submissions.forEach((s, i) => {
     s.seedlings.forEach(sl => {
       rows.push({
-        'ক্র.নং': s.slNo, 'গ্রাম': s.village, 'ব্লক': s.block, 'ইউনিয়ন': s.union,
+        'ক্র.নং': i + 1, 'গ্রাম': s.village, 'ইউনিয়ন': s.union,
         'উপজেলা': s.upazila, 'জেলা': s.district, 'প্রজাতি': sl.name, 'ক্যাটাগরি': sl.category,
-        'সংখ্যা': sl.count, 'তারিখ': s.date, 'জিও': s.geo,
-        'পরিচর্যাকারী': s.caretakerName, 'মোবাইল': s.caretakerMobile,
+        'সংখ্যা': sl.count, 'তারিখ': s.plantingDate, 'জিও': s.geoLocation,
+        'পরিচর্যাকারী': s.farmerName, 'মোবাইল': s.farmerMobile,
         'এসএএও': s.saaoName, 'অফিসার': s.officerName, 'NDVI': s.ndvi, 'মন্তব্য': s.remarks
       });
     });
@@ -1398,11 +1542,11 @@ function exportGeneralExcel() {
 
 function exportCSV() {
   if (!state.submissions.length) { showBanner('কোনো ডাটা নেই', 'error'); return; }
-  const headers = ['slNo','village','block','union','upazila','district','species','category','count','date','geo','caretakerName','caretakerMobile','saaoName','saaoMobile','officerName','officerMobile','ndvi','remarks'];
+  const headers = ['slNo','village','union','upazila','district','species','category','count','plantingDate','geoLocation','farmerName','farmerMobile','saaoName','saaoMobile','officerName','officerMobile','ndvi','remarks'];
   const rows = [headers.join(',')];
-  state.submissions.forEach(s => {
+  state.submissions.forEach((s, i) => {
     s.seedlings.forEach(sl => {
-      rows.push([s.slNo,s.village,s.block,s.union,s.upazila,s.district,sl.name,sl.category,sl.count,s.date,s.geo,s.caretakerName,s.caretakerMobile,s.saaoName,s.saaoMobile,s.officerName,s.officerMobile,s.ndvi,s.remarks].map(v => `"${(v||'').toString().replace(/"/g,'""')}"`).join(','));
+      rows.push([i+1,s.village,s.union,s.upazila,s.district,sl.name,sl.category,sl.count,s.plantingDate,s.geoLocation,s.farmerName,s.farmerMobile,s.saaoName,s.saaoMobile,s.officerName,s.officerMobile,s.ndvi,s.remarks].map(v => `"${(v||'').toString().replace(/"/g,'""')}"`).join(','));
     });
   });
   const blob = new Blob(['\uFEFF' + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
@@ -1438,7 +1582,7 @@ function exportPDF() {
     <p><b>মোট এন্ট্রি:</b> ${total} | <b>মোট চারা:</b> ${trees}</p>
     <table>
       <tr><th>ক্র.</th><th>গ্রাম</th><th>উপজেলা</th><th>জেলা</th><th>প্রজাতি</th><th>সংখ্যা</th><th>তারিখ</th></tr>
-      ${state.submissions.map(s => s.seedlings.map(sl => `<tr><td>${s.slNo}</td><td>${s.village}</td><td>${s.upazila}</td><td>${s.district}</td><td>${sl.name}</td><td>${sl.count}</td><td>${s.date}</td></tr>`).join('')).join('')}
+      ${state.submissions.map((s, i) => s.seedlings.map(sl => `<tr><td>${i + 1}</td><td>${s.village}</td><td>${s.upazila}</td><td>${s.district}</td><td>${sl.name}</td><td>${sl.count}</td><td>${s.plantingDate}</td></tr>`).join('')).join('')}
 
     </body>
     </html>
@@ -1738,9 +1882,9 @@ function renderMapEntries(districtFilter) {
       + '<span class="text-lg">📍</span>'
       + '<div>'
       + '<div class="font-semibold text-sm">'+s.village+', '+s.upazila+'</div>'
-      + '<div class="text-xs text-gray-600">'+total+'টি চারা · '+s.district+' · '+s.date+'</div>'
+      + '<div class="text-xs text-gray-600">'+total+'টি চারা · '+s.district+' · '+s.plantingDate+'</div>'
       + '</div></div>'
-      + '<button onclick="focusOnMap(\''+s.geo+'\')" class="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">দেখুন</button>'
+      + '<button onclick="focusOnMap(\''+s.geoLocation+'\')" class="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">দেখুন</button>'
       + '</div>';
   }).join('');
 }
@@ -1776,7 +1920,7 @@ async function shareApp() {
 }
 
 // ============ INIT ============
-document.getElementById('fDate').value = new Date().toISOString().slice(0,10);
+document.getElementById('fPlantingDate').value = new Date().toISOString().slice(0,10);
 renderSeedlingList();
 renderDashboard();
 </script>
