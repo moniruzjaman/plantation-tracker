@@ -306,6 +306,37 @@ tbody tr{border-bottom:1px solid #E9ECEF}
 <p id="geoStatus" class="hidden mt-0.5" style="font-size:10px;color:#9ca3af"><span id="geoStatusText"></span></p>
 </div>
 
+<!-- ===== FORM MAP with Geo-Fencing ===== -->
+<div class="sm:col-span-2">
+<label class="block text-xs font-semibold text-gray-700 mb-1">🗺️ বাগান/প্লট ম্যাপ ও জিও-ফেন্সিং</label>
+<div style="position:relative;border-radius:0.75rem;overflow:hidden;border:2px solid #E9ECEF;background:#e5e7eb">
+<div id="formMap" style="width:100%;height:320px"></div>
+<div id="formMapToolbar" style="position:absolute;top:8px;left:8px;z-index:20;display:flex;flex-direction:column;gap:4px">
+<button onclick="window._formMapDraw&&window._formMapDraw('polygon')" title="বহুভুজ আঁকুন (বাগান/প্লটের সীমানা)" style="width:34px;height:34px;border-radius:6px;border:none;background:white;box-shadow:0 1px 4px rgba(0,0,0,.2);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center" onmouseover="this.style.background='#edf6f2'" onmouseout="this.style.background='white'">📐</button>
+<button onclick="window._formMapDraw&&window._formMapDraw('point')" title="পয়েন্ট চিহ্নিত করুন" style="width:34px;height:34px;border-radius:6px;border:none;background:white;box-shadow:0 1px 4px rgba(0,0,0,.2);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center" onmouseover="this.style.background='#edf6f2'" onmouseout="this.style.background='white'">📍</button>
+<button onclick="window._formMapTrash&&window._formMapTrash()" title="আঁকা মুছুন" style="width:34px;height:34px;border-radius:6px;border:none;background:white;box-shadow:0 1px 4px rgba(0,0,0,.2);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center" onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='white'">🗑️</button>
+</div>
+<div id="formMapLayerToggle" style="position:absolute;top:8px;right:8px;z-index:20">
+<button onclick="toggleFormMapLayers()" title="লেয়ার টগল করুন" style="padding:4px 8px;border-radius:6px;border:none;background:white;box-shadow:0 1px 4px rgba(0,0,0,.2);cursor:pointer;font-size:11px;font-weight:600;color:#006A4E;display:flex;align-items:center;gap:4px" onmouseover="this.style.background='#edf6f2'" onmouseout="this.style.background='white'">🗺️ লেয়ার</button>
+</div>
+<div id="formMapLayerPanel" class="hidden" style="position:absolute;top:44px;right:8px;z-index:20;background:white;border-radius:8px;padding:10px;box-shadow:0 4px 12px rgba(0,0,0,.15);min-width:160px;font-size:11px">
+<label style="display:flex;align-items:center;gap:6px;margin-bottom:6px;cursor:pointer"><input type="checkbox" id="fmLayerSatellite" onchange="switchFormBasemap('satellite')" style="accent-color:#006A4E"> স্যাটেলাইট</label>
+<label style="display:flex;align-items:center;gap:6px;margin-bottom:6px;cursor:pointer"><input type="checkbox" id="fmLayerStreet" checked onchange="switchFormBasemap('street')" style="accent-color:#006A4E"> স্ট্রিট</label>
+<label style="display:flex;align-items:center;gap:6px;margin-bottom:6px;cursor:pointer"><input type="checkbox" id="fmLayerTerrain" onchange="switchFormBasemap('terrain')" style="accent-color:#006A4E"> টেরেইন</label>
+<label style="display:flex;align-items:center;gap:6px;margin-bottom:6px;cursor:pointer"><input type="checkbox" id="fmLayerHybrid" onchange="switchFormBasemap('hybrid')" style="accent-color:#006A4E"> হাইব্রিড</label>
+<label style="display:flex;align-items:center;gap:6px;margin-bottom:6px;cursor:pointer"><input type="checkbox" id="fmLayerDark" onchange="switchFormBasemap('dark')" style="accent-color:#006A4E"> ডার্ক</label>
+<label style="display:flex;align-items:center;gap:6px;margin-bottom:6px;cursor:pointer"><input type="checkbox" id="fmLayerAdmin" checked onchange="toggleFormAdminBounds(this.checked)" style="accent-color:#006A4E"> প্রশাসনিক সীমানা</label>
+<label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="fmLayerNdvi" onchange="toggleFormNdvi(this.checked)" style="accent-color:#006A4E"> NDVI</label>
+</div>
+<div id="formMapInfo" style="position:absolute;bottom:8px;left:8px;right:8px;z-index:20;display:flex;justify-content:space-between;align-items:center">
+<div id="formMapCoords" style="background:rgba(255,255,255,.9);border-radius:6px;padding:3px 8px;font-size:10px;color:#495057;box-shadow:0 1px 3px rgba(0,0,0,.1)">ক্লিক করে অবস্থান নির্বাচন করুন</div>
+<div id="formMapArea" class="hidden" style="background:rgba(0,106,78,.9);color:white;border-radius:6px;padding:3px 8px;font-size:10px;font-weight:600"></div>
+</div>
+</div>
+<input type="hidden" id="fPolygonGeojson" value="">
+<p style="font-size:10px;color:#6C757D;margin-top:4px">📐 আপনার বাগান/প্লটের সীমানা আঁকুন। ক্ষেত্রফল স্বয়ংক্রিয় হিসাব হবে।</p>
+</div>
+
 <div class="sm:col-span-2">
 <label class="block text-xs font-semibold text-gray-700 mb-1">রোপণকৃত বৃক্ষের অবস্থান (সুনির্দিষ্ট ঠিকানা)</label>
 <textarea id="fAddress" rows="2" placeholder="রোপণকৃত বৃক্ষের অবস্থান লিখুন" class="w-full"></textarea>
@@ -1258,6 +1289,7 @@ document.querySelectorAll('.nav-btn[data-tab="'+tab+'"]').forEach(function(b){b.
 hideBanner("successBanner");hideBanner("errorBanner");
 if(tab==="dashboard")renderDashboard();
 if(tab==="admin"&&isAdmin)renderAdminTable();
+if(tab==="form")setTimeout(function(){initFormMap()},100);
 if(tab==="map")renderMap();
 if(tab==="storedData")renderMyTab();
 window.scrollTo({top:0,behavior:"smooth"});
@@ -1588,6 +1620,7 @@ function buildBaseSubmission(prefix){
  officerMobile:_val(prefix+"OfficerMobile"),
  ndvi: _val(prefix+"Ndvi"),
  remarks: _val(prefix+"Remarks"),
+    polygonGeojson: prefix === "f" ? getFormPolygonData() : (window._editPolygonData || null),
  photoBase64: prefix === "f" ? (window._photoBase64 || "") : "",
  submittedAt: new Date().toISOString()
  };
@@ -1695,6 +1728,7 @@ if(photoWrap) photoWrap.classList.add("hidden");
 var ndviEl = document.getElementById("fNdvi");
 if(ndviEl) ndviEl.value = "";
 document.getElementById("fSourceTypeCustom").classList.add("hidden");
+clearFormMapDrawing();
 applyProfileToForm();
 fetchGeoLocation();
 };
@@ -2909,6 +2943,280 @@ saveSubmissions(subs);closeEditModal();renderAdminTable();
 });
 window.adminDelete=function(id){if(!confirm("আপনি কি নিশ্চিত?"))return;saveSubmissions(getSubmissions().filter(function(s){return s.id!==id&&s.submissionId!==id}));renderAdminTable()};
 document.getElementById("editModal").addEventListener("click",function(e){if(e.target===this)closeEditModal()});
+
+// ── Form Map (MapLibre GL JS) — Geo-Fencing for Orchard/Plot ──
+var _formMapInst = null;
+var _formDrawInst = null;
+var _formDrawnFeatures = [];
+var _formAdminSrcId = null;
+var _formNdviSrcId = null;
+var _formNdviLyrId = null;
+var _formCurrentBasemap = 'street';
+
+var FORM_BASEMAPS = {
+  street: {
+    type: 'raster',
+    tiles: ['https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png','https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png','https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png'],
+    tileSize: 256, attribution: '&copy; OpenStreetMap &copy; CARTO'
+  },
+  satellite: {
+    type: 'raster',
+    tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+    tileSize: 256, attribution: '&copy; Esri'
+  },
+  terrain: {
+    type: 'raster',
+    tiles: ['https://a.tile.opentopomap.org/{z}/{x}/{y}.png','https://b.tile.opentopomap.org/{z}/{x}/{y}.png','https://c.tile.opentopomap.org/{z}/{x}/{y}.png'],
+    tileSize: 256, attribution: '&copy; OpenTopoMap'
+  },
+  hybrid: {
+    type: 'raster',
+    tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+    tileSize: 256, attribution: '&copy; Esri'
+  },
+  dark: {
+    type: 'raster',
+    tiles: ['https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png','https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png','https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png'],
+    tileSize: 256, attribution: '&copy; CARTO'
+  }
+};
+
+function initFormMap(lat, lng) {
+  if (!maplibregl) return;
+  var container = document.getElementById('formMap');
+  if (!container || _formMapInst) return;
+  try {
+    _formMapInst = new maplibregl.Map({
+      container: 'formMap',
+      style: { version: 8, sources: {}, layers: [] },
+      center: [lng || 90.4125, lat || 23.8103],
+      zoom: lat ? 15 : 7,
+      attributionControl: false
+    });
+    _formMapInst.addControl(new maplibregl.NavigationControl({showCompass: false}), 'bottom-right');
+    _formMapInst.addControl(new maplibregl.ScaleControl({maxWidth: 120}), 'bottom-left');
+    switchFormBasemap('street');
+    _formMapInst.on('load', function() {
+      loadFormAdminBounds();
+      setupFormDraw();
+    });
+    _formMapInst.on('click', function(e) {
+      if (_formDrawInst && _formDrawInst.getMode() !== 'simple_select') return;
+      var coordStr = e.lngLat.lat.toFixed(6) + ', ' + e.lngLat.lng.toFixed(6);
+      document.getElementById('fGeo').value = coordStr;
+      var coordsEl = document.getElementById('formMapCoords');
+      if (coordsEl) coordsEl.textContent = coordStr;
+      window.reverseGeocode && window.reverseGeocode(e.lngLat.lat.toFixed(6), e.lngLat.lng.toFixed(6), 'fAddress');
+    });
+    _formMapInst.on('mousemove', function(e) {
+      var coordsEl = document.getElementById('formMapCoords');
+      if (coordsEl && !_formDrawInst) coordsEl.textContent = e.lngLat.lat.toFixed(6) + ', ' + e.lngLat.lng.toFixed(6);
+    });
+  } catch(err) { console.error('Form map init error:', err); }
+}
+
+function setupFormDraw() {
+  if (!MaplibreDraw || !_formMapInst) return;
+  _formDrawInst = new MaplibreDraw({
+    displayControlsDefault: false,
+    controls: { polygon: true, point: true, trash: true },
+    styles: [
+      { id: 'gl-draw-polygon-fill', type: 'fill', filter: ['all', ['==', '$type', 'Polygon']],
+        paint: { 'fill-color': '#006A4E', 'fill-opacity': 0.2 } },
+      { id: 'gl-draw-polygon-stroke', type: 'line', filter: ['all', ['==', '$type', 'Polygon']],
+        paint: { 'line-color': '#006A4E', 'line-width': 3 } },
+      { id: 'gl-draw-polygon-midpoint', type: 'circle', filter: ['all', ['==', '$type', 'Point'], ['==', 'meta', 'midpoint']],
+        paint: { 'circle-radius': 5, 'circle-color': '#006A4E' }, layout: { 'circle-pitch-scale': 'map' } },
+      { id: 'gl-draw-polygon-vertex', type: 'circle', filter: ['all', ['==', '$type', 'Point'], ['!=', 'meta', 'midpoint']],
+        paint: { 'circle-radius': 5, 'circle-color': '#006A4E' }, layout: { 'circle-pitch-scale': 'map' } },
+      { id: 'gl-draw-point', type: 'circle', filter: ['all', ['==', '$type', 'Point'], ['has', 'user_coordinates']],
+        paint: { 'circle-radius': 8, 'circle-color': '#F42A41', 'circle-stroke-width': 2, 'circle-stroke-color': '#fff' } }
+    ]
+  });
+  _formMapInst.addControl(_formDrawInst, 'top-left');
+  document.getElementById('formMapToolbar').style.display = 'none';
+  _formDrawInst.on('create', function(e) {
+    var feat = e.features[0];
+    _formDrawnFeatures.push(JSON.parse(JSON.stringify(feat)));
+    updateFormPolygonStorage();
+    if (feat.geometry.type === 'Polygon' && typeof turf !== 'undefined') {
+      var areaM2 = turf.area(turf.featureCollection([feat]));
+      var areaAc = areaM2 / 4046.86;
+      var areaBigha = areaM2 / 1333.33;
+      var areaEl = document.getElementById('formMapArea');
+      if (areaEl) {
+        areaEl.classList.remove('hidden');
+        areaEl.textContent = '📐 ' + (areaM2 > 10000 ? (areaAc.toFixed(2) + ' একর / ' + areaBigha.toFixed(2) + ' বিঘা') : (areaM2.toFixed(1) + ' বর্গমিটার'));
+      }
+    }
+    if (feat.geometry.type === 'Point') {
+      var c = feat.geometry.coordinates;
+      document.getElementById('fGeo').value = c[1].toFixed(6) + ', ' + c[0].toFixed(6);
+    }
+  });
+  _formDrawInst.on('delete', function(e) {
+    e.features.forEach(function(del) {
+      _formDrawnFeatures = _formDrawnFeatures.filter(function(f) {
+        return JSON.stringify(f.geometry) !== JSON.stringify(del.geometry);
+      });
+    });
+    updateFormPolygonStorage();
+    var areaEl = document.getElementById('formMapArea');
+    if (areaEl) { areaEl.classList.add('hidden'); areaEl.textContent = ''; }
+  });
+  _formDrawInst.on('update', function(e) {
+    e.features.forEach(function(updated) {
+      for (var i = 0; i < _formDrawnFeatures.length; i++) {
+        if (JSON.stringify(_formDrawnFeatures[i].geometry) === JSON.stringify(updated._geometryBeforeUpdate || updated.geometry)) {
+          _formDrawnFeatures[i] = JSON.parse(JSON.stringify(updated));
+          break;
+        }
+      }
+    });
+    updateFormPolygonStorage();
+    var polyFeat = _formDrawnFeatures.find(function(f) { return f.geometry.type === 'Polygon'; });
+    if (polyFeat && typeof turf !== 'undefined') {
+      var areaM2 = turf.area(turf.featureCollection([polyFeat]));
+      var areaAc = areaM2 / 4046.86;
+      var areaEl = document.getElementById('formMapArea');
+      if (areaEl) { areaEl.classList.remove('hidden'); areaEl.textContent = '📐 ' + (areaM2 > 10000 ? (areaAc.toFixed(2) + ' একর') : (areaM2.toFixed(1) + ' বর্গমিটার')); }
+    }
+  });
+}
+
+function updateFormPolygonStorage() {
+  var fc = { type: 'FeatureCollection', features: _formDrawnFeatures };
+  var el = document.getElementById('fPolygonGeojson');
+  if (el) el.value = JSON.stringify(fc);
+}
+
+window._formMapDraw = function(mode) {
+  if (!_formDrawInst) return;
+  _formDrawInst.changeMode(mode === 'polygon' ? 'draw_polygon' : 'draw_point');
+};
+
+window._formMapTrash = function() {
+  if (!_formDrawInst) return;
+  _formDrawInst.trash();
+  _formDrawnFeatures = [];
+  updateFormPolygonStorage();
+  var areaEl = document.getElementById('formMapArea');
+  if (areaEl) { areaEl.classList.add('hidden'); areaEl.textContent = ''; }
+};
+
+function loadFormAdminBounds() {
+  if (!_formMapInst) return;
+  fetch('/gis/boundaries/divisions.geojson').then(function(r) {
+    if (!r.ok) throw new Error('not found');
+    return r.json();
+  }).then(function(geojson) {
+    if (!geojson.features || !geojson.features.length) return;
+    _formAdminSrcId = 'form-admin-src';
+    _formMapInst.addSource(_formAdminSrcId, { type: 'geojson', data: geojson });
+    _formMapInst.addLayer({ id: 'form-admin-fill', type: 'fill', source: _formAdminSrcId,
+      paint: { 'fill-color': '#006A4E', 'fill-opacity': 0.04 } });
+    _formMapInst.addLayer({ id: 'form-admin-line', type: 'line', source: _formAdminSrcId,
+      paint: { 'line-color': '#006A4E', 'line-width': 1.5, 'line-opacity': 0.5, 'line-dasharray': [3, 3] } });
+    _formMapInst.addLayer({ id: 'form-admin-label', type: 'symbol', source: _formAdminSrcId,
+      layout: { 'text-field': ['coalesce', ['get', 'shapeName'], ['get', 'name']], 'text-size': 10, 'text-max-width': 8 },
+      paint: { 'text-color': '#005a42', 'text-halo-color': '#fff', 'text-halo-width': 1.5 } });
+  }).catch(function() {});
+}
+
+window.toggleFormMapLayers = function() {
+  var panel = document.getElementById('formMapLayerPanel');
+  if (panel) panel.classList.toggle('hidden');
+};
+
+window.switchFormBasemap = function(key) {
+  if (!_formMapInst) return;
+  if (key === _formCurrentBasemap) return;
+  document.querySelectorAll('#formMapLayerPanel input[id^="fmLayer"]').forEach(function(cb) {
+    if (cb.id !== 'fmLayerAdmin' && cb.id !== 'fmLayerNdvi') cb.checked = false;
+  });
+  var cb = document.getElementById('fmLayer' + key.charAt(0).toUpperCase() + key.slice(1));
+  if (cb) cb.checked = true;
+  var bm = FORM_BASEMAPS[key];
+  if (!bm) return;
+  var oldSrcId = 'form-basemap';
+  if (_formMapInst.getSource(oldSrcId)) _formMapInst.removeSource(oldSrcId);
+  _formMapInst.addSource(oldSrcId, bm);
+  var lyrOrder = ['form-admin-fill','form-admin-line','form-admin-label','gl-draw-polygon-fill','gl-draw-polygon-stroke','gl-draw-point'];
+  var firstLyr = null;
+  for (var i = 0; i < lyrOrder.length; i++) { if (_formMapInst.getLayer(lyrOrder[i])) { firstLyr = lyrOrder[i]; break; } }
+  var existing = _formMapInst.getLayer('form-basemap-lyr');
+  if (existing) _formMapInst.removeLayer('form-basemap-lyr');
+  _formMapInst.addLayer({ id: 'form-basemap-lyr', type: 'raster', source: oldSrcId }, firstLyr || undefined);
+  if (key === 'hybrid') {
+    if (!_formMapInst.getSource('form-labels-src')) {
+      _formMapInst.addSource('form-labels-src', { type: 'raster',
+        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'], tileSize: 256 });
+    }
+    if (!_formMapInst.getLayer('form-labels-lyr')) {
+      _formMapInst.addLayer({ id: 'form-labels-lyr', type: 'raster', source: 'form-labels-src' });
+    }
+  } else {
+    if (_formMapInst.getLayer('form-labels-lyr')) _formMapInst.removeLayer('form-labels-lyr');
+    if (_formMapInst.getSource('form-labels-src')) _formMapInst.removeSource('form-labels-src');
+  }
+  _formCurrentBasemap = key;
+};
+
+window.toggleFormAdminBounds = function(visible) {
+  if (!_formMapInst) return;
+  ['form-admin-fill','form-admin-line','form-admin-label'].forEach(function(id) {
+    var lyr = _formMapInst.getLayer(id);
+    if (lyr) _formMapInst.setLayoutProperty(id, 'visibility', visible ? 'visible' : 'none');
+  });
+};
+
+window.toggleFormNdvi = function(visible) {
+  if (!_formMapInst) return;
+  if (visible) {
+    if (!_formMapInst.getSource('form-ndvi-src')) {
+      _formMapInst.addSource('form-ndvi-src', { type: 'raster',
+        tiles: ['https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_L3_NDVI_Monthly/default/{z}/{y}/{x}.png'], tileSize: 256 });
+      _formMapInst.addLayer({ id: 'form-ndvi-lyr', type: 'raster', source: 'form-ndvi-src',
+        paint: { 'raster-opacity': 0.6 } });
+    } else {
+      _formMapInst.setLayoutProperty('form-ndvi-lyr', 'visibility', 'visible');
+    }
+  } else {
+    if (_formMapInst.getLayer('form-ndvi-lyr')) _formMapInst.setLayoutProperty('form-ndvi-lyr', 'visibility', 'none');
+  }
+};
+
+function flyFormMap(lat, lng) {
+  if (!_formMapInst) { initFormMap(lat, lng); return; }
+  _formMapInst.flyTo({ center: [lng, lat], zoom: 15, essential: true });
+  setTimeout(function() { _formMapInst.resize(); }, 300);
+}
+
+function clearFormMapDrawing() {
+  if (!_formDrawInst) return;
+  _formDrawInst.deleteAll();
+  _formDrawnFeatures = [];
+  updateFormPolygonStorage();
+  var areaEl = document.getElementById('formMapArea');
+  if (areaEl) { areaEl.classList.add('hidden'); areaEl.textContent = ''; }
+}
+
+function getFormPolygonData() {
+  var el = document.getElementById('fPolygonGeojson');
+  if (!el || !el.value) return null;
+  try { return JSON.parse(el.value); } catch(e) { return null; }
+}
+
+// Patch fetchGeoLocation to also fly the form map
+var _origFetchGeo = window.fetchGeoLocation;
+window.fetchGeoLocation = function() {
+  if (_origFetchGeo) _origFetchGeo();
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(function(pos) {
+      flyFormMap(pos.coords.latitude, pos.coords.longitude);
+    }, function(){}, { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 });
+  }
+};
 
 // ── GIS Map Visualizer (MapLibre GL JS) ──
 // Legacy Leaflet code replaced by /gis/gis-module.js which overrides
