@@ -16,17 +16,33 @@ export default defineConfig(({mode}) => {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest,txt}'],
           runtimeCaching: [
             {
-              urlPattern: /^https:\/\/unpkg\.com\/leaflet@[\d\.]+\/dist\/leaflet\.(js|css)/,
+              urlPattern: /^https:\/\/unpkg\.com\/maplibre-gl@[\d\.]+\/dist\/maplibre-gl/,
               handler: 'CacheFirst',
               options: {
-                cacheName: 'leaflet-assets',
+                cacheName: 'maplibre-assets',
                 expiration: {
                   maxEntries: 10,
-                  maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+                  maxAgeSeconds: 60 * 60 * 24 * 365,
                 },
-                cacheableResponse: {
-                  statuses: [0, 200]
-                }
+                cacheableResponse: { statuses: [0, 200] }
+              }
+            },
+            {
+              urlPattern: /^https:\/\/unpkg\.com\/@maplibre\/maplibre-gl-draw/,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'maplibre-draw-assets',
+                expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
+                cacheableResponse: { statuses: [0, 200] }
+              }
+            },
+            {
+              urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/npm\/@turf\/turf/,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'turf-assets',
+                expiration: { maxEntries: 5, maxAgeSeconds: 60 * 60 * 24 * 365 },
+                cacheableResponse: { statuses: [0, 200] }
               }
             },
             {
@@ -34,13 +50,44 @@ export default defineConfig(({mode}) => {
               handler: 'StaleWhileRevalidate',
               options: {
                 cacheName: 'openstreetmap-tiles',
-                expiration: {
-                  maxEntries: 500, // cache up to 500 tiles
-                  maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
-                },
-                cacheableResponse: {
-                  statuses: [0, 200]
-                }
+                expiration: { maxEntries: 500, maxAgeSeconds: 60 * 60 * 24 * 30 },
+                cacheableResponse: { statuses: [0, 200] }
+              }
+            },
+            {
+              urlPattern: /^https:\/\/[a-d]\.basemaps\.cartocdn\.com/,
+              handler: 'StaleWhileRevalidate',
+              options: {
+                cacheName: 'cartodb-tiles',
+                expiration: { maxEntries: 500, maxAgeSeconds: 60 * 60 * 24 * 30 },
+                cacheableResponse: { statuses: [0, 200] }
+              }
+            },
+            {
+              urlPattern: /^https:\/\/[a-z]\.arcgisonline\.com/,
+              handler: 'StaleWhileRevalidate',
+              options: {
+                cacheName: 'esri-tiles',
+                expiration: { maxEntries: 500, maxAgeSeconds: 60 * 60 * 24 * 30 },
+                cacheableResponse: { statuses: [0, 200] }
+              }
+            },
+            {
+              urlPattern: /^https:\/\/[a-c]\.tile\.opentopomap\.org/,
+              handler: 'StaleWhileRevalidate',
+              options: {
+                cacheName: 'opentopomap-tiles',
+                expiration: { maxEntries: 500, maxAgeSeconds: 60 * 60 * 24 * 30 },
+                cacheableResponse: { statuses: [0, 200] }
+              }
+            },
+            {
+              urlPattern: /\/gis\/boundaries\/.*\.geojson$/,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'admin-boundaries',
+                expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 7 },
+                cacheableResponse: { statuses: [0, 200] }
               }
             }
           ]
@@ -99,7 +146,6 @@ export default defineConfig(({mode}) => {
       rollupOptions: {
         output: {
           manualChunks: {
-            'leaflet': ['leaflet'],
             'google-genai': ['@google/genai']
           }
         }

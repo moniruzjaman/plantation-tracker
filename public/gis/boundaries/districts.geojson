@@ -1,0 +1,7 @@
+{
+  "type": "FeatureCollection",
+  "name": "bangladesh-districts",
+  "description": "Placeholder: will be populated by running node scripts/download-bd-boundaries.js",
+  "source": "Placeholder - run download script to populate with real data from geoBoundaries (gbOpen_BGD_ADM2.geojson)",
+  "features": []
+}

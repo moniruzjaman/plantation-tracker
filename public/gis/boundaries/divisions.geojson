@@ -1,0 +1,237 @@
+{
+  "type": "FeatureCollection",
+  "name": "bangladesh-divisions",
+  "description": "Approximate placeholder boundaries for Bangladesh's 8 administrative divisions. Replace by running: node scripts/download-bd-boundaries.js",
+  "source": "Placeholder (approximate hand-drawn polygons)",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "shapeName": "বরিশাল",
+        "shapeNameEn": "Barisal",
+        "shapeISO": "BD-A",
+        "shapeGroup": "division",
+        "shapeID": 1
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [90.05, 22.70],
+          [90.15, 22.85],
+          [90.40, 22.95],
+          [90.50, 22.75],
+          [90.45, 22.35],
+          [90.30, 22.15],
+          [90.10, 21.95],
+          [89.95, 22.10],
+          [89.85, 22.40],
+          [90.05, 22.70]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "shapeName": "চট্টগ্রাম",
+        "shapeNameEn": "Chattogram",
+        "shapeISO": "BD-B",
+        "shapeGroup": "division",
+        "shapeID": 2
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [90.50, 22.75],
+          [90.80, 23.00],
+          [91.20, 23.20],
+          [91.70, 23.40],
+          [92.30, 23.30],
+          [92.65, 22.80],
+          [92.60, 22.10],
+          [92.40, 21.50],
+          [92.10, 21.00],
+          [91.70, 20.60],
+          [91.30, 20.80],
+          [90.90, 21.40],
+          [90.60, 21.90],
+          [90.45, 22.35],
+          [90.50, 22.75]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "shapeName": "ঢাকা",
+        "shapeNameEn": "Dhaka",
+        "shapeISO": "BD-C",
+        "shapeGroup": "division",
+        "shapeID": 3
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [89.85, 22.40],
+          [90.05, 22.70],
+          [90.40, 22.95],
+          [90.50, 22.75],
+          [90.80, 23.00],
+          [91.20, 23.20],
+          [91.10, 23.50],
+          [90.90, 23.90],
+          [90.80, 24.15],
+          [90.50, 24.30],
+          [90.10, 24.25],
+          [89.80, 24.00],
+          [89.60, 23.60],
+          [89.50, 23.10],
+          [89.70, 22.70],
+          [89.85, 22.40]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "shapeName": "খুলনা",
+        "shapeNameEn": "Khulna",
+        "shapeISO": "BD-D",
+        "shapeGroup": "division",
+        "shapeID": 4
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [88.60, 22.10],
+          [88.80, 22.60],
+          [89.10, 22.80],
+          [89.50, 23.10],
+          [89.60, 23.60],
+          [89.50, 23.30],
+          [89.30, 22.90],
+          [89.15, 22.50],
+          [88.90, 22.20],
+          [88.60, 22.10]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "shapeName": "রাজশাহী",
+        "shapeNameEn": "Rajshahi",
+        "shapeISO": "BD-E",
+        "shapeGroup": "division",
+        "shapeID": 5
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [88.20, 24.50],
+          [88.50, 24.80],
+          [88.90, 24.90],
+          [89.20, 24.70],
+          [89.50, 24.40],
+          [89.50, 24.00],
+          [89.30, 23.60],
+          [89.60, 23.60],
+          [89.80, 24.00],
+          [89.70, 24.30],
+          [89.60, 24.80],
+          [89.20, 25.10],
+          [88.80, 25.30],
+          [88.30, 25.20],
+          [88.00, 25.00],
+          [88.10, 24.70],
+          [88.20, 24.50]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "shapeName": "রংপুর",
+        "shapeNameEn": "Rangpur",
+        "shapeISO": "BD-F",
+        "shapeGroup": "division",
+        "shapeID": 6
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [88.30, 25.20],
+          [88.80, 25.30],
+          [89.20, 25.10],
+          [89.60, 24.80],
+          [89.70, 24.30],
+          [89.80, 24.00],
+          [90.10, 24.25],
+          [90.30, 24.70],
+          [90.30, 25.10],
+          [90.10, 25.50],
+          [89.70, 25.90],
+          [89.20, 26.10],
+          [88.70, 26.20],
+          [88.30, 26.00],
+          [88.10, 25.60],
+          [88.30, 25.20]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "shapeName": "সিলেট",
+        "shapeNameEn": "Sylhet",
+        "shapeISO": "BD-G",
+        "shapeGroup": "division",
+        "shapeID": 7
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [90.90, 23.90],
+          [91.10, 23.50],
+          [91.20, 23.20],
+          [91.70, 23.40],
+          [92.10, 23.80],
+          [92.45, 24.20],
+          [92.50, 24.60],
+          [92.30, 24.90],
+          [91.90, 25.00],
+          [91.40, 24.90],
+          [91.00, 24.60],
+          [90.80, 24.15],
+          [90.90, 23.90]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "shapeName": "ময়মনসিংহ",
+        "shapeNameEn": "Mymensingh",
+        "shapeISO": "BD-H",
+        "shapeGroup": "division",
+        "shapeID": 8
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [89.80, 24.00],
+          [90.10, 24.25],
+          [90.30, 24.70],
+          [90.30, 25.10],
+          [90.60, 25.20],
+          [91.00, 25.00],
+          [91.40, 24.90],
+          [91.00, 24.60],
+          [90.80, 24.15],
+          [90.50, 24.30],
+          [90.10, 24.25],
+          [89.80, 24.00]
+        ]]
+      }
+    }
+  ]
+}
