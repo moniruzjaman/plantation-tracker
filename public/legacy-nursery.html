@@ -49,6 +49,12 @@ body{font-family:'Noto Sans Bengali','Kalpurush','SolaimanLipi',Arial,sans-serif
 .share-tile:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(0,0,0,.12)}
 .guide-section{border-left:3px solid #006A4E;transition:all .15s}
 .guide-section:hover{border-left-color:#F42A41;background:#fafafa}
+.form-map-btn{width:40px;height:40px;border-radius:8px;border:none;background:white;box-shadow:0 2px 6px rgba(0,0,0,.18);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:transform .1s,box-shadow .1s;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.form-map-btn:active{transform:scale(.9);box-shadow:0 1px 2px rgba(0,0,0,.15)}
+@media(max-width:480px){.form-map-btn{width:36px;height:36px;font-size:16px}}
+.form-map-layer-btn{padding:6px 12px;height:34px;border-radius:8px;border:none;background:white;box-shadow:0 2px 6px rgba(0,0,0,.18);cursor:pointer;font-size:11px;font-weight:600;color:#006A4E;display:flex;align-items:center;gap:4px;-webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:transform .1s}
+.form-map-layer-btn:active{transform:scale(.95)}
+@media(max-width:480px){.form-map-layer-btn{height:30px;font-size:10px;padding:4px 8px}}
 .premium-badge{background:linear-gradient(135deg,#F42A41,#991826);box-shadow:0 2px 8px rgba(220,38,38,.35)}
 details>summary{list-style:none}
 details>summary::-webkit-details-marker{display:none}
@@ -309,17 +315,17 @@ tbody tr{border-bottom:1px solid #E9ECEF}
 <!-- ===== FORM MAP with Geo-Fencing ===== -->
 <div class="sm:col-span-2">
 <label class="block text-xs font-semibold text-gray-700 mb-1">🗺️ বাগান/প্লট ম্যাপ ও জিও-ফেন্সিং</label>
-<div style="position:relative;border-radius:0.75rem;overflow:hidden;border:2px solid #E9ECEF;background:#e5e7eb">
-<div id="formMap" style="width:100%;height:320px"></div>
-<div id="formMapToolbar" style="position:absolute;top:8px;left:8px;z-index:20;display:flex;flex-direction:column;gap:4px">
-<button onclick="window._formMapDraw&&window._formMapDraw('polygon')" title="বহুভুজ আঁকুন (বাগান/প্লটের সীমানা)" style="width:34px;height:34px;border-radius:6px;border:none;background:white;box-shadow:0 1px 4px rgba(0,0,0,.2);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center" onmouseover="this.style.background='#edf6f2'" onmouseout="this.style.background='white'">📐</button>
-<button onclick="window._formMapDraw&&window._formMapDraw('point')" title="পয়েন্ট চিহ্নিত করুন" style="width:34px;height:34px;border-radius:6px;border:none;background:white;box-shadow:0 1px 4px rgba(0,0,0,.2);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center" onmouseover="this.style.background='#edf6f2'" onmouseout="this.style.background='white'">📍</button>
-<button onclick="window._formMapTrash&&window._formMapTrash()" title="আঁকা মুছুন" style="width:34px;height:34px;border-radius:6px;border:none;background:white;box-shadow:0 1px 4px rgba(0,0,0,.2);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center" onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='white'">🗑️</button>
+<div id="formMapWrap" style="position:relative;border-radius:0.75rem;overflow:hidden;border:2px solid #E9ECEF;background:#e5e7eb">
+<div id="formMap" style="width:100%;height:50vh;min-height:220px;max-height:420px"></div>
+<div id="formMapToolbar" style="position:absolute;top:8px;left:8px;z-index:20;display:flex;flex-direction:column;gap:5px">
+<button onclick="window._formMapDraw&&window._formMapDraw('polygon')" title="বহুভুজ আঁকুন (বাগান/প্লটের সীমানা)" class="form-map-btn" onmouseover="this.style.background='#edf6f2'" onmouseout="this.style.background='white'">📐</button>
+<button onclick="window._formMapDraw&&window._formMapDraw('point')" title="পয়েন্ট চিহ্নিত করুন" class="form-map-btn" onmouseover="this.style.background='#edf6f2'" onmouseout="this.style.background='white'">📍</button>
+<button onclick="window._formMapTrash&&window._formMapTrash()" title="আঁকা মুছুন" class="form-map-btn" onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='white'">🗑️</button>
 </div>
 <div id="formMapLayerToggle" style="position:absolute;top:8px;right:8px;z-index:20">
-<button onclick="toggleFormMapLayers()" title="লেয়ার টগল করুন" style="padding:4px 8px;border-radius:6px;border:none;background:white;box-shadow:0 1px 4px rgba(0,0,0,.2);cursor:pointer;font-size:11px;font-weight:600;color:#006A4E;display:flex;align-items:center;gap:4px" onmouseover="this.style.background='#edf6f2'" onmouseout="this.style.background='white'">🗺️ লেয়ার</button>
+<button onclick="toggleFormMapLayers()" title="লেয়ার টগল করুন" class="form-map-layer-btn" onmouseover="this.style.background='#edf6f2'" onmouseout="this.style.background='white'">🗺️ লেয়ার</button>
 </div>
-<div id="formMapLayerPanel" class="hidden" style="position:absolute;top:44px;right:8px;z-index:20;background:white;border-radius:8px;padding:10px;box-shadow:0 4px 12px rgba(0,0,0,.15);min-width:160px;font-size:11px">
+<div id="formMapLayerPanel" class="hidden" style="position:absolute;top:42px;right:8px;z-index:20;background:white;border-radius:8px;padding:10px 12px;box-shadow:0 4px 12px rgba(0,0,0,.15);min-width:170px;font-size:11px">
 <label style="display:flex;align-items:center;gap:6px;margin-bottom:6px;cursor:pointer"><input type="checkbox" id="fmLayerSatellite" onchange="switchFormBasemap('satellite')" style="accent-color:#006A4E"> স্যাটেলাইট</label>
 <label style="display:flex;align-items:center;gap:6px;margin-bottom:6px;cursor:pointer"><input type="checkbox" id="fmLayerStreet" checked onchange="switchFormBasemap('street')" style="accent-color:#006A4E"> স্ট্রিট</label>
 <label style="display:flex;align-items:center;gap:6px;margin-bottom:6px;cursor:pointer"><input type="checkbox" id="fmLayerTerrain" onchange="switchFormBasemap('terrain')" style="accent-color:#006A4E"> টেরেইন</label>
@@ -328,9 +334,9 @@ tbody tr{border-bottom:1px solid #E9ECEF}
 <label style="display:flex;align-items:center;gap:6px;margin-bottom:6px;cursor:pointer"><input type="checkbox" id="fmLayerAdmin" checked onchange="toggleFormAdminBounds(this.checked)" style="accent-color:#006A4E"> প্রশাসনিক সীমানা</label>
 <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="fmLayerNdvi" onchange="toggleFormNdvi(this.checked)" style="accent-color:#006A4E"> NDVI</label>
 </div>
-<div id="formMapInfo" style="position:absolute;bottom:8px;left:8px;right:8px;z-index:20;display:flex;justify-content:space-between;align-items:center">
-<div id="formMapCoords" style="background:rgba(255,255,255,.9);border-radius:6px;padding:3px 8px;font-size:10px;color:#495057;box-shadow:0 1px 3px rgba(0,0,0,.1)">ক্লিক করে অবস্থান নির্বাচন করুন</div>
-<div id="formMapArea" class="hidden" style="background:rgba(0,106,78,.9);color:white;border-radius:6px;padding:3px 8px;font-size:10px;font-weight:600"></div>
+<div id="formMapInfo" style="position:absolute;bottom:8px;left:8px;right:8px;z-index:20;display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap">
+<div id="formMapCoords" style="background:rgba(255,255,255,.92);border-radius:6px;padding:4px 10px;font-size:11px;color:#495057;box-shadow:0 1px 3px rgba(0,0,0,.1);max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">ক্লিক করে অবস্থান নির্বাচন করুন</div>
+<div id="formMapArea" class="hidden" style="background:rgba(0,106,78,.92);color:white;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;white-space:nowrap"></div>
 </div>
 </div>
 <input type="hidden" id="fPolygonGeojson" value="">
@@ -1289,7 +1295,7 @@ document.querySelectorAll('.nav-btn[data-tab="'+tab+'"]').forEach(function(b){b.
 hideBanner("successBanner");hideBanner("errorBanner");
 if(tab==="dashboard")renderDashboard();
 if(tab==="admin"&&isAdmin)renderAdminTable();
-if(tab==="form")setTimeout(function(){initFormMap()},100);
+if(tab==="form"){if(!_formMapInst)setTimeout(function(){initFormMap(23.8103,90.4125)},200);else _formMapInst.resize();}
 if(tab==="map")renderMap();
 if(tab==="storedData")renderMyTab();
 window.scrollTo({top:0,behavior:"smooth"});
@@ -2972,7 +2978,8 @@ var FORM_BASEMAPS = {
   hybrid: {
     type: 'raster',
     tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
-    tileSize: 256, attribution: '&copy; Esri'
+    tileSize: 256, attribution: '&copy; Esri',
+    labels: ['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}']
   },
   dark: {
     type: 'raster',
@@ -2982,21 +2989,23 @@ var FORM_BASEMAPS = {
 };
 
 function initFormMap(lat, lng) {
-  if (!maplibregl) return;
+  var ML = (typeof maplibregl !== 'undefined') ? maplibregl : (typeof MapLibreGL !== 'undefined' ? MapLibreGL : null);
+  if (!ML) { console.warn('MapLibre GL not loaded yet, retrying...'); setTimeout(function(){ initFormMap(lat, lng); }, 500); return; }
   var container = document.getElementById('formMap');
-  if (!container || _formMapInst) return;
+  if (!container) return;
+  if (_formMapInst) { _formMapInst.resize(); return; }
   try {
-    _formMapInst = new maplibregl.Map({
+    _formMapInst = new ML.Map({
       container: 'formMap',
       style: { version: 8, sources: {}, layers: [] },
       center: [lng || 90.4125, lat || 23.8103],
-      zoom: lat ? 15 : 7,
+      zoom: (lat && lat !== 23.8103) ? 15 : 7,
       attributionControl: false
     });
-    _formMapInst.addControl(new maplibregl.NavigationControl({showCompass: false}), 'bottom-right');
-    _formMapInst.addControl(new maplibregl.ScaleControl({maxWidth: 120}), 'bottom-left');
-    switchFormBasemap('street');
+    _formMapInst.addControl(new ML.NavigationControl({showCompass: false}), 'bottom-right');
+    _formMapInst.addControl(new ML.ScaleControl({maxWidth: 120}), 'bottom-left');
     _formMapInst.on('load', function() {
+      switchFormBasemap('street');
       loadFormAdminBounds();
       setupFormDraw();
     });
@@ -3016,8 +3025,9 @@ function initFormMap(lat, lng) {
 }
 
 function setupFormDraw() {
-  if (!MaplibreDraw || !_formMapInst) return;
-  _formDrawInst = new MaplibreDraw({
+  var MD = (typeof MaplibreDraw !== 'undefined') ? MaplibreDraw : (typeof MapLibreDraw !== 'undefined' ? MapLibreDraw : null);
+  if (!MD || !_formMapInst) { console.warn('MapLibreDraw not available'); return; }
+  _formDrawInst = new MD({
     displayControlsDefault: false,
     controls: { polygon: true, point: true, trash: true },
     styles: [
@@ -3033,8 +3043,9 @@ function setupFormDraw() {
         paint: { 'circle-radius': 8, 'circle-color': '#F42A41', 'circle-stroke-width': 2, 'circle-stroke-color': '#fff' } }
     ]
   });
-  _formMapInst.addControl(_formDrawInst, 'top-left');
-  document.getElementById('formMapToolbar').style.display = 'none';
+  _formMapInst.addControl(_formDrawInst);
+  var toolbar = document.getElementById('formMapToolbar');
+  if (toolbar) toolbar.style.display = 'none';
   _formDrawInst.on('create', function(e) {
     var feat = e.features[0];
     _formDrawnFeatures.push(JSON.parse(JSON.stringify(feat)));
@@ -3130,34 +3141,27 @@ window.toggleFormMapLayers = function() {
 
 window.switchFormBasemap = function(key) {
   if (!_formMapInst) return;
-  if (key === _formCurrentBasemap) return;
+  var bm = FORM_BASEMAPS[key];
+  if (!bm) return;
   document.querySelectorAll('#formMapLayerPanel input[id^="fmLayer"]').forEach(function(cb) {
     if (cb.id !== 'fmLayerAdmin' && cb.id !== 'fmLayerNdvi') cb.checked = false;
   });
   var cb = document.getElementById('fmLayer' + key.charAt(0).toUpperCase() + key.slice(1));
   if (cb) cb.checked = true;
-  var bm = FORM_BASEMAPS[key];
-  if (!bm) return;
-  var oldSrcId = 'form-basemap';
-  if (_formMapInst.getSource(oldSrcId)) _formMapInst.removeSource(oldSrcId);
-  _formMapInst.addSource(oldSrcId, bm);
+  var srcId = 'form-basemap';
+  if (_formMapInst.getLayer('form-basemap-lyr')) _formMapInst.removeLayer('form-basemap-lyr');
+  if (_formMapInst.getSource(srcId)) _formMapInst.removeSource(srcId);
+  _formMapInst.addSource(srcId, { type: bm.type, tiles: bm.tiles, tileSize: bm.tileSize, attribution: bm.attribution });
   var lyrOrder = ['form-admin-fill','form-admin-line','form-admin-label','gl-draw-polygon-fill','gl-draw-polygon-stroke','gl-draw-point'];
-  var firstLyr = null;
-  for (var i = 0; i < lyrOrder.length; i++) { if (_formMapInst.getLayer(lyrOrder[i])) { firstLyr = lyrOrder[i]; break; } }
-  var existing = _formMapInst.getLayer('form-basemap-lyr');
-  if (existing) _formMapInst.removeLayer('form-basemap-lyr');
-  _formMapInst.addLayer({ id: 'form-basemap-lyr', type: 'raster', source: oldSrcId }, firstLyr || undefined);
-  if (key === 'hybrid') {
-    if (!_formMapInst.getSource('form-labels-src')) {
-      _formMapInst.addSource('form-labels-src', { type: 'raster',
-        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'], tileSize: 256 });
-    }
-    if (!_formMapInst.getLayer('form-labels-lyr')) {
-      _formMapInst.addLayer({ id: 'form-labels-lyr', type: 'raster', source: 'form-labels-src' });
-    }
-  } else {
-    if (_formMapInst.getLayer('form-labels-lyr')) _formMapInst.removeLayer('form-labels-lyr');
-    if (_formMapInst.getSource('form-labels-src')) _formMapInst.removeSource('form-labels-src');
+  var beforeLyr = null;
+  for (var i = 0; i < lyrOrder.length; i++) { if (_formMapInst.getLayer(lyrOrder[i])) { beforeLyr = lyrOrder[i]; break; } }
+  _formMapInst.addLayer({ id: 'form-basemap-lyr', type: 'raster', source: srcId }, beforeLyr || undefined);
+  var labelSrc = 'form-labels-src', labelLyr = 'form-labels-lyr';
+  if (_formMapInst.getLayer(labelLyr)) _formMapInst.removeLayer(labelLyr);
+  if (_formMapInst.getSource(labelSrc)) _formMapInst.removeSource(labelSrc);
+  if (bm.labels) {
+    _formMapInst.addSource(labelSrc, { type: 'raster', tiles: bm.labels, tileSize: 256 });
+    _formMapInst.addLayer({ id: labelLyr, type: 'raster', source: labelSrc });
   }
   _formCurrentBasemap = key;
 };
@@ -3187,9 +3191,11 @@ window.toggleFormNdvi = function(visible) {
 };
 
 function flyFormMap(lat, lng) {
+  lat = parseFloat(lat); lng = parseFloat(lng);
+  if (isNaN(lat) || isNaN(lng)) return;
   if (!_formMapInst) { initFormMap(lat, lng); return; }
   _formMapInst.flyTo({ center: [lng, lat], zoom: 15, essential: true });
-  setTimeout(function() { _formMapInst.resize(); }, 300);
+  setTimeout(function() { if (_formMapInst) _formMapInst.resize(); }, 300);
 }
 
 function clearFormMapDrawing() {
@@ -3217,6 +3223,18 @@ window.fetchGeoLocation = function() {
     }, function(){}, { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 });
   }
 };
+
+// Auto-init form map on page load (form is the default tab)
+setTimeout(function(){ initFormMap(23.8103, 90.4125); }, 300);
+
+// ResizeObserver to keep form map responsive
+if (typeof ResizeObserver !== 'undefined') {
+  var _formMapRO = new ResizeObserver(function() {
+    if (_formMapInst) _formMapInst.resize();
+  });
+  var _formMapEl = document.getElementById('formMap');
+  if (_formMapEl) _formMapRO.observe(_formMapEl);
+}
 
 // ── GIS Map Visualizer (MapLibre GL JS) ──
 // Legacy Leaflet code replaced by /gis/gis-module.js which overrides
