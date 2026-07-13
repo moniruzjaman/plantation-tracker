@@ -24,8 +24,13 @@ document.head.appendChild(s);
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Galada&family=Hind+Siliguri:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Bengali:wght@400;500;600;700&family=Roboto:wght@400;500;600;700&family=SolaimanLipi&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- MapLibre GL JS + Plugins -->
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet"/>
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<link href="https://unpkg.com/@maplibre/maplibre-gl-draw@3.0.0/dist/maplibre-gl-draw.css" rel="stylesheet"/>
+<script src="https://unpkg.com/@maplibre/maplibre-gl-draw@3.0.0/dist/maplibre-gl-draw.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"></script>
+<script src="/gis/gis-module.js"></script>
 <style>
 *{box-sizing:border-box}
 body{font-family:'Noto Sans Bengali','Kalpurush','SolaimanLipi',Arial,sans-serif;padding-bottom:70px;margin:0}
@@ -542,12 +547,16 @@ tbody tr{border-bottom:1px solid #E9ECEF}
 <div class="bg-white rounded-xl shadow p-3 mb-6 relative">
 <div id="leafletMap" class="w-full h-[450px] sm:h-[550px] rounded-lg border border-gray-200" style="z-index: 10;"></div>
 <div class="mt-3 flex flex-wrap justify-between items-center text-xs text-gray-500 gap-2 px-1">
-<div>
-<span class="inline-flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-gray-400 inline-block"></span> এই ডিভাইসে (আনসিঙ্কড)</span>
-<span class="inline-flex items-center gap-2 ml-3"><span class="w-3 h-3 rounded-full inline-block" style="background:#a855f7"></span> আমার এন্ট্রি</span>
+<div class="flex flex-wrap items-center gap-2">
+<span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-gray-400 inline-block"></span> এই ডিভাইসে (আনসিঙ্কড)</span>
+<span class="inline-flex items-center gap-1 ml-2"><span class="w-3 h-3 rounded-full inline-block" style="background:#a855f7"></span> আমার এন্ট্রি</span>
+<span id="mapUpazilaLegend" class="hidden ml-2 flex flex-wrap items-center gap-1"></span>
 </div>
-<div id="mapUpazilaLegend" class="hidden mt-1 flex flex-wrap items-center text-xs text-gray-500 gap-1 px-1"></div>
+<div class="flex items-center gap-3">
+<button onclick="if(window.gisMap)gisMap.startMeasureDistance()" class="text-xs font-semibold px-2 py-1 rounded border border-blue-300 text-blue-700 hover:bg-blue-50 cursor-pointer" title="দূরত্ব পরিমাপ">📏 দূরত্ব</button>
+<button onclick="if(window.gisMap)gisMap.startMeasureArea()" class="text-xs font-semibold px-2 py-1 rounded border border-orange-300 text-orange-700 hover:bg-orange-50 cursor-pointer" title="ক্ষেত্রফল পরিমাপ">📐 ক্ষেত্রফল</button>
 <div id="mapStatsText" class="font-semibold text-green-700"></div>
+</div>
 </div>
 </div>
 </section>
@@ -2901,42 +2910,28 @@ saveSubmissions(subs);closeEditModal();renderAdminTable();
 window.adminDelete=function(id){if(!confirm("আপনি কি নিশ্চিত?"))return;saveSubmissions(getSubmissions().filter(function(s){return s.id!==id&&s.submissionId!==id}));renderAdminTable()};
 document.getElementById("editModal").addEventListener("click",function(e){if(e.target===this)closeEditModal()});
 
-// ── Leaflet Map Visualizer ──
+// ── GIS Map Visualizer (MapLibre GL JS) ──
+// Legacy Leaflet code replaced by /gis/gis-module.js which overrides
+// window.renderMap and window.zoomToMyGeoLocation.
 var mapInstance = null;
 var mapMarkers = [];
 
 window.zoomToMyGeoLocation = function() {
- if (navigator.geolocation) {
- navigator.geolocation.getCurrentPosition(function(pos) {
- if (mapInstance) {
- var lat = pos.coords.latitude;
- var lng = pos.coords.longitude;
- mapInstance.setView([lat, lng], 13);
- var pulseIcon = L.divIcon({
- html: '<span class="flex h-3 w-3 relative"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" style="position:absolute; background:#60a5fa; border-radius:9999px; width:12px; height:12px; display:inline-block;"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-blue-500" style="position:relative; background:#3b82f6; border-radius:9999px; width:12px; height:12px; display:inline-block;"></span></span>',
- className: 'custom-me-marker',
- iconSize: [12, 12]
- });
- L.marker([lat, lng], { icon: pulseIcon }).addTo(mapInstance).bindPopup("<b>আপনার বর্তমান অবস্থান</b>").openPopup();
- }
- }, function() {
- alert("লোকেশন পাওয়া যায়নি বা পারমিশন নেই।");
- });
- } else {
- alert("আপনার ব্রাউজার লোকেশন সমর্থন করে না।");
- }
+  if (window.gisMap) { window.gisMap.zoomToMyLocation(); return; }
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(function() {
+      if (window.gisMap) { window.gisMap.zoomToMyLocation(); }
+    }, function() {
+      alert("লোকেশন পাওয়া যায়নি বা পারমিশন নেই।");
+    });
+  } else {
+    alert("আপনার ব্রাউজার লোকেশন সমর্থন করে না।");
+  }
 };
 
 // ── National App_Entry sync for the Map tab ──
-// The Map should show every location recorded in the App_Entry sheet
-// (columns L=অক্ষাংশ/latitude, M=দ্রাঘিমাংশ/longitude), across every
-// officer's device — not just this browser's localStorage. The GAS proxy
-// (/api/gas-sync?list=1) fetches and groups the sheet rows server-side
-// (one object per অ্যাপ জমা আইডি, with a seedlings[] array), in the same
-// shape produced locally by buildBaseSubmission()/toGASRows(), so the
-// existing marker-rendering code below needs no special-casing.
-var _nationalEntries = null; // cache: array | null (not loaded yet)
-var _nationalEntriesAt = null; // Date of last successful fetch
+var _nationalEntries = null;
+var _nationalEntriesAt = null;
 var _nationalEntriesLoading = false;
 
 function fetchNationalEntries(force) {
@@ -2974,18 +2969,12 @@ window.refreshNationalMapData = function() {
  });
 };
 
-// Combine this device's local (possibly not-yet-synced) submissions with
-// the national App_Entry list, de-duplicated by অ্যাপ জমা আইডি
-// (submissionId) — preferring the national (sheet-confirmed) copy — then
-// apply the same region/district filters as the rest of the Map tab.
 function getMapEntries() {
  var r = document.getElementById("mapRegion") && document.getElementById("mapRegion").value;
  var d = document.getElementById("mapDistrict") && document.getElementById("mapDistrict").value;
  var u = document.getElementById("mapUpazila") && document.getElementById("mapUpazila").value;
-
  var byId = {};
  var merged = [];
-
  (_nationalEntries || []).forEach(function(s) {
  var key = s.submissionId || s.id;
  if (key) byId[key] = true;
@@ -2993,11 +2982,10 @@ function getMapEntries() {
  });
  getSubmissions().forEach(function(s) {
  var key = s.submissionId || s.id;
- if (key && byId[key]) return; // already present via the national (synced) copy
+ if (key && byId[key]) return;
  s._source = s._source || "local";
  merged.push(s);
  });
-
  return merged.filter(function(s) {
  if (r && s.region !== r) return false;
  if (d && s.district !== d) return false;
@@ -3005,147 +2993,6 @@ function getMapEntries() {
  return true;
  });
 }
-
-window.renderMap = function() {
- try {
- var mapContainer = document.getElementById("leafletMap");
- if (!mapContainer) return;
- 
- // Initialize map if not done already
- if (!mapInstance) {
- // Default viewpoint focused on Bangladesh
- mapInstance = L.map('leafletMap').setView([23.8103, 90.4125], 7);
- 
- L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
- maxZoom: 19,
- attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
- }).addTo(mapInstance);
- }
- 
- // Clear old markers
- mapMarkers.forEach(function(m) { mapInstance.removeLayer(m); });
- mapMarkers = [];
- 
- // Kick off (or reuse the cached) national App_Entry fetch. First paint
- // uses whatever is cached/local; once the fetch resolves we re-render
- // automatically so markers appear without the user having to act.
- if (!_nationalEntries && !_nationalEntriesLoading) {
- fetchNationalEntries().then(function() { renderMap(); });
- }
- 
- // Get filtered submissions (local + national App_Entry, deduped, district/region/upazila filtered)
- var subs = getMapEntries();
- var _mapUpazilaLegend = {}; // rebuilt each render for the dynamic legend
- 
- var bounds = [];
- var mappedCount = 0;
- var totalCount = subs.length;
- 
- subs.forEach(function(s) {
- var geoStr = (s.geoLocation || "").trim();
- if (!geoStr) return;
- var parts = geoStr.split(",");
- if (parts.length !== 2) return;
- var lat = parseFloat(parts[0]);
- var lng = parseFloat(parts[1]);
- if (isNaN(lat) || isNaN(lng)) return;
- 
- bounds.push([lat, lng]);
- mappedCount++;
- 
- var t = countSeedlings(s);
- var totalScCount = t.fruit + t.forest + t.medicinal;
- 
- // Seedlings detailed details
- var _nm = s.farmerName || s.nurseryName || "";
- var _mb = s.farmerMobile || s.mobile || "";
- var _off = s.officerName || s.caretakerName || "";
- var _offmb = s.officerMobile || s.caretakerMobile || "";
- var _reg = s.region || s.division || "";
- var _sid = s.id || s.submissionId || "";
- var detailsHtml = '<div style="font-family: inherit; font-size:12px; line-height:1.5; min-width: 200px;">';
- detailsHtml += '<p style="font-weight:700; color:#006A4E; font-size:13px; margin:0 0 4px 0;">' + _nm + '</p>';
- if(_mb){detailsHtml += '<p style="margin:2px 0;"><b>মোবাইল:</b> <a href="tel:' + _mb + '" style="color:#2563eb; font-weight:600; text-decoration:underline;">' + _mb + '</a></p>';}
- if(_off){detailsHtml += '<p style="margin:2px 0;"><b>মনিটরিং অফিসার:</b> ' + _off + (_offmb ? ' (<a href="tel:' + _offmb + '" style="color:#2563eb; text-decoration:underline;">' + _offmb + '</a>)' : '') + '</p>';}
- var pD = s.plantingDate ? new Date(s.plantingDate).toLocaleDateString("bn-BD") : (s.submittedAt ? new Date(s.submittedAt).toLocaleDateString("bn-BD") : "");
- if (pD) {
- detailsHtml += '<p style="margin:2px 0;"><b>রোপণের তারিখ:</b> ' + pD + '</p>';
- }
- detailsHtml += '<p style="margin:2px 0;"><b>রোপণকৃত বৃক্ষের অবস্থান:</b> ' + (s.address || "উল্লেখ নেই") + '</p>';
- detailsHtml += '<p style="font-size:10px; color:#6C757D; margin:2px 0;">(' + _reg + ' > ' + s.district + ' > ' + s.upazila + ')</p>';
- detailsHtml += '<div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 4px; text-align: center; font-size:10px; margin-top:6px;">';
- detailsHtml += '<div style="background:#fff7ed; border-radius:4px; padding:3px;"><span style="color:#ea580c; font-weight:bold;">' + t.fruit + '</span><br><span style="color:#6C757D;">ফলদ</span></div>';
- detailsHtml += '<div style="background:#edf6f2; border-radius:4px; padding:3px;"><span style="color:#006A4E; font-weight:bold;">' + t.forest + '</span><br><span style="color:#6C757D;">বনজ</span></div>';
- detailsHtml += '<div style="background:#eff6ff; border-radius:4px; padding:3px;"><span style="color:#1d4ed8; font-weight:bold;">' + t.medicinal + '</span><br><span style="color:#6C757D;">ঔষধি</span></div>';
- detailsHtml += '</div>';
- detailsHtml += '<button onclick="parent.window.editMySubmission ? parent.window.editMySubmission(\''+_sid+'\') : editMySubmission(\''+_sid+'\')" style="width:100%; margin-top:8px; background:#dbeafe; color:#1d4ed8; border:none; padding:5px; border-radius:6px; font-weight:700; cursor:pointer; font-size:11px;"> তথ্য সম্পাদনা</button>';
- detailsHtml += '</div>';
- 
- // Marker color logic: each upazila gets a distinct color from the
- // palette — this makes it easy to visually cluster by upazila on the map.
- // Special overrides: local-unsynced = gray, current user's own entry = purple.
- var markerBg = upazilaColor(s.upazila);
- if (s._source === "local") markerBg = '#9ca3af'; // Gray — not yet synced
- var myProfile = getProfile();
- if (!s._isMine) {
- var pm = myProfile && myProfile.mobile;
- if (pm && (s.saaoMobile === pm || s.officerMobile === pm)) s._isMine = true;
- }
- if (s._source === "local" || s._isMine) markerBg = '#a855f7'; // Purple — my entry
- 
- // Track upazila→color for the dynamic legend
- if (s.upazila && s._source !== "local" && !s._isMine) {
- _mapUpazilaLegend[s.upazila] = markerBg;
- }
-
- var customIcon = L.divIcon({
- html: '<div style="background-color: ' + markerBg + '; width: 28px; height: 28px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); transform: scale(1);" title="' + (s.upazila||'') + '">🌳</div>',
- className: 'custom-tree-icon',
- iconSize: [28, 28],
- iconAnchor: [14, 14]
- });
- 
- var marker = L.marker([lat, lng], { icon: customIcon }).addTo(mapInstance).bindPopup(detailsHtml);
- mapMarkers.push(marker);
- });
- 
- // Build dynamic upazila color legend
- var legendEl = document.getElementById("mapUpazilaLegend");
- if (legendEl) {
- var keys = Object.keys(_mapUpazilaLegend).sort();
- if (keys.length > 0) {
- legendEl.innerHTML = keys.map(function(u) {
- return '<span class="inline-flex items-center gap-1 ml-3"><span class="w-3 h-3 rounded-full inline-block" style="background:' + _mapUpazilaLegend[u] + '"></span>' + u + '</span>';
- }).join('');
- legendEl.classList.remove('hidden');
- } else {
- legendEl.classList.add('hidden');
- }
- }
-
- // Update footer text statistics
- var statsText = document.getElementById("mapStatsText");
- if (statsText) {
- statsText.textContent = "মোট রোপণকারী: " + totalCount + " | ম্যাপে প্রদর্শিত: " + mappedCount;
- }
- 
- // Zoom/fit map bounds
- if (bounds.length > 0) {
- mapInstance.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
- } else {
- // Zoom to general Bangladesh bounds or default to Kurigram center
- mapInstance.setView([25.8113, 89.6582], 9);
- }
- 
- // Correct Leaflet display inside hidden container
- setTimeout(function() {
- mapInstance.invalidateSize();
- }, 250);
- 
- } catch (err) {
- console.error("Map rendering error:", err);
- }
-};
 
 // ── PWA Direct App Install & Iframe Detect ──
 var deferredPrompt = null;
