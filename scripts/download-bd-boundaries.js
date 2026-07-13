@@ -36,29 +36,32 @@ const SOURCES = [
   {
     key: "divisions",
     urls: [
-      "https://github.com/wmgeolab/geoBoundaries/raw/main/releaseData/gbOpen/BGD/ADM1/gbOpen_BGD_ADM1.geojson",
+      "https://www.geoboundaries.org/api/current/gbOpen/BGD/ADM1/",
     ],
+    apiMode: true,
     filename: "divisions.geojson",
-    simplify: false, // only 8 features — keep as-is
+    simplify: false,
     tolerance: 0,
   },
   {
     key: "districts",
     urls: [
-      "https://github.com/wmgeolab/geoBoundaries/raw/main/releaseData/gbOpen/BGD/ADM2/gbOpen_BGD_ADM2.geojson",
+      "https://www.geoboundaries.org/api/current/gbOpen/BGD/ADM2/",
     ],
+    apiMode: true,
     filename: "districts.geojson",
     simplify: true,
-    tolerance: 0.00045, // ~50 m at Bangladesh latitude
+    tolerance: 0.00045,
   },
   {
     key: "upazilas",
     urls: [
-      "https://github.com/wmgeolab/geoBoundaries/raw/main/releaseData/gbOpen/BGD/ADM3/gbOpen_BGD_ADM3.geojson",
+      "https://www.geoboundaries.org/api/current/gbOpen/BGD/ADM3/",
     ],
+    apiMode: true,
     filename: "upazilas.geojson",
     simplify: true,
-    tolerance: 0.0009, // ~100 m at Bangladesh latitude
+    tolerance: 0.0009,
   },
 ];
 
@@ -255,8 +258,19 @@ async function main() {
 
     // Try each URL in order
     for (const url of source.urls) {
-      console.log(`   Trying: ${url.replace(/.{50}/, "$&…")}`);
-      const buf = await download(url);
+      let downloadUrl = url;
+      if (source.apiMode) {
+        console.log(`   Resolving API: ${url.replace(/.{50}/, "$&…")}`);
+        const apiBuf = await download(url);
+        if (!apiBuf) continue;
+        try {
+          const apiData = JSON.parse(apiBuf.toString("utf-8"));
+          downloadUrl = apiData.gjDownloadURL || apiData.simplifiedGeometryGeoJSON;
+          if (!downloadUrl) { console.error("  ✗ No download URL in API response"); continue; }
+        } catch { console.error("  ✗ Invalid API JSON"); continue; }
+      }
+      console.log(`   Trying: ${downloadUrl.replace(/.{50}/, "$&…")}`);
+      const buf = await download(downloadUrl);
       if (buf) {
         data = parseGeoJSON(buf);
         if (data && data.type === "FeatureCollection") break;
