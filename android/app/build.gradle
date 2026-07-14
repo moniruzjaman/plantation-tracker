@@ -16,10 +16,25 @@ android {
     }
     signingConfigs {
         release {
-            storeFile file(MYAPP_RELEASE_STORE_FILE ? MYAPP_RELEASE_STORE_FILE : 'release.keystore')
-            storePassword MYAPP_RELEASE_STORE_PASSWORD ?: 'plantation2026'
-            keyAlias MYAPP_RELEASE_KEY_ALIAS ?: 'plantation'
-            keyPassword MYAPP_RELEASE_KEY_PASSWORD ?: 'plantation2026'
+            def propOrEnv = { String key, String fallback ->
+                def v = project.findProperty(key)
+                if (v) return v.toString()
+                v = System.getenv(key)
+                if (v) return v.toString()
+                v = System.getenv(key.replace('MYAPP_RELEASE_', 'RELEASE_'))
+                if (v) return v.toString()
+                return fallback
+            }
+            // Resolve keystore path — try configured name, then release.jks, then release.keystore
+            def storeName = propOrEnv('MYAPP_RELEASE_STORE_FILE', 'release.jks')
+            def storePath = file(storeName)
+            if (!storePath.exists()) {
+                storePath = file(storeName == 'release.jks' ? 'release.keystore' : 'release.jks')
+            }
+            storeFile   storePath
+            storePassword propOrEnv('MYAPP_RELEASE_STORE_PASSWORD', 'plantation2026')
+            keyAlias     propOrEnv('MYAPP_RELEASE_KEY_ALIAS', 'plantation')
+            keyPassword  propOrEnv('MYAPP_RELEASE_KEY_PASSWORD', 'plantation2026')
         }
     }
     buildTypes {
