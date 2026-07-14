@@ -16,10 +16,16 @@ android {
     }
     signingConfigs {
         release {
-            storeFile file(MYAPP_RELEASE_STORE_FILE ? MYAPP_RELEASE_STORE_FILE : 'release.keystore')
-            storePassword MYAPP_RELEASE_STORE_PASSWORD ?: 'plantation2026'
-            keyAlias MYAPP_RELEASE_KEY_ALIAS ?: 'plantation'
-            keyPassword MYAPP_RELEASE_KEY_PASSWORD ?: 'plantation2026'
+            def propOrEnv = { String key, String fallback ->
+                def v = project.findProperty(key)
+                if (v) return v.toString()
+                v = System.getenv(key)
+                return v ? v.toString() : fallback
+            }
+            storeFile file(propOrEnv('MYAPP_RELEASE_STORE_FILE', 'release.keystore'))
+            storePassword propOrEnv('MYAPP_RELEASE_STORE_PASSWORD', 'plantation2026')
+            keyAlias   propOrEnv('MYAPP_RELEASE_KEY_ALIAS', 'plantation')
+            keyPassword propOrEnv('MYAPP_RELEASE_KEY_PASSWORD', 'plantation2026')
         }
     }
     buildTypes {
