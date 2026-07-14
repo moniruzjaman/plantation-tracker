@@ -31,7 +31,8 @@ var COLUMNS = [
 
 var PROFILE_COLUMNS = [
   'জমার সময়', 'অ্যাপ জমা আইডি', 'সংক্ষিপ্ত পদবি', 'পদবি',
-  'নাম', 'মোবাইল', 'জেলা', 'উপজেলা', 'ইউনিয়ন', 'ব্লক'
+  'নাম', 'মোবাইল', 'ইমেইল', 'ডিভাইস আইডি',
+  'জেলা', 'উপজেলা', 'ইউনিয়ন', 'ব্লক'
 ];
 
 function getSheet_() {
@@ -71,6 +72,8 @@ function doPost(e) {
         raw.roleLabel || '',
         raw.name || '',
         raw.mobile || '',
+        raw.email || '',
+        raw.deviceId || '',
         raw.district || '',
         raw.upazila || '',
         raw.union || '',
@@ -229,6 +232,8 @@ function lookupByMobile_(mobile) {
         roleLabel: String(get('পদবি') || ''),
         name:      String(get('নাম') || ''),
         mobile:    mob,
+        email:     String(get('ইমেইল') || ''),
+        deviceId:  String(get('ডিভাইস আইডি') || ''),
         district:  String(get('জেলা') || ''),
         upazila:   String(get('উপজেলা') || ''),
         union:     String(get('ইউনিয়ন') || ''),
