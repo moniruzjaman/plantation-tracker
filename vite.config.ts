@@ -98,7 +98,6 @@ export default defineConfig(({mode}) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
-        'motion/react': path.resolve(__dirname, 'node_modules/motion/dist/es/react.mjs'),
       },
     },
     server: {

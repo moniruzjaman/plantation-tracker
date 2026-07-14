@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Geolocation as CapGeolocation } from '@capacitor/geolocation';
 import { Capacitor } from '@capacitor/core';
 import { 

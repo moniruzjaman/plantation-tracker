@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Download, Smartphone, CheckCircle, HelpCircle, X, ExternalLink } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 
