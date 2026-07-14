@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    name: Build PWA & Android APK/AAB
+    name: Build PWA & Android APK
     runs-on: ubuntu-latest
 
     steps:
@@ -59,52 +59,42 @@ jobs:
             https://raw.githubusercontent.com/gradle/gradle/v8.14.3/gradle/wrapper/gradle-wrapper.jar
           chmod +x android/gradlew
 
-      # 10. Signing keystore
+      # 10. Setup signing keystore + inject gradle.properties
       - name: Setup Signing Keystore
         id: keystore
         run: |
           if [ -n "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" ]; then
             echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > android/app/release.jks
+            # Write signing config directly into gradle.properties (most reliable)
+            cat >> android/gradle.properties << 'SIGNING_EOF'
+          MYAPP_RELEASE_STORE_FILE=release.jks
+          MYAPP_RELEASE_STORE_PASSWORD=${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          MYAPP_RELEASE_KEY_ALIAS=${{ secrets.RELEASE_KEY_ALIAS }}
+          MYAPP_RELEASE_KEY_PASSWORD=${{ secrets.RELEASE_KEY_PASSWORD }}
+          SIGNING_EOF
             echo "keystore=secret" >> "$GITHUB_OUTPUT"
           else
             PASS=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9' | head -c 20)
             keytool -genkeypair -v \
               -keystore android/app/release.jks \
-              -alias plantation \
+              -alias plantation-tracker \
               -keyalg RSA -keysize 2048 -validity 10000 \
               -storepass "$PASS" -keypass "$PASS" \
               -dname "CN=Plantation Tracker, OU=DAE, O=DAE, L=Dhaka, ST=Dhaka, C=BD"
+            cat >> android/gradle.properties << SIGNING_EOF
+          MYAPP_RELEASE_STORE_FILE=release.jks
+          MYAPP_RELEASE_STORE_PASSWORD=$PASS
+          MYAPP_RELEASE_KEY_ALIAS=plantation-tracker
+          MYAPP_RELEASE_KEY_PASSWORD=$PASS
+          SIGNING_EOF
             echo "keystore=generated" >> "$GITHUB_OUTPUT"
-            echo "pass=$PASS" >> "$GITHUB_OUTPUT"
           fi
 
-      # 11. Build Release AAB
-      - name: Build Release AAB
-        env:
-          MYAPP_RELEASE_STORE_FILE: release.jks
-          MYAPP_RELEASE_STORE_PASSWORD: ${{ steps.keystore.outputs.keystore == 'secret' && secrets.RELEASE_KEYSTORE_PASSWORD || steps.keystore.outputs.pass }}
-          MYAPP_RELEASE_KEY_ALIAS: ${{ steps.keystore.outputs.keystore == 'secret' && secrets.RELEASE_KEY_ALIAS || 'plantation' }}
-          MYAPP_RELEASE_KEY_PASSWORD: ${{ steps.keystore.outputs.keystore == 'secret' && secrets.RELEASE_KEY_PASSWORD || steps.keystore.outputs.pass }}
-        run: cd android && ./gradlew bundleRelease --no-daemon
-
-      # 12. Build Release APK
+      # 11. Build Release APK
       - name: Build Release APK
-        env:
-          MYAPP_RELEASE_STORE_FILE: release.jks
-          MYAPP_RELEASE_STORE_PASSWORD: ${{ steps.keystore.outputs.keystore == 'secret' && secrets.RELEASE_KEYSTORE_PASSWORD || steps.keystore.outputs.pass }}
-          MYAPP_RELEASE_KEY_ALIAS: ${{ steps.keystore.outputs.keystore == 'secret' && secrets.RELEASE_KEY_ALIAS || 'plantation' }}
-          MYAPP_RELEASE_KEY_PASSWORD: ${{ steps.keystore.outputs.keystore == 'secret' && secrets.RELEASE_KEY_PASSWORD || steps.keystore.outputs.pass }}
         run: cd android && ./gradlew assembleRelease --no-daemon
 
-      # 13. Upload AAB
-      - name: Upload Release AAB
-        uses: actions/upload-artifact@v4
-        with:
-          name: plantation-tracker-release-aab
-          path: android/app/build/outputs/bundle/release/app-release.aab
-          retention-days: 30
-
-      # 14. Upload APK
+      # 12. Upload APK
       - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
@@ -112,7 +102,12 @@ jobs:
           path: android/app/build/outputs/apk/release/app-release.apk
           retention-days: 30
 
-      # 15. Cleanup
-      - name: Cleanup Keystore
+      # 13. Cleanup
+      - name: Cleanup Keystore & Signing Config
         if: always()
-        run: rm -f android/app/release.jks
+        run: |
+          rm -f android/app/release.jks
+          # Remove injected signing lines but keep original gradle.properties content
+          if [ -f android/gradle.properties ]; then
+            sed -i '/^MYAPP_RELEASE_/d' android/gradle.properties
+          fi
