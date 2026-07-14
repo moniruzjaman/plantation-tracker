@@ -3310,6 +3310,7 @@ function getMapEntries() {
  var key = s.submissionId || s.id;
  if (key && byId[key]) return;
  s._source = s._source || "local";
+ s._isMine = true;
  merged.push(s);
  });
  return merged.filter(function(s) {
@@ -3409,7 +3410,7 @@ window.testGasConnection=function(){
  var ep=typeof GAS_SYNC_ENDPOINT!=="undefined"?GAS_SYNC_ENDPOINT:"/api/gas-sync";
  fetch(ep+"?list=1").then(function(r){return r.json()}).then(function(data){
  btn.textContent="সংযোগ পরীক্ষা করুন";btn.disabled=false;
- if(data&&data.ok){var count=Array.isArray(data.rows)?data.rows.length:0;result.textContent="সংযোগ সফল! সার্ভার থেকে "+count+" টি রেকর্ড পাওয়া গেছে।";result.style.color="#006A4E";}
+ if(data&&data.ok){var count=Array.isArray(data.entries)?data.entries.length:0;result.textContent="সংযোগ সফল! সার্ভার থেকে "+count+" টি রেকর্ড পাওয়া গেছে।";result.style.color="#006A4E";}
  else{result.textContent="সার্ভার থেকে তথ্য আসছে কিন্তু ডাটা খালি।";result.style.color="#ea580c";}
  }).catch(function(err){
  btn.textContent="সংযোগ পরীক্ষা করুন";btn.disabled=false;
