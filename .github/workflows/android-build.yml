@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    name: Build PWA & Android APK/AAB
+    name: Build PWA & Android APK
     runs-on: ubuntu-latest
 
     steps:
@@ -78,16 +78,7 @@ jobs:
             echo "pass=$PASS" >> "$GITHUB_OUTPUT"
           fi
 
-      # 11. Build Release AAB
-      - name: Build Release AAB
-        env:
-          MYAPP_RELEASE_STORE_FILE: release.jks
-          MYAPP_RELEASE_STORE_PASSWORD: ${{ steps.keystore.outputs.keystore == 'secret' && secrets.RELEASE_KEYSTORE_PASSWORD || steps.keystore.outputs.pass }}
-          MYAPP_RELEASE_KEY_ALIAS: ${{ steps.keystore.outputs.keystore == 'secret' && secrets.RELEASE_KEY_ALIAS || 'plantation' }}
-          MYAPP_RELEASE_KEY_PASSWORD: ${{ steps.keystore.outputs.keystore == 'secret' && secrets.RELEASE_KEY_PASSWORD || steps.keystore.outputs.pass }}
-        run: cd android && ./gradlew bundleRelease --no-daemon
-
-      # 12. Build Release APK
+      # 11. Build Release APK
       - name: Build Release APK
         env:
           MYAPP_RELEASE_STORE_FILE: release.jks
@@ -96,15 +87,7 @@ jobs:
           MYAPP_RELEASE_KEY_PASSWORD: ${{ steps.keystore.outputs.keystore == 'secret' && secrets.RELEASE_KEY_PASSWORD || steps.keystore.outputs.pass }}
         run: cd android && ./gradlew assembleRelease --no-daemon
 
-      # 13. Upload AAB
-      - name: Upload Release AAB
-        uses: actions/upload-artifact@v4
-        with:
-          name: plantation-tracker-release-aab
-          path: android/app/build/outputs/bundle/release/app-release.aab
-          retention-days: 30
-
-      # 14. Upload APK
+      # 12. Upload APK
       - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
@@ -112,7 +95,7 @@ jobs:
           path: android/app/build/outputs/apk/release/app-release.apk
           retention-days: 30
 
-      # 15. Cleanup
+      # 13. Cleanup
       - name: Cleanup Keystore
         if: always()
         run: rm -f android/app/release.jks
