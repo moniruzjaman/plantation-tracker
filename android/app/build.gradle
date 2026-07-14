@@ -20,12 +20,21 @@ android {
                 def v = project.findProperty(key)
                 if (v) return v.toString()
                 v = System.getenv(key)
-                return v ? v.toString() : fallback
+                if (v) return v.toString()
+                v = System.getenv(key.replace('MYAPP_RELEASE_', 'RELEASE_'))
+                if (v) return v.toString()
+                return fallback
             }
-            storeFile file(propOrEnv('MYAPP_RELEASE_STORE_FILE', 'release.keystore'))
+            // Resolve keystore path — try configured name, then release.jks, then release.keystore
+            def storeName = propOrEnv('MYAPP_RELEASE_STORE_FILE', 'release.jks')
+            def storePath = file(storeName)
+            if (!storePath.exists()) {
+                storePath = file(storeName == 'release.jks' ? 'release.keystore' : 'release.jks')
+            }
+            storeFile   storePath
             storePassword propOrEnv('MYAPP_RELEASE_STORE_PASSWORD', 'plantation2026')
-            keyAlias   propOrEnv('MYAPP_RELEASE_KEY_ALIAS', 'plantation')
-            keyPassword propOrEnv('MYAPP_RELEASE_KEY_PASSWORD', 'plantation2026')
+            keyAlias     propOrEnv('MYAPP_RELEASE_KEY_ALIAS', 'plantation')
+            keyPassword  propOrEnv('MYAPP_RELEASE_KEY_PASSWORD', 'plantation2026')
         }
     }
     buildTypes {
