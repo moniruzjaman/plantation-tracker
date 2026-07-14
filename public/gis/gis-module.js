@@ -851,11 +851,17 @@
 
     for (var i = 0; i < entries.length; i++) {
       var s = entries[i];
-      if (!s.geoLocation) continue;
 
-      var parts = s.geoLocation.split(',');
-      var lat = parseFloat(parts[0]);
-      var lng = parseFloat(parts[1]);
+      /* Resolve lat/lng from geoLocation string OR separate lat/lng fields */
+      var lat, lng;
+      if (s.geoLocation) {
+        var parts = s.geoLocation.split(',');
+        lat = parseFloat(parts[0]);
+        lng = parseFloat(parts[1]);
+      } else if (s.latitude && s.longitude) {
+        lat = parseFloat(s.latitude);
+        lng = parseFloat(s.longitude);
+      }
       if (isNaN(lat) || isNaN(lng)) continue;
 
       var color = '#9CA3AF'; // default gray
@@ -1872,25 +1878,20 @@
     if (!self.map || !self._supported) return;
 
     try {
-      /* Fetch national entries if available */
-      if (typeof fetchNationalEntries === 'function') {
-        fetchNationalEntries(false);
-      }
-
-      /* Get all entries */
-      var entries = [];
-      if (typeof getMapEntries === 'function') {
-        entries = getMapEntries();
-      } else if (typeof getSubmissions === 'function') {
-        entries = getSubmissions();
-      }
-
       /* Apply filters if filter selects exist */
       var regionFilter = document.getElementById('mapRegion');
       var districtFilter = document.getElementById('mapDistrict');
       var upazilaFilter = document.getElementById('mapUpazila');
 
-      var filtered = entries;
+      var filtered;
+      if (typeof getMapEntries === 'function') {
+        filtered = getMapEntries();
+      } else if (typeof getSubmissions === 'function') {
+        filtered = getSubmissions();
+      } else {
+        filtered = [];
+      }
+
       if (regionFilter && regionFilter.value) {
         filtered = filtered.filter(function (e) { return e.region === regionFilter.value; });
       }
@@ -2071,7 +2072,14 @@
     if (!gisMap) {
       window.initGIS();
     }
-    if (gisMap && gisMap._supported) {
+    if (!gisMap || !gisMap._supported) return;
+
+    /* Fetch national data FIRST, then render markers */
+    if (typeof fetchNationalEntries === 'function') {
+      fetchNationalEntries(false).then(function () {
+        gisMap.refreshMarkers();
+      });
+    } else {
       gisMap.refreshMarkers();
     }
   };
