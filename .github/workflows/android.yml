@@ -1,62 +1,49 @@
-name: Plantation Tracker Android PWA & Native Build
+name: Plantation Tracker Android Build
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   build:
-    name: Build PWA Web Assets & Android App Bundle
+    name: Build PWA & Android APK/AAB
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout repository code
+      # 1. Checkout
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 2. Setup Node.js runtime and cache dependencies
+      # 2. Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: 'npm'
 
-      # 3. Install NPM dependencies & Build Web Assets
+      # 3. Install dependencies
       - name: Install Dependencies
         run: npm ci
 
-      - name: Run Build Suite (Logo, Map & Icon Generation)
-        run: npm run build
+      # 4. Assemble legacy HTML from parts (needed for web build)
+      - name: Assemble Legacy HTML
+        run: node map.js
 
-      # 4. Integrate Capacitor native files
-      - name: Sync Capacitor Android Project
+      # 5. Build web assets (vite only — skip Android prep scripts)
+      - name: Build Web Assets
+        run: npx vite build
+
+      # 6. Sync Capacitor
+      - name: Sync Capacitor Android
         run: npx cap sync android
 
-      # 4b. Generate Android Icons and Splash Screens
-      - name: Generate Android Launcher Icons & Splash Screens
-        run: |
-          echo "🎨 Generating Android launcher icons and splash screens with proper dimensions..."
-          node generate-android-icons.js
-          
-          # Verify all icons exist
-          echo "\n🔍 Verifying generated icons:"
-          find android/app/src/main/res/mipmap-* -name "*.png" | wc -l
-          echo "icon files found"
-          
-          # Verify splash screens
-          echo "\n🔍 Verifying generated splash screens:"
-          find android/app/src/main/res/drawable* -name "splash.png" | wc -l
-          echo "splash files found"
-          
-          # Check file sizes (should be > 100 bytes for valid PNGs)
-          echo "\n📊 Sample file sizes:"
-          ls -lh android/app/src/main/res/mipmap-hdpi/ic_launcher.png 2>/dev/null || echo "No mipmap-hdpi icons"
-          ls -lh android/app/src/main/res/drawable-port-hdpi/splash.png 2>/dev/null || echo "No splash screens"
-          ls -lh android/app/src/main/res/drawable-port-night-hdpi/splash.png 2>/dev/null || echo "No night splash screens"
+      # 7. Generate Android icons & splash screens
+      - name: Generate Android Icons
+        run: node generate-android-icons.js
 
-      # 5. Set up Java SE 21 environment for Gradle compilation
+      # 8. JDK 21
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
@@ -64,216 +51,68 @@ jobs:
           java-version: '21'
           cache: 'gradle'
 
-      # 5b. Force-restore clean Gradle Wrapper JAR
-      - name: Force Restore Clean gradle-wrapper.jar
+      # 9. Fresh Gradle wrapper JAR
+      - name: Restore gradle-wrapper.jar
         run: |
           mkdir -p android/gradle/wrapper
-          curl -L -o android/gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.14.3/gradle/wrapper/gradle-wrapper.jar
-          echo "✅ gradle-wrapper.jar restored"
-          ls -lh android/gradle/wrapper/gradle-wrapper.jar
+          curl -sL -o android/gradle/wrapper/gradle-wrapper.jar \
+            https://raw.githubusercontent.com/gradle/gradle/v8.14.3/gradle/wrapper/gradle-wrapper.jar
+          chmod +x android/gradlew
 
-      - name: Set Gradlew Executable
-        run: chmod +x android/gradlew
-
-      # 5c. Ensure AndroidX is enabled in gradle.properties
-      - name: Ensure AndroidX is Enabled
-        run: |
-          cd android
-          
-          # Check if gradle.properties exists
-          if [ ! -f gradle.properties ]; then
-            echo "📝 Creating gradle.properties..."
-            touch gradle.properties
-          fi
-          
-          # Check and add AndroidX if missing
-          if ! grep -q "android.useAndroidX" gradle.properties; then
-            echo "🔧 Adding AndroidX configuration..."
-            cat >> gradle.properties << 'EOF'
-
-          # AndroidX package structure (auto-added by CI)
-          android.useAndroidX=true
-          android.enableJetifier=true
-          EOF
-          else
-            echo "✅ AndroidX already configured"
-          fi
-          
-          # Verify
-          echo "📋 Current gradle.properties:"
-          cat gradle.properties
-          echo ""
-          grep -E "android\.(useAndroidX|enableJetifier)" gradle.properties || echo "⚠️  Warning: AndroidX not found"
-
-      # 6. Generate or Decode Signing Keystore
+      # 10. Signing keystore
       - name: Setup Signing Keystore
         id: keystore
         run: |
-          mkdir -p android/app
-          
-          # Check if secrets are available
           if [ -n "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" ]; then
-            echo "🔐 Using existing keystore from secrets..."
             echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > android/app/release.jks
-            echo "keystore_source=secret" >> $GITHUB_OUTPUT
+            echo "keystore=secret" >> "$GITHUB_OUTPUT"
           else
-            echo "🔑 Generating new release keystore..."
-            KEYSTORE_PASS=$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9' | head -c 16)
-            ALIAS_PASS=$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9' | head -c 16)
-            
-            keytool -genkeypair \
-              -v \
+            PASS=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9' | head -c 20)
+            keytool -genkeypair -v \
               -keystore android/app/release.jks \
-              -alias plantation-key \
-              -keyalg RSA \
-              -keysize 2048 \
-              -validity 10000 \
-              -storepass "$KEYSTORE_PASS" \
-              -keypass "$ALIAS_PASS" \
-              -dname "CN=Plantation Tracker, OU=DAE, O=KrishiAI, L=Dhaka, ST=Dhaka, C=BD"
-            
-            # Save generated credentials as outputs
-            echo "keystore_source=generated" >> $GITHUB_OUTPUT
-            echo "generated_store_pass=$KEYSTORE_PASS" >> $GITHUB_OUTPUT
-            echo "generated_alias_pass=$ALIAS_PASS" >> $GITHUB_OUTPUT
-            echo "generated_alias=plantation-key" >> $GITHUB_OUTPUT
-            
-            # Display credentials (only visible in logs for this run)
-            echo "::warning::Generated Keystore Credentials (save these to your repository secrets):"
-            echo "RELEASE_KEYSTORE_PASSWORD: $KEYSTORE_PASS"
-            echo "RELEASE_KEY_PASSWORD: $ALIAS_PASS"
-            echo "RELEASE_KEY_ALIAS: plantation-key"
+              -alias plantation \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass "$PASS" -keypass "$PASS" \
+              -dname "CN=Plantation Tracker, OU=DAE, O=DAE, L=Dhaka, ST=Dhaka, C=BD"
+            echo "keystore=generated" >> "$GITHUB_OUTPUT"
+            echo "pass=$PASS" >> "$GITHUB_OUTPUT"
           fi
 
-      # 7. Configure Gradle for signing
-      - name: Configure Gradle Signing
-        run: |
-          # Determine keystore credentials
-          if [ "${{ steps.keystore.outputs.keystore_source }}" = "secret" ]; then
-            STORE_PASS="${{ secrets.RELEASE_KEYSTORE_PASSWORD }}"
-            KEY_PASS="${{ secrets.RELEASE_KEY_PASSWORD }}"
-            KEY_ALIAS="${{ secrets.RELEASE_KEY_ALIAS }}"
-          else
-            STORE_PASS="${{ steps.keystore.outputs.generated_store_pass }}"
-            KEY_PASS="${{ steps.keystore.outputs.generated_alias_pass }}"
-            KEY_ALIAS="${{ steps.keystore.outputs.generated_alias }}"
-          fi
-          
-          # Create gradle.properties with signing config
-          cd android
-          cat >> gradle.properties << EOF
-          
-          # Release signing configuration
-          RELEASE_STORE_FILE=release.jks
-          RELEASE_STORE_PASSWORD=$STORE_PASS
-          RELEASE_KEY_ALIAS=$KEY_ALIAS
-          RELEASE_KEY_PASSWORD=$KEY_PASS
-          EOF
-          
-          echo "✅ Gradle signing configured with ${{ steps.keystore.outputs.keystore_source }} keystore"
-
-      # 8. Build Signed Release AAB
-      - name: Build Signed Release AAB
+      # 11. Build Release AAB
+      - name: Build Release AAB
         env:
-          RELEASE_VERSION_CODE: ${{ github.run_number }}
-        run: |
-          cd android
-          ./gradlew bundleRelease \
-            -PRELEASE_STORE_FILE=release.jks \
-            -PRELEASE_STORE_PASSWORD=$(grep RELEASE_STORE_PASSWORD gradle.properties | cut -d'=' -f2) \
-            -PRELEASE_KEY_ALIAS=$(grep RELEASE_KEY_ALIAS gradle.properties | cut -d'=' -f2) \
-            -PRELEASE_KEY_PASSWORD=$(grep RELEASE_KEY_PASSWORD gradle.properties | cut -d'=' -f2)
+          MYAPP_RELEASE_STORE_FILE: release.jks
+          MYAPP_RELEASE_STORE_PASSWORD: ${{ steps.keystore.outputs.keystore == 'secret' && secrets.RELEASE_KEYSTORE_PASSWORD || steps.keystore.outputs.pass }}
+          MYAPP_RELEASE_KEY_ALIAS: ${{ steps.keystore.outputs.keystore == 'secret' && secrets.RELEASE_KEY_ALIAS || 'plantation' }}
+          MYAPP_RELEASE_KEY_PASSWORD: ${{ steps.keystore.outputs.keystore == 'secret' && secrets.RELEASE_KEY_PASSWORD || steps.keystore.outputs.pass }}
+        run: cd android && ./gradlew bundleRelease --no-daemon
 
-      # 9. Build Signed Release APK
-      - name: Build Signed Release APK
+      # 12. Build Release APK
+      - name: Build Release APK
         env:
-          RELEASE_VERSION_CODE: ${{ github.run_number }}
-        run: |
-          cd android
-          ./gradlew assembleRelease \
-            -PRELEASE_STORE_FILE=release.jks \
-            -PRELEASE_STORE_PASSWORD=$(grep RELEASE_STORE_PASSWORD gradle.properties | cut -d'=' -f2) \
-            -PRELEASE_KEY_ALIAS=$(grep RELEASE_KEY_ALIAS gradle.properties | cut -d'=' -f2) \
-            -PRELEASE_KEY_PASSWORD=$(grep RELEASE_KEY_PASSWORD gradle.properties | cut -d'=' -f2)
+          MYAPP_RELEASE_STORE_FILE: release.jks
+          MYAPP_RELEASE_STORE_PASSWORD: ${{ steps.keystore.outputs.keystore == 'secret' && secrets.RELEASE_KEYSTORE_PASSWORD || steps.keystore.outputs.pass }}
+          MYAPP_RELEASE_KEY_ALIAS: ${{ steps.keystore.outputs.keystore == 'secret' && secrets.RELEASE_KEY_ALIAS || 'plantation' }}
+          MYAPP_RELEASE_KEY_PASSWORD: ${{ steps.keystore.outputs.keystore == 'secret' && secrets.RELEASE_KEY_PASSWORD || steps.keystore.outputs.pass }}
+        run: cd android && ./gradlew assembleRelease --no-daemon
 
-      # 10. Clean Up Sensitive Files
-      - name: Clean Up Keystore
-        if: always()
-        run: |
-          rm -f android/app/release.jks
-          # Remove signing config but keep AndroidX
-          cd android
-          if [ -f gradle.properties ]; then
-            grep -v "RELEASE_STORE_FILE\|RELEASE_STORE_PASSWORD\|RELEASE_KEY_ALIAS\|RELEASE_KEY_PASSWORD" gradle.properties > gradle.properties.tmp
-            mv gradle.properties.tmp gradle.properties
-          fi
-          echo "🧹 Cleaned up keystore and signing configuration"
-
-      # 11. Upload Release AAB
+      # 13. Upload AAB
       - name: Upload Release AAB
         uses: actions/upload-artifact@v4
         with:
-          name: plantation-tracker-release-bundle-aab
+          name: plantation-tracker-release-aab
           path: android/app/build/outputs/bundle/release/app-release.aab
           retention-days: 30
 
-      # 12. Upload Signed APK
-      - name: Upload Signed APK
+      # 14. Upload APK
+      - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
           name: plantation-tracker-signed-apk
           path: android/app/build/outputs/apk/release/app-release.apk
           retention-days: 30
 
-      # 13. Export Generated Keystore (if auto-generated)
-      - name: Export Generated Keystore
-        if: steps.keystore.outputs.keystore_source == 'generated'
-        run: |
-          mkdir -p keystore-export
-          
-          # Recreate keystore for export (since we cleaned it up)
-          keytool -genkeypair \
-            -v \
-            -keystore keystore-export/release.jks \
-            -alias ${{ steps.keystore.outputs.generated_alias }} \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -storepass "${{ steps.keystore.outputs.generated_store_pass }}" \
-            -keypass "${{ steps.keystore.outputs.generated_alias_pass }}" \
-            -dname "CN=Plantation Tracker, OU=DAE, O=KrishiAI, L=Dhaka, ST=Dhaka, C=BD"
-          
-          # Create credentials file
-          cat > keystore-export/keystore-credentials.txt << EOF
-          ========================================
-          PLANTATION TRACKER - SIGNING CREDENTIALS
-          ========================================
-          
-          Generated: $(date)
-          GitHub Run: ${{ github.run_number }}
-          
-          Keystore File: release.jks
-          Keystore Password: ${{ steps.keystore.outputs.generated_store_pass }}
-          Key Alias: ${{ steps.keystore.outputs.generated_alias }}
-          Key Password: ${{ steps.keystore.outputs.generated_alias_pass }}
-          
-          IMPORTANT: Save these credentials to your GitHub repository secrets:
-          - RELEASE_KEYSTORE_BASE64 (base64 encode the release.jks file)
-          - RELEASE_KEYSTORE_PASSWORD
-          - RELEASE_KEY_ALIAS
-          - RELEASE_KEY_PASSWORD
-          
-          Keep this file secure! Delete after saving to secrets.
-          ========================================
-          EOF
-          
-          echo "::warning::⚠️ Auto-generated keystore credentials created. Check the 'keystore-export' artifact!"
-
-      # 14. Upload Keystore Export (if generated)
-      - name: Upload Keystore Export
-        if: steps.keystore.outputs.keystore_source == 'generated'
-        uses: actions/upload-artifact@v4
-        with:
-          name: keystore-credentials-export
-          path: keystore-export/
-          retention-days: 7
+      # 15. Cleanup
+      - name: Cleanup Keystore
+        if: always()
+        run: rm -f android/app/release.jks
