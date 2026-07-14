@@ -6,3 +6,8 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Signing keys (never commit)
+*.keystore
+*.jks
+

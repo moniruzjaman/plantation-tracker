@@ -1,5 +1,5 @@
 /**
- * Google Apps Script — App_Entry sheet backend.
+ * Google Apps Script — App_Entry + User_Profile sheet backend.
  *
  * This file is NOT deployed by Vercel/git. Copy its contents into the
  * Apps Script project bound to the Tree Plantation Reporting Workbook
@@ -10,21 +10,15 @@
  * failing), it always goes through the /api/gas-sync proxy in this repo.
  *
  * Responsibilities:
- *   doPost(e) -- append one App_Entry row per request (the proxy calls this
- *               once per seedling row of a submission).
- *   doGet(e)  -- ?mobile=01XXXXXXXXX  -> existing-profile lookup for the
- *               Profile modal (search by farmer/SAAO/officer mobile).
- *             -- ?list=1[&district=..][&region=..] -> every App_Entry row,
- *               grouped one-object-per-submissionId with a seedlings[]
- *               array, for the Map tab. This is what keeps the Map's
- *               markers in sync with columns L (latitude) and
- *               M (longitude) for EVERY officer's entries,
- *               not just the requesting device's own submissions.
+ *   doPost(e)  -- entryType="user_profile" -> User_Profile sheet
+ *                  otherwise                  -> App_Entry sheet (seedling row)
+ *   doGet(e)   -- ?mobile=01XXXXXXXXX       -> User_Profile lookup by mobile
+ *               -- ?list=1[&district=..]    -> every App_Entry row, grouped
  */
 
 var SHEET_NAME = 'App_Entry';
+var PROFILE_SHEET_NAME = 'User_Profile';
 
-// Column order must match the App_Entry header row exactly.
 var COLUMNS = [
   'জমার সময়', 'অ্যাপ জমা আইডি', 'বিভাগ', 'অঞ্চল', 'জেলা', 'উপজেলা',
   'ইউনিয়ন', 'গ্রাম', 'অবস্থানের ধরন', 'চারার উৎস', 'সুনির্দিষ্ট ঠিকানা',
@@ -35,10 +29,26 @@ var COLUMNS = [
   'মন্তব্য', 'সত্যায়ন হ্যাশ', 'সিঙ্কের সময়'
 ];
 
+var PROFILE_COLUMNS = [
+  'জমার সময়', 'অ্যাপ জমা আইডি', 'সংক্ষিপ্ত পদবি', 'পদবি',
+  'নাম', 'মোবাইল', 'জেলা', 'উপজেলা', 'ইউনিয়ন', 'ব্লক'
+];
+
 function getSheet_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(SHEET_NAME);
   if (!sheet) throw new Error('Sheet "' + SHEET_NAME + '" not found');
+  return sheet;
+}
+
+function getProfileSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(PROFILE_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(PROFILE_SHEET_NAME);
+    sheet.appendRow(PROFILE_COLUMNS);
+    sheet.getRange(1, 1, 1, PROFILE_COLUMNS.length).setFontWeight('bold');
+  }
   return sheet;
 }
 
@@ -47,13 +57,30 @@ function jsonOut_(obj) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-// doPost: append one row (one seedling line of one submission)
 function doPost(e) {
   try {
     var raw = JSON.parse(e.postData.contents);
+
+    if (raw.entryType === 'user_profile') {
+      var ps = getProfileSheet_();
+      var now = new Date();
+      ps.appendRow([
+        now.toISOString(),
+        raw.submissionId || '',
+        raw.shortRole || '',
+        raw.roleLabel || '',
+        raw.name || '',
+        raw.mobile || '',
+        raw.district || '',
+        raw.upazila || '',
+        raw.union || '',
+        raw.block || ''
+      ]);
+      return jsonOut_({ ok: true });
+    }
+
     var sheet = getSheet_();
     var now = new Date();
-
     var row = [
       now.toISOString(),
       raw.submissionId || '',
@@ -66,14 +93,14 @@ function doPost(e) {
       raw.locationType || '',
       raw.sourceType || '',
       raw.address || '',
-      raw.latitude || '',           // L -- latitude
-      raw.longitude || '',          // M -- longitude
+      raw.latitude || '',
+      raw.longitude || '',
       raw.plantingDate || '',
       raw.speciesName || '',
       raw.category || '',
       raw.quantity || 0,
       raw.ndvi || '',
-      '',                            // photo (inline) -- intentionally left blank; large base64 photos bloat the sheet
+      '',
       raw.photoSha256 || '',
       raw.farmerName || '',
       raw.farmerMobile || '',
@@ -92,7 +119,6 @@ function doPost(e) {
   }
 }
 
-// doGet: profile lookup by mobile, or the full/filtered App_Entry list
 function doGet(e) {
   var params = (e && e.parameter) || {};
   try {
@@ -104,7 +130,6 @@ function doGet(e) {
   }
 }
 
-// Read the whole sheet once as an array of column-name -> value objects.
 function readAllRows_() {
   var sheet = getSheet_();
   var values = sheet.getDataRange().getValues();
@@ -116,7 +141,7 @@ function readAllRows_() {
   var rows = [];
   for (var r = 1; r < values.length; r++) {
     var v = values[r];
-    if (!v.join('')) continue; // skip fully blank rows
+    if (!v.join('')) continue;
     var get = function(col) { return idx.hasOwnProperty(col) ? v[idx[col]] : ''; };
     rows.push({
       submissionId: String(get('অ্যাপ জমা আইডি') || ''),
@@ -129,8 +154,8 @@ function readAllRows_() {
       locationType: String(get('অবস্থানের ধরন') || ''),
       sourceType:   String(get('চারার উৎস') || ''),
       address:      String(get('সুনির্দিষ্ট ঠিকানা') || ''),
-      latitude:     get('অক্ষাংশ'),    // column L
-      longitude:    get('দ্রাঘিমাংশ'), // column M
+      latitude:     get('অক্ষাংশ'),
+      longitude:    get('দ্রাঘিমাংশ'),
       plantingDate: String(get('রোপণের তারিখ') || ''),
       speciesName:  String(get('বৃক্ষের প্রজাতি/জাত') || ''),
       category:     String(get('বৃক্ষের শ্রেণী') || ''),
@@ -149,9 +174,6 @@ function readAllRows_() {
   return rows;
 }
 
-// ?list=1 -- group flat sheet rows back into one-object-per-submission
-// (mirroring the shape the app already keeps in localStorage), so the
-// Map tab's existing rendering code can consume it unchanged.
 function listEntries_(district, region) {
   var rows = readAllRows_();
   if (district) rows = rows.filter(function(r) { return r.district === district; });
@@ -188,25 +210,33 @@ function listEntries_(district, region) {
   return { ok: true, count: entries.length, entries: entries };
 }
 
-// ?mobile=... -- most recent row where this number appears as farmer,
-// SAAO, or monitoring officer; used to prefill the Profile modal so a
-// person already known to the sheet doesn't get re-onboarded with
-// conflicting details on a new device.
 function lookupByMobile_(mobile) {
-  var rows = readAllRows_();
-  var matches = rows.filter(function(r) {
-    return r.farmerMobile === mobile || r.saaoMobile === mobile || r.officerMobile === mobile;
-  });
-  if (!matches.length) return { ok: false, found: false };
-  var latest = matches[matches.length - 1];
-  return {
-    ok: true,
-    found: true,
-    profile: {
-      division: latest.division, region: latest.region, district: latest.district,
-      upazila: latest.upazila, union: latest.union,
-      saaoName: latest.saaoName, saaoMobile: latest.saaoMobile,
-      officerName: latest.officerName, officerMobile: latest.officerMobile
+  var ps = getProfileSheet_();
+  var values = ps.getDataRange().getValues();
+  if (values.length < 2) return { ok: false, found: false };
+  var header = values[0];
+  var idx = {};
+  header.forEach(function(h, i) { idx[String(h).trim()] = i; });
+
+  var match = null;
+  for (var r = values.length - 1; r >= 1; r--) {
+    var v = values[r];
+    var mob = idx.hasOwnProperty('মোবাইল') ? String(v[idx['মোবাইল']] || '') : '';
+    if (mob === mobile) {
+      var get = function(col) { return idx.hasOwnProperty(col) ? v[idx[col]] : ''; };
+      match = {
+        shortRole: String(get('সংক্ষিপ্ত পদবি') || ''),
+        roleLabel: String(get('পদবি') || ''),
+        name:      String(get('নাম') || ''),
+        mobile:    mob,
+        district:  String(get('জেলা') || ''),
+        upazila:   String(get('উপজেলা') || ''),
+        union:     String(get('ইউনিয়ন') || ''),
+        block:     String(get('ব্লক') || '')
+      };
+      break;
     }
-  };
+  }
+  if (!match) return { ok: false, found: false };
+  return { ok: true, found: true, user: match };
 }
