@@ -2987,10 +2987,47 @@ window.zoomToMyGeoLocation = function() {
 var _nationalEntries = null;        // cache: array | null (not loaded yet)
 var _nationalEntriesAt = null;      // Date of last successful fetch
 var _nationalEntriesLoading = false;
+var NATIONAL_ENTRIES_CACHE_KEY = "national_entries_cache_v1";
+var NATIONAL_ENTRIES_CACHE_MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
+
+function loadCachedNationalEntries() {
+  try {
+    var raw = localStorage.getItem(NATIONAL_ENTRIES_CACHE_KEY);
+    if (!raw) return null;
+    var parsed = JSON.parse(raw);
+    if (!parsed || !Array.isArray(parsed.entries)) return null;
+    return parsed;
+  } catch (e) { return null; }
+}
+function saveCachedNationalEntries(entries) {
+  try {
+    localStorage.setItem(NATIONAL_ENTRIES_CACHE_KEY, JSON.stringify({ entries: entries, cachedAt: new Date().toISOString() }));
+  } catch (e) { /* storage full/unavailable — ignore, cache is best-effort */ }
+}
 
 function fetchNationalEntries(force) {
   if (_nationalEntriesLoading) return Promise.resolve(_nationalEntries || []);
   if (_nationalEntries && !force) return Promise.resolve(_nationalEntries);
+
+  // Serve the persisted cache immediately (if any) so the map isn't empty
+  // while the network request is in flight; a fresh fetch still runs unless
+  // the cache is very recent.
+  var cached = !force ? loadCachedNationalEntries() : null;
+  if (cached && !_nationalEntries) {
+    _nationalEntries = cached.entries;
+    _nationalEntriesAt = new Date(cached.cachedAt);
+    var cacheAgeMs = Date.now() - _nationalEntriesAt.getTime();
+    var statusElInit = document.getElementById("mapSyncStatus");
+    if (statusElInit) {
+      statusElInit.textContent = "📦 ক্যাশ থেকে " + _nationalEntries.length + " টি এন্ট্রি (" + _nationalEntriesAt.toLocaleTimeString("bn-BD") + ") — নতুন তথ্য আনা হচ্ছে...";
+    }
+    if (cacheAgeMs < NATIONAL_ENTRIES_CACHE_MAX_AGE_MS) {
+      // Still kick off a background refresh, but don't block on it.
+      fetchNationalEntries(true).then(function() { if (typeof renderMap === "function") renderMap(); });
+      return Promise.resolve(_nationalEntries);
+    }
+  }
+
   _nationalEntriesLoading = true;
   var statusEl = document.getElementById("mapSyncStatus");
   if (statusEl) statusEl.textContent = "📡 App_Entry (সকল জেলা) থেকে তথ্য লোড হচ্ছে...";
@@ -3000,6 +3037,7 @@ function fetchNationalEntries(force) {
       var rows = (data && data.ok && Array.isArray(data.entries)) ? data.entries : [];
       _nationalEntries = rows.map(function(r) { r._source = "national"; return r; });
       _nationalEntriesAt = new Date();
+      saveCachedNationalEntries(_nationalEntries);
       if (statusEl) {
         statusEl.textContent = "✅ App_Entry থেকে " + _nationalEntries.length + " টি এন্ট্রি সিঙ্ক করা হয়েছে (" + _nationalEntriesAt.toLocaleTimeString("bn-BD") + ")";
       }
@@ -3007,8 +3045,11 @@ function fetchNationalEntries(force) {
     })
     .catch(function(err) {
       console.error("National App_Entry fetch failed:", err);
-      if (statusEl) statusEl.textContent = "⚠️ App_Entry থেকে তথ্য আনা যায়নি — শুধু এই ডিভাইসের তথ্য দেখানো হচ্ছে।";
-      _nationalEntries = _nationalEntries || [];
+      if (!_nationalEntries) {
+        var fallback = loadCachedNationalEntries();
+        _nationalEntries = fallback ? fallback.entries : [];
+      }
+      if (statusEl) statusEl.textContent = "⚠️ App_Entry থেকে তথ্য আনা যায়নি — ক্যাশ/এই ডিভাইসের তথ্য দেখানো হচ্ছে।";
       return _nationalEntries;
     })
     .finally(function() { _nationalEntriesLoading = false; });
@@ -3064,11 +3105,46 @@ window.renderMap = function() {
     if (!mapInstance) {
       // Default viewpoint focused on Bangladesh
       mapInstance = L.map('leafletMap').setView([23.8103, 90.4125], 7);
-      
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+
+      var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
       }).addTo(mapInstance);
+
+      var satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: 'Tiles &copy; Esri'
+      });
+
+      // NDVI / EVI: NASA GIBS MODIS 8-day vegetation index composites (free, no API key).
+      // Composites lag a few days behind real-time, so we request a date ~6 days back
+      // and silently fall back to OSM if a tile set turns out unavailable.
+      var gibsDate = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      var ndviLayer = L.tileLayer(
+        'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_NDVI_8Day/default/' + gibsDate + '/GoogleMapsCompatible_Level9/{z}/{y}/{x}.png',
+        { maxZoom: 9, attribution: 'NASA GIBS — MODIS Terra NDVI (8-Day)', errorTileUrl: '' }
+      );
+      var eviLayer = L.tileLayer(
+        'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_EVI_8Day/default/' + gibsDate + '/GoogleMapsCompatible_Level9/{z}/{y}/{x}.png',
+        { maxZoom: 9, attribution: 'NASA GIBS — MODIS Terra EVI (8-Day)', errorTileUrl: '' }
+      );
+      [ndviLayer, eviLayer].forEach(function(l) {
+        var tileErrCount = 0;
+        l.on('tileerror', function() {
+          tileErrCount++;
+          if (tileErrCount > 3 && mapInstance.hasLayer(l)) {
+            mapInstance.removeLayer(l);
+            mapInstance.addLayer(osmLayer);
+          }
+        });
+      });
+
+      L.control.layers({
+        '🗺️ রাস্তার মানচিত্র': osmLayer,
+        '🛰️ স্যাটেলাইট': satelliteLayer,
+        '🌿 NDVI (উদ্ভিদ সূচক)': ndviLayer,
+        '🍃 EVI (বর্ধিত উদ্ভিদ সূচক)': eviLayer
+      }, null, { collapsed: true, position: 'topright' }).addTo(mapInstance);
     }
     
     // Clear old markers
@@ -3182,8 +3258,10 @@ window.renderMap = function() {
     if (bounds.length > 0) {
       mapInstance.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
     } else {
-      // Zoom to general Bangladesh bounds or default to Kurigram center
-      mapInstance.setView([25.8113, 89.6582], 9);
+      // No entries yet (e.g. still loading, or filtered to zero) — stay on
+      // the national Bangladesh-focused view rather than jumping to any
+      // single district, so the map always opens showing the whole country.
+      mapInstance.setView([23.8103, 90.4125], 7);
     }
     
     // Correct Leaflet display inside hidden container
