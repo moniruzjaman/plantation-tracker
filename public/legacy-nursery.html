@@ -2954,6 +2954,18 @@ document.getElementById("editModal").addEventListener("click",function(e){if(e.t
 var mapInstance = null;
 var mapMarkers = [];
 
+// Bangladesh's real extent, with a generous buffer, used to reject clearly
+// bad/placeholder GPS coordinates (e.g. "0,0" null-island, a GPS glitch, or
+// a lat/lng typo) before they can ever reach fitBounds(). A single such
+// point mixed in with real Bangladesh coordinates forces Leaflet to zoom
+// out to fit both — which is exactly what a "world map" view looks like.
+var BD_BOUNDS = { minLat: 20.0, maxLat: 27.5, minLng: 87.5, maxLng: 93.5 };
+function isValidBdCoord(lat, lng) {
+  if (isNaN(lat) || isNaN(lng)) return false;
+  if (lat === 0 && lng === 0) return false; // null island
+  return lat >= BD_BOUNDS.minLat && lat <= BD_BOUNDS.maxLat && lng >= BD_BOUNDS.minLng && lng <= BD_BOUNDS.maxLng;
+}
+
 window.zoomToMyGeoLocation = function() {
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(function(pos) {
@@ -3173,7 +3185,10 @@ window.renderMap = function() {
       if (parts.length !== 2) return;
       var lat = parseFloat(parts[0]);
       var lng = parseFloat(parts[1]);
-      if (isNaN(lat) || isNaN(lng)) return;
+      if (!isValidBdCoord(lat, lng)) {
+        if (!isNaN(lat) && !isNaN(lng)) console.warn("Skipping out-of-range/placeholder coordinate for map marker:", s.id || s.submissionId, lat, lng);
+        return;
+      }
       
       bounds.push([lat, lng]);
       mappedCount++;
