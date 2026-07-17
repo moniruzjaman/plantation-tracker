@@ -51,4 +51,9 @@ declare module 'lucide-react' {
   export const Award: Icon;
   export const CircleDot: Icon;
   export const Cloud: Icon;
+  export const Plus: Icon;
+  export const Minus: Icon;
+  export const RefreshCw: Icon;
+  export const Trees: Icon;
+  export const Satellite: Icon;
 }
