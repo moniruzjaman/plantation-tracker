@@ -3264,9 +3264,18 @@ window.renderMap = function() {
       mapInstance.setView([23.8103, 90.4125], 7);
     }
     
-    // Correct Leaflet display inside hidden container
+    // Correct Leaflet display inside hidden container — the map may have
+    // been created (or last measured) while the tab was display:none, which
+    // leaves Leaflet's internal size/zoom projection wrong (it can render as
+    // a zoomed-way-out "world map" with markers in the wrong place). Fixing
+    // the size alone isn't enough — the view must be re-applied afterward.
     setTimeout(function() {
-      mapInstance.invalidateSize();
+      mapInstance.invalidateSize({ animate: false });
+      if (bounds.length > 0) {
+        mapInstance.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+      } else {
+        mapInstance.setView([23.8103, 90.4125], 7);
+      }
     }, 250);
     
   } catch (err) {
