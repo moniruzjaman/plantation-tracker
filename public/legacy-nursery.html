@@ -60,6 +60,10 @@ table{border-collapse:collapse;width:100%}
 th,td{padding:0.5rem;text-align:left}
 th{font-size:0.75rem}
 tbody tr{border-bottom:1px solid #e5e7eb}
+#profileModal{padding:max(12px,env(safe-area-inset-top))}
+#profileModal input,#profileModal select,#profileModal button{min-height:46px}
+#profileModal .overflow-y-auto{-webkit-overflow-scrolling:touch}
+@media(max-width:640px){#profileModal input,#profileModal select{font-size:16px}}
 </style>
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col">
@@ -658,11 +662,11 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 
 </main>
 <!-- ==================== PROFILE MODAL (User_Profile sheet) ==================== -->
-<div id="profileModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center modal-bg p-4" style="background:rgba(0,0,0,.45)">
-<div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5 anim-in">
-<h3 class="text-lg font-bold text-green-700 mb-1">👤 আপনার প্রোফাইল</h3>
-<p class="text-xs text-gray-500 mb-4">User_Profile শীটে সংরক্ষিত হবে। নাম, মোবাইল, জেলা আবশ্যক।</p>
-<div class="space-y-3">
+<div id="profileModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto p-3 sm:p-5" style="background:rgba(0,0,0,.45)">
+<div class="bg-white rounded-2xl shadow-2xl w-full max-w-md lg:max-w-lg max-h-[95vh] overflow-hidden flex flex-col anim-in">
+<h3 class="text-lg font-bold text-green-700 mb-1 px-5 pt-5">👤 আপনার প্রোফাইল</h3>
+<p class="text-xs text-gray-500 mb-4 px-5">User_Profile শীটে সংরক্ষিত হবে। নাম, মোবাইল, জেলা আবশ্যক।</p>
+<div class="flex-1 overflow-y-auto px-5 space-y-3">
 <div>
 <label class="block text-xs font-semibold text-gray-700 mb-1">সংক্ষিপ্ত পদবি</label>
 <select id="pShortRole" onchange="onPShortRoleChange()" class="w-full border rounded-md px-3 py-2 text-sm bg-white" style="border-color:#d1d5db">
@@ -681,16 +685,16 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 </div>
 <div>
 <label class="block text-xs font-semibold text-gray-700 mb-1">নাম <span style="color:#ef4444">*</span></label>
-<input type="text" id="pName" placeholder="আপনার নাম" class="w-full border rounded-md px-3 py-2 text-sm" style="border-color:#d1d5db">
+<input type="text" id="pName" placeholder="আপনার নাম" autocomplete="name" class="w-full border rounded-md px-3 py-2 text-sm" style="border-color:#d1d5db">
 </div>
 <div>
 <label class="block text-xs font-semibold text-gray-700 mb-1">মোবাইল নম্বর <span style="color:#ef4444">*</span></label>
-<input type="text" id="pMobile" maxlength="11" inputmode="numeric" placeholder="01XXXXXXXXX" onblur="lookupExistingUser()" class="w-full border rounded-md px-3 py-2 text-sm" style="border-color:#d1d5db">
+<input type="tel" id="pMobile" maxlength="11" minlength="11" autocomplete="tel-national" inputmode="numeric" pattern="01[3-9][0-9]{8}" placeholder="01XXXXXXXXX" oninput="this.value=this.value.replace(/\D/g,'').slice(0,11)" onblur="lookupExistingUser()" class="w-full border rounded-md px-3 py-2 text-sm" style="border-color:#d1d5db">
 <p id="profileLookupNote" class="text-[10px] hidden mt-0.5" style="color:#2563eb">খোঁজা হচ্ছে...</p>
 </div>
 <div>
 <label class="block text-xs font-semibold text-gray-700 mb-1">ইমেইল <span class="text-gray-400 font-normal">(ঐচ্ছিক)</span></label>
-<input type="email" id="pEmail" placeholder="name@example.com" class="w-full border rounded-md px-3 py-2 text-sm" style="border-color:#d1d5db">
+<input type="email" id="pEmail" placeholder="name@example.com" autocomplete="email" class="w-full border rounded-md px-3 py-2 text-sm" style="border-color:#d1d5db">
 </div>
 <div>
 <label class="block text-xs font-semibold text-gray-700 mb-1">ডিভাইস আইডি</label>
@@ -698,15 +702,18 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 </div>
 <div>
 <label class="block text-xs font-semibold text-gray-700 mb-1">জেলা <span style="color:#ef4444">*</span></label>
-<select id="pDistrict" onchange="onPDistrictChange()" class="w-full border rounded-md px-3 py-2 text-sm bg-white" style="border-color:#d1d5db"><option value="">জেলা নির্বাচন করুন</option></select>
+<select id="pDistrict" onchange="onPDistrictChange()" autocomplete="address-level1" class="w-full border rounded-md px-3 py-2 text-sm bg-white" style="border-color:#d1d5db"><option value="">জেলা নির্বাচন করুন</option></select>
 </div>
+<details class="border rounded-lg p-3">
+<summary class="cursor-pointer font-semibold text-green-700 text-sm">আরও অবস্থান তথ্য (ঐচ্ছিক)</summary>
+<div class="space-y-3 mt-3">
 <div>
 <label class="block text-xs font-semibold text-gray-700 mb-1">উপজেলা</label>
 <select id="pUpazila" data-district-source="pDistrict" class="w-full border rounded-md px-3 py-2 text-sm bg-white" style="border-color:#d1d5db"><option value="">উপজেলা নির্বাচন করুন</option></select>
 </div>
 <div>
 <label class="block text-xs font-semibold text-gray-700 mb-1">ইউনিয়ন</label>
-<input type="text" id="pUnion" placeholder="ইউনিয়নের নাম লিখুন" class="w-full border rounded-md px-3 py-2 text-sm" style="border-color:#d1d5db">
+<input type="text" id="pUnion" placeholder="ইউনিয়নের নাম লিখুন" class="w-full border rounded-md px-3 py-2 text-sm" style="border-color:#d1d5db" autocomplete="address-level3">
 </div>
 <div>
 <label class="block text-xs font-semibold text-gray-700 mb-1">ব্লক</label>
@@ -719,11 +726,13 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 </select>
 <input type="text" id="pBlockCustom" placeholder="ব্লকের নাম লিখুন" class="hidden w-full border rounded-md px-3 py-2 text-sm mt-2" style="border-color:#d1d5db">
 </div>
+</div>
+</details>
 <p id="profileError" class="text-xs hidden" style="color:#ef4444">নাম, ৮ ডিজিটের মোবাইল ও জেলা আবশ্যক।</p>
 </div>
-<div class="flex gap-2 mt-5">
-<button type="button" onclick="saveProfileFromModal()" class="flex-1 text-white px-4 py-2.5 rounded-lg font-semibold text-sm" style="background:#15803d">সংরক্ষণ করুন</button>
-<button type="button" id="profileCancelBtn" onclick="closeProfileModal()" class="hidden px-4 py-2.5 rounded-lg font-semibold text-sm" style="background:#f3f4f6;color:#374151">বাতিল</button>
+<div class="flex flex-col-reverse sm:flex-row gap-3 mt-5 border-t px-5 py-4">
+<button type="button" onclick="saveProfileFromModal()" class="flex-1 text-white px-4 py-2.5 rounded-lg font-semibold text-sm" style="background:#15803d;min-height:46px">সংরক্ষণ করুন</button>
+<button type="button" id="profileCancelBtn" onclick="closeProfileModal()" class="hidden px-4 py-2.5 rounded-lg font-semibold text-sm" style="background:#f3f4f6;color:#374151;min-height:46px">বাতিল</button>
 </div>
 </div>
 </div>
@@ -1113,6 +1122,23 @@ window.lookupExistingUser=function(){
 // ── User Profile (syncs to User_Profile sheet) ──
 function getProfile(){try{return JSON.parse(localStorage.getItem(PROFILE_KEY)||"null")}catch(e){return null}}
 function saveProfile(p){localStorage.setItem(PROFILE_KEY,JSON.stringify(p))}
+document.addEventListener("DOMContentLoaded",function(){
+  ["pName","pMobile","pEmail","pDistrict","pUpazila","pUnion","pBlock","pBlockCustom"].forEach(function(id){
+    var e=document.getElementById(id);
+    if(!e) return;
+    e.addEventListener("input",function(){
+      var p=getProfile()||{};
+      p.name=document.getElementById("pName").value;
+      p.mobile=document.getElementById("pMobile").value;
+      p.email=document.getElementById("pEmail").value;
+      p.district=document.getElementById("pDistrict").value;
+      p.upazila=document.getElementById("pUpazila").value;
+      p.union=document.getElementById("pUnion").value;
+      p.block=resolvedBlockValue();
+      saveProfile(p);
+    });
+  });
+});
 window.openProfileModal=function(){
   populatePDistrictDD();
   document.getElementById("profileLookupNote").classList.add("hidden");
@@ -1152,7 +1178,7 @@ window.saveProfileFromModal=function(){
   var union=_val("pUnion");
   var block=resolvedBlockValue();
   var err=document.getElementById("profileError");
-  if(!name||!/^\d{11}$/.test(mobile)||!district){err.classList.remove("hidden");return}
+  if(!name||!/^01[3-9]\d{8}$/.test(mobile)||!district){err.classList.remove("hidden");return}
   err.classList.add("hidden");
   var email=_val("pEmail");
   var deviceId=getDeviceId();
@@ -2961,10 +2987,47 @@ window.zoomToMyGeoLocation = function() {
 var _nationalEntries = null;        // cache: array | null (not loaded yet)
 var _nationalEntriesAt = null;      // Date of last successful fetch
 var _nationalEntriesLoading = false;
+var NATIONAL_ENTRIES_CACHE_KEY = "national_entries_cache_v1";
+var NATIONAL_ENTRIES_CACHE_MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
+
+function loadCachedNationalEntries() {
+  try {
+    var raw = localStorage.getItem(NATIONAL_ENTRIES_CACHE_KEY);
+    if (!raw) return null;
+    var parsed = JSON.parse(raw);
+    if (!parsed || !Array.isArray(parsed.entries)) return null;
+    return parsed;
+  } catch (e) { return null; }
+}
+function saveCachedNationalEntries(entries) {
+  try {
+    localStorage.setItem(NATIONAL_ENTRIES_CACHE_KEY, JSON.stringify({ entries: entries, cachedAt: new Date().toISOString() }));
+  } catch (e) { /* storage full/unavailable — ignore, cache is best-effort */ }
+}
 
 function fetchNationalEntries(force) {
   if (_nationalEntriesLoading) return Promise.resolve(_nationalEntries || []);
   if (_nationalEntries && !force) return Promise.resolve(_nationalEntries);
+
+  // Serve the persisted cache immediately (if any) so the map isn't empty
+  // while the network request is in flight; a fresh fetch still runs unless
+  // the cache is very recent.
+  var cached = !force ? loadCachedNationalEntries() : null;
+  if (cached && !_nationalEntries) {
+    _nationalEntries = cached.entries;
+    _nationalEntriesAt = new Date(cached.cachedAt);
+    var cacheAgeMs = Date.now() - _nationalEntriesAt.getTime();
+    var statusElInit = document.getElementById("mapSyncStatus");
+    if (statusElInit) {
+      statusElInit.textContent = "📦 ক্যাশ থেকে " + _nationalEntries.length + " টি এন্ট্রি (" + _nationalEntriesAt.toLocaleTimeString("bn-BD") + ") — নতুন তথ্য আনা হচ্ছে...";
+    }
+    if (cacheAgeMs < NATIONAL_ENTRIES_CACHE_MAX_AGE_MS) {
+      // Still kick off a background refresh, but don't block on it.
+      fetchNationalEntries(true).then(function() { if (typeof renderMap === "function") renderMap(); });
+      return Promise.resolve(_nationalEntries);
+    }
+  }
+
   _nationalEntriesLoading = true;
   var statusEl = document.getElementById("mapSyncStatus");
   if (statusEl) statusEl.textContent = "📡 App_Entry (সকল জেলা) থেকে তথ্য লোড হচ্ছে...";
@@ -2974,6 +3037,7 @@ function fetchNationalEntries(force) {
       var rows = (data && data.ok && Array.isArray(data.entries)) ? data.entries : [];
       _nationalEntries = rows.map(function(r) { r._source = "national"; return r; });
       _nationalEntriesAt = new Date();
+      saveCachedNationalEntries(_nationalEntries);
       if (statusEl) {
         statusEl.textContent = "✅ App_Entry থেকে " + _nationalEntries.length + " টি এন্ট্রি সিঙ্ক করা হয়েছে (" + _nationalEntriesAt.toLocaleTimeString("bn-BD") + ")";
       }
@@ -2981,8 +3045,11 @@ function fetchNationalEntries(force) {
     })
     .catch(function(err) {
       console.error("National App_Entry fetch failed:", err);
-      if (statusEl) statusEl.textContent = "⚠️ App_Entry থেকে তথ্য আনা যায়নি — শুধু এই ডিভাইসের তথ্য দেখানো হচ্ছে।";
-      _nationalEntries = _nationalEntries || [];
+      if (!_nationalEntries) {
+        var fallback = loadCachedNationalEntries();
+        _nationalEntries = fallback ? fallback.entries : [];
+      }
+      if (statusEl) statusEl.textContent = "⚠️ App_Entry থেকে তথ্য আনা যায়নি — ক্যাশ/এই ডিভাইসের তথ্য দেখানো হচ্ছে।";
       return _nationalEntries;
     })
     .finally(function() { _nationalEntriesLoading = false; });
@@ -3038,11 +3105,46 @@ window.renderMap = function() {
     if (!mapInstance) {
       // Default viewpoint focused on Bangladesh
       mapInstance = L.map('leafletMap').setView([23.8103, 90.4125], 7);
-      
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+
+      var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
       }).addTo(mapInstance);
+
+      var satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: 'Tiles &copy; Esri'
+      });
+
+      // NDVI / EVI: NASA GIBS MODIS 8-day vegetation index composites (free, no API key).
+      // Composites lag a few days behind real-time, so we request a date ~6 days back
+      // and silently fall back to OSM if a tile set turns out unavailable.
+      var gibsDate = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      var ndviLayer = L.tileLayer(
+        'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_NDVI_8Day/default/' + gibsDate + '/GoogleMapsCompatible_Level9/{z}/{y}/{x}.png',
+        { maxZoom: 9, attribution: 'NASA GIBS — MODIS Terra NDVI (8-Day)', errorTileUrl: '' }
+      );
+      var eviLayer = L.tileLayer(
+        'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_EVI_8Day/default/' + gibsDate + '/GoogleMapsCompatible_Level9/{z}/{y}/{x}.png',
+        { maxZoom: 9, attribution: 'NASA GIBS — MODIS Terra EVI (8-Day)', errorTileUrl: '' }
+      );
+      [ndviLayer, eviLayer].forEach(function(l) {
+        var tileErrCount = 0;
+        l.on('tileerror', function() {
+          tileErrCount++;
+          if (tileErrCount > 3 && mapInstance.hasLayer(l)) {
+            mapInstance.removeLayer(l);
+            mapInstance.addLayer(osmLayer);
+          }
+        });
+      });
+
+      L.control.layers({
+        '🗺️ রাস্তার মানচিত্র': osmLayer,
+        '🛰️ স্যাটেলাইট': satelliteLayer,
+        '🌿 NDVI (উদ্ভিদ সূচক)': ndviLayer,
+        '🍃 EVI (বর্ধিত উদ্ভিদ সূচক)': eviLayer
+      }, null, { collapsed: true, position: 'topright' }).addTo(mapInstance);
     }
     
     // Clear old markers
@@ -3156,13 +3258,24 @@ window.renderMap = function() {
     if (bounds.length > 0) {
       mapInstance.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
     } else {
-      // Zoom to general Bangladesh bounds or default to Kurigram center
-      mapInstance.setView([25.8113, 89.6582], 9);
+      // No entries yet (e.g. still loading, or filtered to zero) — stay on
+      // the national Bangladesh-focused view rather than jumping to any
+      // single district, so the map always opens showing the whole country.
+      mapInstance.setView([23.8103, 90.4125], 7);
     }
     
-    // Correct Leaflet display inside hidden container
+    // Correct Leaflet display inside hidden container — the map may have
+    // been created (or last measured) while the tab was display:none, which
+    // leaves Leaflet's internal size/zoom projection wrong (it can render as
+    // a zoomed-way-out "world map" with markers in the wrong place). Fixing
+    // the size alone isn't enough — the view must be re-applied afterward.
     setTimeout(function() {
-      mapInstance.invalidateSize();
+      mapInstance.invalidateSize({ animate: false });
+      if (bounds.length > 0) {
+        mapInstance.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+      } else {
+        mapInstance.setView([23.8103, 90.4125], 7);
+      }
     }, 250);
     
   } catch (err) {
