@@ -234,6 +234,11 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 </div>
 
 <div>
+<label class="block text-xs font-semibold text-gray-700 mb-1">ব্লক <span class="text-gray-400 font-normal">(সরকারি প্রতিবেদনের জন্য)</span></label>
+<input type="text" id="fBlock" placeholder="ব্লকের নাম" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+</div>
+
+<div>
 <label class="block text-xs font-semibold text-gray-700 mb-1">রোপণকারীর নাম (কৃষক) <span style="color:#ef4444">*</span></label>
 <input type="text" id="fNursery" placeholder="কৃষকের নাম লিখুন" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
 <p class="text-xs mt-0.5 hidden" data-error="fNursery" style="color:#ef4444;font-size:0.75rem">রোপণকারীর নাম আবশ্যক</p>
@@ -605,7 +610,11 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <button onclick="applyMyFilters()" class="text-white text-xs font-semibold px-4 py-2 rounded-lg transition cursor-pointer" style="background:#15803d">📈 প্রতিবেদন তৈরি করুন</button>
 <button onclick="resetMyFilters()" class="text-xs font-semibold px-4 py-2 rounded-lg transition cursor-pointer" style="background:#f3f4f6;color:#374151">রিসেট</button>
 <span class="flex-1"></span>
-<button onclick="exportMyReport('xlsx')" class="text-white text-xs px-3 py-2 rounded-lg font-semibold transition cursor-pointer" style="background:#0284c7">📥 Excel</button>
+<button onclick="exportToGovExcel('my')" class="text-white text-xs px-3 py-2 rounded-lg font-semibold transition cursor-pointer" style="background:#0284c7">📥 মন্ত্রণালয় ছক</button>
+<button onclick="printGovReport('ministry','my')" class="text-white text-xs px-3 py-2 rounded-lg font-semibold transition cursor-pointer" style="background:#0369a1">🖨️ মন্ত্রণালয় ছক</button>
+<button onclick="export17ColGovExcel('my')" class="text-white text-xs px-3 py-2 rounded-lg font-semibold transition cursor-pointer" style="background:#7c3aed">📥 ১৭ কলাম ছক</button>
+<button onclick="printGovReport('17col','my')" class="text-white text-xs px-3 py-2 rounded-lg font-semibold transition cursor-pointer" style="background:#6d28d9">🖨️ ১৭ কলাম ছক</button>
+<button onclick="exportMyReport('xlsx')" class="text-white text-xs px-3 py-2 rounded-lg font-semibold transition cursor-pointer" style="background:#0891b2">📥 সাধারণ Excel</button>
 <button onclick="exportMyReport('csv')" class="text-white text-xs px-3 py-2 rounded-lg font-semibold transition cursor-pointer" style="background:#4f46e5">📥 CSV</button>
 </div>
 </div>
@@ -637,8 +646,11 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <div id="adminPanel" class="hidden">
 <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
 <div class="flex items-center gap-2"><span class="text-xs font-semibold px-3 py-1 rounded-full" style="background:#dcfce7;color:#166534">✅ এডমিন</span><button onclick="changePassword()" class="text-xs underline" style="color:#2563eb">পাসওয়ার্ড পরিবর্তন</button></div>
-<div class="flex gap-2">
-<button onclick="exportToGovExcel('admin')" class="text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition hover:opacity-90 cursor-pointer" style="background:#0284c7">📥 সরকারি ছক</button>
+<div class="flex gap-2 flex-wrap">
+<button onclick="exportToGovExcel('admin')" class="text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition hover:opacity-90 cursor-pointer" style="background:#0284c7">📥 মন্ত্রণালয় ছক (Excel)</button>
+<button onclick="printGovReport('ministry','admin')" class="text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition hover:opacity-90 cursor-pointer" style="background:#0369a1">🖨️ মন্ত্রণালয় ছক (প্রিন্ট)</button>
+<button onclick="export17ColGovExcel('admin')" class="text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition hover:opacity-90 cursor-pointer" style="background:#7c3aed">📥 ১৭ কলাম ছক (Excel)</button>
+<button onclick="printGovReport('17col','admin')" class="text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition hover:opacity-90 cursor-pointer" style="background:#6d28d9">🖨️ ১৭ কলাম ছক (প্রিন্ট)</button>
 <button onclick="exportToExcel('admin')" class="text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition hover:opacity-90 cursor-pointer" style="background:#15803d">📥 সাধারণ Excel</button>
 <button onclick="exportToCSV('admin')" class="text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition hover:opacity-90 cursor-pointer" style="background:#4f46e5">📥 CSV</button>
 <button onclick="adminLogout()" class="text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition hover:opacity-90 cursor-pointer" style="background:#dc2626">🚪 লগআউট</button>
@@ -1627,6 +1639,7 @@ function buildBaseSubmission(prefix){
     upazila:     _val(prefix+"Upazila"),
     union:       _val(prefix+"Union"),
     village:     _val(prefix+"Village"),
+    block:       _val(prefix+"Block") || ((getProfile() || {}).block || ""),
     locationType:_val(prefix+"LocationType"),
     sourceType:  prefix==="f" ? resolvedSourceTypeValue() : _val(prefix+"SourceType"),
     address:     _val(prefix+"Address"),
@@ -2764,101 +2777,193 @@ window.apiSyncNow = function() {
 };
 
 // ── Government Template Specialized Export ──
-window.exportToGovExcel = function(prefix) {
-  if (typeof XLSX === "undefined") {
-    showBanner("errorBanner", "Excel লাইব্রেরি লোড হয়নি। ইন্টারনেট সংযোগ নিশ্চিত করুন।");
-    return;
-  }
-  var subs = getFiltered(prefix || "dash");
-  if (!subs.length) {
-    showBanner("errorBanner", "রপ্তানি করার মতো কোনো ডাটা পাওয়া যায়নি।");
-    return;
-  }
-  
-  var data = [];
-  // Exact 9 columns as requested by the user:
-  data.push([
-    "ক্র. নং",
-    "বৃক্ষরোপণের জেলা,উপজেলা,ইউনিয়ন ও গ্রামের নাম",
-    "রোপণকৃত বৃক্ষের প্রজাতির নাম",
-    "রোপণকৃত বৃক্ষের সংখ্যা",
-    "বৃক্ষরোপণের তারিখ",
-    "বৃক্ষরোপণের সুনির্দিষ্ট এলাকা (জিওغرافিক্যাল কোঅর্ডিনেটসহ)",
-    "পরিচর্যাকানীর নাম ও ফোন নম্বর",
-    "মনিটরিং অফিসারের নাম ও ফোন নম্বর",
-    "মন্তব্য"
-  ]);
-
-  // Index numbering line requested by the user
-  data.push([
-    "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯"
-  ]);
-
-  var rowIndex = 1;
-  subs.forEach(function(s) {
-    var pDate = s.plantingDate || (s.submittedAt ? s.submittedAt.slice(0, 10) : "");
-    
-    // Combine district, upazila, and Union & Village / address as requested
-    var fullLocation = "জেলা: " + s.district + ", উপজেলা: " + s.upazila + (s.address ? ", অবস্থান/গ্রাম: " + s.address : "");
-    var geoLoc = s.geoLocation || "উল্লেখ নেই";
-    
-    // Caretaker and Planter info
-    var caretakerInfo = "";
-    if (s.caretakerName) {
-      caretakerInfo = s.caretakerName + (s.caretakerMobile ? " (" + s.caretakerMobile + ")" : "");
-    } else {
-      caretakerInfo = s.nurseryName + (s.mobile ? " (" + s.mobile + ")" : "");
-    }
-    
-    var officerInfo = caretakerInfo;
-    var remarks = s.remarks || "";
-
-    var has = (s.fruitSeedlings && s.fruitSeedlings.length || 0) + 
-              (s.forestSeedlings && s.forestSeedlings.length || 0) + 
-              (s.medicinalSeedlings && s.medicinalSeedlings.length || 0);
-
-    if (!has) {
-      data.push([
-        rowIndex++,
-        fullLocation,
-        "কোনো চারা রোপণ বিবরণী নেই",
-        0,
-        pDate,
-        geoLoc,
-        caretakerInfo,
-        officerInfo,
-        remarks
-      ]);
-    } else {
-      CATEGORIES.forEach(function(cat) {
-        (s[cat.key] || []).forEach(function(e) {
-          var countVal = (parseInt(e.count) || 0) + (parseInt(e.graftingCount) || 0);
-          data.push([
-            rowIndex++,
-            fullLocation,
-            e.name || "নামহীন প্রজাতি (" + cat.label + ")",
-            countVal,
-            pDate,
-            geoLoc,
-            caretakerInfo,
-            officerInfo,
-            remarks
-          ]);
-        });
+//
+// Two official DAE/MoA formats, built from the LIVE submission schema
+// (farmerName/farmerMobile/saaoName/saaoMobile/officerName/officerMobile/
+// district/upazila/union/village/block/seedlings[]) with a fallback to the
+// older fruitSeedlings/forestSeedlings/medicinalSeedlings + nurseryName/
+// caretakerName shape for any legacy-format rows still on a device.
+// (The previous version of this exporter only read the *old* shape, so it
+// silently produced empty/garbled rows for every entry made with the
+// current form -- fixed here.)
+function normalizeEntryForReport_(s) {
+  var geoLocation = s.geoLocation || ((s.latitude && s.longitude) ? (s.latitude + ', ' + s.longitude) : '') || '';
+  var plantingDate = s.plantingDate || (s.submittedAt ? String(s.submittedAt).slice(0, 10) : '');
+  var rows = [];
+  if (s.seedlings && s.seedlings.length) {
+    s.seedlings.forEach(function(e) {
+      rows.push({ speciesName: e.speciesName || '', quantity: parseInt(e.quantity) || 0 });
+    });
+  } else {
+    CATEGORIES.forEach(function(cat) {
+      (s[cat.key] || []).forEach(function(e) {
+        rows.push({ speciesName: e.name || '', quantity: (parseInt(e.count) || 0) + (parseInt(e.graftingCount) || 0) });
       });
-    }
-  });
+    });
+  }
+  if (!rows.length) rows.push({ speciesName: '', quantity: 0 });
+  return {
+    district: s.district || '', upazila: s.upazila || '', union: s.union || '',
+    village: s.village || '', block: s.block || '',
+    geoLocation: geoLocation, plantingDate: plantingDate,
+    farmerName: s.farmerName || s.nurseryName || '',
+    farmerMobile: s.farmerMobile || s.mobile || '',
+    saaoName: s.saaoName || '', saaoMobile: s.saaoMobile || '',
+    officerName: s.officerName || s.caretakerName || '',
+    officerMobile: s.officerMobile || s.caretakerMobile || '',
+    remarks: s.remarks || '', rows: rows
+  };
+}
+function nameAndPhone_(name, phone) {
+  if (!name && !phone) return '';
+  return name + (phone ? ' ' + phone : '');
+}
+function joinedLocation_(n) {
+  var parts = [];
+  if (n.village) parts.push('গ্রামঃ ' + n.village);
+  if (n.union) parts.push('ইউনিয়নঃ ' + n.union);
+  if (n.upazila) parts.push('উপজেলাঃ ' + n.upazila);
+  if (n.district) parts.push('জেলাঃ ' + n.district);
+  return parts.join(', ') + (parts.length ? '।' : '');
+}
 
+// ── Ministry format: 9 columns, matches "ministry report" sheet exactly ──
+var MINISTRY_HEADERS = [
+  'ক্রঃ নং', 'বৃক্ষরোপণের জেলা, উপজেলা, ইউনিয়ন ও গ্রামের নাম',
+  'রোপণকৃত বৃক্ষের প্রজাতির নাম', 'রোপণকৃত বৃক্ষের সংখ্যা',
+  'বৃক্ষরোপণের সুনির্দিষ্ট এলাকা (জিওগ্রাফিক্যাল কোঅর্ডিনেটসহ)',
+  'পরিচর্যাকারী কৃষকের নাম ও ফোন নম্বর', 'সংশ্লিষ্ট এসএএও-এর নাম ও ফোন নম্বর',
+  'মনিটরিং অফিসারের নাম ও ফোন নম্বর', 'মন্তব্য'
+];
+function buildMinistryRows_(subs) {
+  var data = [];
+  var idx = 1;
+  subs.forEach(function(s) {
+    var n = normalizeEntryForReport_(s);
+    n.rows.forEach(function(r) {
+      data.push([
+        idx++, joinedLocation_(n), r.speciesName || 'উল্লেখ নেই', r.quantity,
+        n.geoLocation || 'উল্লেখ নেই',
+        nameAndPhone_(n.farmerName, n.farmerMobile),
+        nameAndPhone_(n.saaoName, n.saaoMobile),
+        nameAndPhone_(n.officerName, n.officerMobile),
+        n.remarks
+      ]);
+    });
+  });
+  return data;
+}
+
+// ── 17-column format: matches "17 column report" sheet exactly ──
+var COL17_HEADERS = [
+  'ক্র. নং', 'বৃক্ষরোপণের গ্রামের নাম', 'ব্লক', 'ইউনিয়ন', 'উপজেলা', 'জেলা',
+  'রোপণকৃত বৃক্ষের প্রজাতির নাম', 'রোপণকৃত বৃক্ষের চারার প্রজাতিভিত্তিক সংখ্যা',
+  'বৃক্ষরোপণের তারিখ', 'বৃক্ষরোপণের সুনির্দিষ্ট এলাকা জিওগ্রাফিক্যাল কো-অর্ডিনেট (অক্ষাংশ ও দ্রাঘিমাংশ)',
+  'পরিচর্যাকারীর নাম', 'পরিচর্যাকারীর মোবাইল নাম্বর', 'সংশ্লিষ্ট এসএএও এর নাম',
+  'সংশ্লিষ্ট এসএএও মোবাইল নাম্বর', 'মনিটরিং অফিসারের নাম', 'মনিটরিং অফিসারের মোবাইল নাম্বর', 'মন্তব্য'
+];
+function build17ColRows_(subs) {
+  var data = [];
+  var idx = 1;
+  subs.forEach(function(s) {
+    var n = normalizeEntryForReport_(s);
+    n.rows.forEach(function(r) {
+      data.push([
+        idx++, n.village, n.block, n.union, n.upazila, n.district,
+        r.speciesName || 'উল্লেখ নেই', r.quantity, n.plantingDate, n.geoLocation,
+        n.farmerName, n.farmerMobile, n.saaoName, n.saaoMobile,
+        n.officerName, n.officerMobile, n.remarks
+      ]);
+    });
+  });
+  return data;
+}
+
+// Admin exports pull the full merged (national + local) dataset filtered by
+// the admin region/district selectors, so the report isn't limited to just
+// this device's cache; My Data exports stay scoped to the logged-in user's
+// own entries (see getMySubmissionsBase()).
+function getGovReportSource_(prefix) {
+  if (prefix === 'my') {
+    return applyMyFilterSet(getMySubmissionsBase());
+  }
+  var r = document.getElementById(prefix + 'Region') && document.getElementById(prefix + 'Region').value;
+  var d = document.getElementById(prefix + 'District') && document.getElementById(prefix + 'District').value;
+  return getDashEntries().filter(function(s) {
+    if (r && s.region !== r) return false;
+    if (d && s.district !== d) return false;
+    return true;
+  });
+}
+
+function exportGovXlsx_(kind, prefix) {
+  if (typeof XLSX === 'undefined') { showBanner('errorBanner', 'Excel লাইব্রেরি লোড হয়নি। ইন্টারনেট সংযোগ নিশ্চিত করুন।'); return; }
+  var subs = getGovReportSource_(prefix);
+  if (!subs.length) { showBanner('errorBanner', 'রপ্তানি করার মতো কোনো ডাটা পাওয়া যায়নি।'); return; }
+
+  var titleRows, headers, numRow, bodyRows, colWidths, sheetName, fileTag;
+  if (kind === '17col') {
+    titleRows = [
+      ['০৫ বছরে ২৫ কোটি বৃক্ষ রোপণ কর্মসূচির আওতায় রোপণকৃত চারার তথ্য'],
+      ['মন্ত্রণালয়/বিভাগ/অধিদপ্তর/দপ্তরের নাম: কৃষি সম্প্রসারণ অধিদপ্তর (DAE), কুড়িগ্রাম']
+    ];
+    headers = COL17_HEADERS;
+    numRow = headers.map(function(_, i) { return i + 1; });
+    bodyRows = build17ColRows_(subs);
+    colWidths = [6, 18, 12, 12, 12, 12, 18, 14, 12, 26, 16, 14, 16, 14, 16, 14, 20];
+    sheetName = '১৭ কলাম প্রতিবেদন'; fileTag = '17column_report';
+  } else {
+    titleRows = [
+      ['১৭. ০৫ বছরে ২৫ কোটি বৃক্ষরোপণ কর্মসূচির আওতাভুক্ত হওয়ার লক্ষ্যে সাপ্তাহিকভিত্তিতে বৃক্ষরোপণের তথ্য ই-মেইলযোগে admonitoring@dae.gov.bd / ddimplement@dae.gov.bd এ প্রেরণ করতে হবে। কৃষি মন্ত্রণালয়ে (E-mail-input2@moa.gov.bd ও moa.input2@gmail.com) আবশ্যিকভাবে প্রেরণ করতে হবে।']
+    ];
+    headers = MINISTRY_HEADERS;
+    numRow = headers.map(function(_, i) { return i + 1; });
+    bodyRows = buildMinistryRows_(subs);
+    colWidths = [6, 46, 22, 12, 26, 30, 30, 30, 22];
+    sheetName = 'মন্ত্রণালয় প্রতিবেদন'; fileTag = 'ministry_report';
+  }
+
+  var data = titleRows.concat([headers, numRow]).concat(bodyRows);
   var ws = XLSX.utils.aoa_to_sheet(data);
-  ws["!cols"] = [
-    {wch:8}, {wch:48}, {wch:25}, {wch:12}, {wch:15}, {wch:25}, {wch:30}, {wch:30}, {wch:25}
-  ];
+  ws['!cols'] = colWidths.map(function(w) { return { wch: w }; });
   var wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "বৃক্ষরোপণ_সরকারি_ছক");
-  XLSX.writeFile(wb, "plantation_official_sheet_" + new Date().toISOString().slice(0, 10) + ".xlsx");
-  showBanner("successBanner", "সরকারি ছকে এক্সেল সফলভাবে ডাউনলোড হয়েছে!");
-  setTimeout(function() { hideBanner("successBanner"); }, 3000);
-};
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  XLSX.writeFile(wb, fileTag + '_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+  showBanner('successBanner', 'সরকারি ছকে এক্সেল সফলভাবে ডাউনলোড হয়েছে!');
+  setTimeout(function() { hideBanner('successBanner'); }, 3000);
+}
+
+function printGovReport_(kind, prefix) {
+  var subs = getGovReportSource_(prefix);
+  if (!subs.length) { showBanner('errorBanner', 'প্রিন্ট করার মতো কোনো ডাটা পাওয়া যায়নি।'); return; }
+  var headers, numRow, bodyRows, title;
+  if (kind === '17col') {
+    headers = COL17_HEADERS; numRow = headers.map(function(_, i) { return i + 1; });
+    bodyRows = build17ColRows_(subs);
+    title = '০৫ বছরে ২৫ কোটি বৃক্ষ রোপণ কর্মসূচির আওতায় রোপণকৃত চারার তথ্য';
+  } else {
+    headers = MINISTRY_HEADERS; numRow = headers.map(function(_, i) { return i + 1; });
+    bodyRows = buildMinistryRows_(subs);
+    title = 'সাপ্তাহিক বৃক্ষরোপণ কর্মসূচির অগ্রগতি প্রতিবেদন';
+  }
+  var esc = function(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;'); };
+  var thead = '<tr>' + headers.map(function(h) { return '<th>' + esc(h) + '</th>'; }).join('') + '</tr>' +
+              '<tr>' + numRow.map(function(n) { return '<th>' + n + '</th>'; }).join('') + '</tr>';
+  var tbody = bodyRows.map(function(r) { return '<tr>' + r.map(function(c) { return '<td>' + esc(c) + '</td>'; }).join('') + '</tr>'; }).join('');
+  var html = '<!DOCTYPE html><html lang="bn"><head><meta charset="utf-8"><title>' + esc(title) + '</title>' +
+    '<style>body{font-family:"Noto Sans Bengali",Arial,sans-serif;margin:16px}h1{font-size:14px;text-align:center}' +
+    'table{border-collapse:collapse;width:100%;font-size:10px}th,td{border:1px solid #333;padding:3px 5px;text-align:left}' +
+    'th{background:#f0fdf4}@media print{body{margin:6mm}}</style></head><body>' +
+    '<h1>' + esc(title) + '</h1><table><thead>' + thead + '</thead><tbody>' + tbody + '</tbody></table>' +
+    '<script>window.onload=function(){window.print();}<\/script></body></html>';
+  var w = window.open('', '_blank');
+  if (!w) { showBanner('errorBanner', 'পপ-আপ ব্লক করা হয়েছে। ব্রাউজার সেটিংসে পপ-আপ অনুমতি দিন।'); return; }
+  w.document.open(); w.document.write(html); w.document.close();
+}
+
+window.exportToGovExcel = function(prefix) { exportGovXlsx_('ministry', prefix); };
+window.export17ColGovExcel = function(prefix) { exportGovXlsx_('17col', prefix); };
+window.printGovReport = function(kind, prefix) { printGovReport_(kind, prefix); };
 
 
 // ── Admin ──
