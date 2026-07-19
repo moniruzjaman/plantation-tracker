@@ -14,6 +14,11 @@
  *                  otherwise                  -> App_Entry sheet (seedling row)
  *   doGet(e)   -- ?mobile=01XXXXXXXXX       -> User_Profile lookup by mobile
  *               -- ?list=1[&district=..]    -> every App_Entry row, grouped
+ *
+ * IMPORTANT — one-time manual step after deploying this version: add a
+ * 'ব্লক' header in the App_Entry sheet's LAST column (after 'সিঙ্কের সময়').
+ * This script appends to that position; it does not insert or reorder any
+ * existing columns, so already-written rows are unaffected.
  */
 
 var SHEET_NAME = 'App_Entry';
@@ -26,8 +31,38 @@ var COLUMNS = [
   'বৃক্ষের শ্রেণী', 'সংখ্যা', 'প্রাথমিক NDVI', 'ছবি (ইনলাইন)',
   'ছবি SHA-256', 'কৃষকের নাম', 'কৃষকের মোবাইল', 'SAAO-এর নাম',
   'SAAO-এর মোবাইল', 'মনিটরিং অফিসারের নাম', 'মনিটরিং অফিসারের মোবাইল',
-  'মন্তব্য', 'সত্যায়ন হ্যাশ', 'সিঙ্কের সময়'
+  'মন্তব্য', 'সত্যায়ন হ্যাশ', 'সিঙ্কের সময়',
+  'ব্লক' // Appended at the end (not inserted mid-schema) so existing rows
+         // in the live sheet keep their column positions. Needed for the
+         // government 17-column report, which is the only place ব্লক is
+         // required — App_Entry never captured it before.
 ];
+
+/**
+ * Normalizes a raw lat/lng pair before it's ever written to the sheet.
+ * The live "17 column report" / "ministry report" data contains several
+ * malformed coordinates that break report generation and map rendering:
+ *   - comma used as decimal separator: "25,477083" -> should be "25.477083"
+ *   - missing decimal point entirely: "2547209" -> should be "25.47209"
+ *   - double decimal points: "25.521270.89.822017" (lat/lng ran together)
+ * This performs best-effort cleanup and flags anything it can't confidently
+ * fix, rather than silently writing bad data into the sheet.
+ */
+function normalizeCoord_(raw) {
+  var s = String(raw == null ? '' : raw).trim();
+  if (!s) return { value: '', ok: true };
+  s = s.replace(',', '.'); // comma-as-decimal-separator typo
+  var dotCount = (s.match(/\./g) || []).length;
+  if (dotCount > 1) return { value: s, ok: false }; // e.g. two numbers ran together
+  if (dotCount === 0 && /^\d{5,}$/.test(s)) {
+    // Missing decimal point on a plain digit string, e.g. "2547209" for a
+    // Bangladesh latitude (always 2 integer digits) -> "25.47209".
+    s = s.slice(0, 2) + '.' + s.slice(2);
+  }
+  var n = parseFloat(s);
+  if (isNaN(n)) return { value: raw, ok: false };
+  return { value: n, ok: true };
+}
 
 var PROFILE_COLUMNS = [
   'জমার সময়', 'অ্যাপ জমা আইডি', 'সংক্ষিপ্ত পদবি', 'পদবি',
@@ -84,6 +119,8 @@ function doPost(e) {
 
     var sheet = getSheet_();
     var now = new Date();
+    var lat = normalizeCoord_(raw.latitude);
+    var lng = normalizeCoord_(raw.longitude);
     var row = [
       now.toISOString(),
       raw.submissionId || '',
@@ -96,8 +133,8 @@ function doPost(e) {
       raw.locationType || '',
       raw.sourceType || '',
       raw.address || '',
-      raw.latitude || '',
-      raw.longitude || '',
+      lat.value,
+      lng.value,
       raw.plantingDate || '',
       raw.speciesName || '',
       raw.category || '',
@@ -111,12 +148,13 @@ function doPost(e) {
       raw.saaoMobile || '',
       raw.officerName || '',
       raw.officerMobile || '',
-      raw.remarks || '',
+      raw.remarks ? (raw.remarks + (lat.ok && lng.ok ? '' : ' ⚠️ স্থানাঙ্ক যাচাই প্রয়োজন')) : (lat.ok && lng.ok ? '' : '⚠️ স্থানাঙ্ক যাচাই প্রয়োজন'),
       raw.authHash || '',
-      now.toISOString()
+      now.toISOString(),
+      raw.block || ''
     ];
     sheet.appendRow(row);
-    return jsonOut_({ ok: true });
+    return jsonOut_({ ok: true, coordWarning: (!lat.ok || !lng.ok) });
   } catch (err) {
     return jsonOut_({ ok: false, error: String(err) });
   }
@@ -171,7 +209,8 @@ function readAllRows_() {
       officerName:  String(get('মনিটরিং অফিসারের নাম') || ''),
       officerMobile:String(get('মনিটরিং অফিসারের মোবাইল') || ''),
       remarks:      String(get('মন্তব্য') || ''),
-      submittedAt:  String(get('জমার সময়') || '')
+      submittedAt:  String(get('জমার সময়') || ''),
+      block:        String(get('ব্লক') || '')
     });
   }
   return rows;
@@ -190,6 +229,7 @@ function listEntries_(district, region) {
       bySubmission[key] = {
         submissionId: r.submissionId, division: r.division, region: r.region,
         district: r.district, upazila: r.upazila, union: r.union, village: r.village,
+        block: r.block,
         locationType: r.locationType, sourceType: r.sourceType, address: r.address,
         latitude: r.latitude, longitude: r.longitude,
         geoLocation: (r.latitude && r.longitude) ? (r.latitude + ', ' + r.longitude) : '',
