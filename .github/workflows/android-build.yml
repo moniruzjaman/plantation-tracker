@@ -35,6 +35,21 @@ jobs:
       - name: Build Web Assets
         run: npx vite build
 
+      # 5b. Stamp the Android version from CI so every APK is traceable to
+      # the exact commit that's live — versionCode from the monotonic GH
+      # Actions run number (always increases, satisfies Play/adb install
+      # requirements), versionName as "<package.json version>-<short SHA>"
+      # so it's human-readable at a glance (Settings -> About app).
+      - name: Stamp Android version
+        run: |
+          SHORT_SHA="${GITHUB_SHA::7}"
+          PKG_VERSION=$(node -p "require('./package.json').version || '1.0'")
+          VERSION_NAME="${PKG_VERSION}-${SHORT_SHA}"
+          echo "Stamping versionCode=${{ github.run_number }} versionName=${VERSION_NAME}"
+          sed -i "s/versionCode [0-9]\+/versionCode ${{ github.run_number }}/" android/app/build.gradle
+          sed -i "s/versionName \"[^\"]*\"/versionName \"${VERSION_NAME}\"/" android/app/build.gradle
+          grep -E "versionCode|versionName" android/app/build.gradle
+
       # 6. Sync Capacitor
       - name: Sync Capacitor Android
         run: npx cap sync android
@@ -73,6 +88,7 @@ jobs:
           MYAPP_RELEASE_KEY_PASSWORD=${{ secrets.RELEASE_KEY_PASSWORD }}
           SIGNING_EOF
             echo "keystore=secret" >> "$GITHUB_OUTPUT"
+            echo "✅ Signed with the persistent \`RELEASE_KEYSTORE_BASE64\` secret — this APK can be installed as an update over previous builds." >> "$GITHUB_STEP_SUMMARY"
           else
             PASS=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9' | head -c 20)
             keytool -genkeypair -v \
@@ -88,6 +104,7 @@ jobs:
           MYAPP_RELEASE_KEY_PASSWORD=$PASS
           SIGNING_EOF
             echo "keystore=generated" >> "$GITHUB_OUTPUT"
+            echo "⚠️ **No \`RELEASE_KEYSTORE_BASE64\` secret set — signed with a throwaway key generated just for this run.** This APK CANNOT be installed as an update over any other build (including this repo's own previous CI artifacts); testers must uninstall the old app first. Add the secret to fix this for good." >> "$GITHUB_STEP_SUMMARY"
           fi
 
       # 11. Build Release APK
@@ -111,3 +128,18 @@ jobs:
           if [ -f android/gradle.properties ]; then
             sed -i '/^MYAPP_RELEASE_/d' android/gradle.properties
           fi
+
+      # 14. Build provenance — ties this APK to the exact commit that's also
+      # deployed to Vercel, so "which build is live" is never ambiguous.
+      - name: Build provenance summary
+        if: always()
+        run: |
+          {
+            echo "### 📦 Build provenance"
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Commit | \`${GITHUB_SHA::7}\` ([view](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})) |"
+            echo "| Branch | \`${{ github.ref_name }}\` |"
+            echo "| versionCode | ${{ github.run_number }} |"
+            echo "| Matching web deploy | https://plantation-tracker.vercel.app (same commit, if this run is on \`main\`) |"
+          } >> "$GITHUB_STEP_SUMMARY"
