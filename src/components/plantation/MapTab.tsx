@@ -9,6 +9,8 @@ import type { GeoState } from '../GeolocationIndicator';
 import { type LayerId, getLayerTiles, NDVI_BANDS, isValidBdCoord, BD_CENTER, BD_ZOOM, toBnNum } from '../../utils/mapHelper';
 import { useMapData } from '../../utils/useMapData';
 import { countSeedlings } from '../../types/plantation';
+import NdviController from './NdviController';
+import GrowthTracker from './GrowthTracker';
 
 // Leaflet default marker icon paths break with Vite bundling — point at the CDN instead.
 delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
@@ -246,6 +248,7 @@ export default function MapTab({ geoState, onMapReady }: MapTabProps) {
   const [bounds, setBounds] = useState<LatLngBounds | null>(null);
   const [pipelineState, setPipelineState] = useState<PipelineState>('idle');
   const [result, setResult] = useState<PipelineResult | null>(null);
+  const [growthTarget, setGrowthTarget] = useState<{ entryId: string; label: string } | null>(null);
 
   const tiles = getLayerTiles(activeLayer);
   const satelliteTiles = getLayerTiles('satellite');
@@ -307,6 +310,10 @@ export default function MapTab({ geoState, onMapReady }: MapTabProps) {
   });
 
   const allPoints: LatLngTuple[] = [...localPoints.map((p) => p.pos), ...nationalPoints.map((p) => p.pos)];
+  const totalTrees = localPoints.reduce((sum, { sub }) => {
+    const c = countSeedlings(sub);
+    return sum + c.fruit + c.forest + c.medicinal;
+  }, 0);
 
   const runPipeline = useCallback(async () => {
     setPipelineState('running');
@@ -406,6 +413,15 @@ export default function MapTab({ geoState, onMapReady }: MapTabProps) {
                     <div><b>উপজেলা/জেলা:</b> {sub.upazila}, {sub.district}</div>
                     <div><b>ফলদ:</b> {toBnNum(counts.fruit)} · <b>বনজ:</b> {toBnNum(counts.forest)} · <b>ঔষধি:</b> {toBnNum(counts.medicinal)}</div>
                   </div>
+                  <button
+                    onClick={() => setGrowthTarget({
+                      entryId: String(sub.id || sub.submissionId || `${pos[0]},${pos[1]}`),
+                      label: `${sub.village || sub.upazila || 'স্থানীয় এন্ট্রি'}, ${sub.district || ''}`,
+                    })}
+                    className="mt-2 w-full bg-emerald-700 hover:bg-emerald-800 text-white text-[10px] font-semibold py-1.5 rounded-lg cursor-pointer"
+                  >
+                    📈 বৃদ্ধি ট্র্যাক করুন
+                  </button>
                 </div>
               </Popup>
             </CircleMarker>
@@ -433,6 +449,14 @@ export default function MapTab({ geoState, onMapReady }: MapTabProps) {
       <NDVILegend visible={showLegend} />
       <CustomZoomControl mapRef={mapRef} />
       <TileStatusIndicator loading={tileLoading} error={tileError} />
+      <NdviController totalTrees={totalTrees} bounds={bounds} />
+      {growthTarget && (
+        <GrowthTracker
+          entryId={growthTarget.entryId}
+          entryLabel={growthTarget.label}
+          onClose={() => setGrowthTarget(null)}
+        />
+      )}
 
       {syncStatus && (
         <div className="absolute top-2 sm:top-3 left-1/2 -translate-x-1/2 z-[1000] max-w-[85%]">

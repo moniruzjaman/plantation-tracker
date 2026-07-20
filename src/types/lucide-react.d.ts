@@ -34,6 +34,7 @@ declare module 'lucide-react' {
   export const Leaf: Icon;
   export const BarChart3: Icon;
   export const TrendingUp: Icon;
+  export const Trash2: Icon;
   export const X: Icon;
   export const Clock: Icon;
   export const Settings: Icon;
