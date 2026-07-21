@@ -252,7 +252,8 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 
 <div>
 <label class="block text-xs font-semibold text-gray-700 mb-1">SAAO-এর নাম</label>
-<input type="text" id="fSaaoName" placeholder="উপ-সহকারী কৃষি কর্মকর্তার নাম" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+<input type="text" id="fSaaoName" list="saaoDatalist" placeholder="উপ-সহকারী কৃষি কর্মকর্তার নাম" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db" oninput="onDirectoryNameInput('saao',this.value)">
+<datalist id="saaoDatalist"></datalist>
 </div>
 
 <div>
@@ -263,7 +264,8 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 
 <div>
 <label class="block text-xs font-semibold text-gray-700 mb-1">মনিটরিং অফিসারের নাম</label>
-<input type="text" id="fOfficerName" placeholder="মনিটরিং অফিসারের নাম" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+<input type="text" id="fOfficerName" list="officerDatalist" placeholder="মনিটরিং অফিসারের নাম" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db" oninput="onDirectoryNameInput('officer',this.value)">
+<datalist id="officerDatalist"></datalist>
 <p class="text-[10px] text-gray-400 mt-0.5">শুধুমাত্র উপজেলা কর্মকর্তা (AEO2/AAO/UAO) — জেলা/অঞ্চল পর্যায়ের কর্মকর্তা নয়</p>
 </div>
 
@@ -1135,6 +1137,8 @@ window.lookupExistingUser=function(){
 function getProfile(){try{return JSON.parse(localStorage.getItem(PROFILE_KEY)||"null")}catch(e){return null}}
 function saveProfile(p){localStorage.setItem(PROFILE_KEY,JSON.stringify(p))}
 document.addEventListener("DOMContentLoaded",function(){
+  syncCustomUpazilasFromServer();
+  fetchDirectory();
   ["pName","pMobile","pEmail","pDistrict","pUpazila","pUnion","pBlock","pBlockCustom"].forEach(function(id){
     var e=document.getElementById(id);
     if(!e) return;
@@ -1390,12 +1394,96 @@ function populateRegionDD(dd,selected){dd.innerHTML='<option value="">নির�
 function populateDistrictDD(dd,region,selected){dd.innerHTML='<option value="">জেলা নির্বাচন করুন</option>';if(region&&BD[region])BD[region].forEach(function(d){var o=document.createElement("option");o.value=d;o.textContent=d;if(d===selected)o.selected=true;dd.appendChild(o)})}
 var CUSTOM_UPAZILA_KEY="custom_upazila_additions";
 function getCustomUpazilas(district){try{var obj=JSON.parse(localStorage.getItem(CUSTOM_UPAZILA_KEY)||"{}");return obj[district]||[]}catch(e){return []}}
-function addCustomUpazila(district,name){
+function addCustomUpazila(district,name,skipSync){
   var obj={}; try{obj=JSON.parse(localStorage.getItem(CUSTOM_UPAZILA_KEY)||"{}")}catch(e){}
   obj[district]=obj[district]||[];
   if(obj[district].indexOf(name)<0) obj[district].push(name);
   localStorage.setItem(CUSTOM_UPAZILA_KEY,JSON.stringify(obj));
+  // Sync to the sheet so every officer benefits from one person's addition,
+  // not just this device. Best-effort: a failed sync still leaves the name
+  // usable locally (matches this app's offline-first pattern elsewhere).
+  if(!skipSync){
+    var profile=getProfile()||{};
+    fetch(GAS_SYNC_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+      entryType:"custom_upazila", district:district, upazilaName:name,
+      addedBy:profile.name||"", deviceId:getDeviceId()
+    })}).catch(function(err){console.warn("Custom upazila sync failed (kept locally):",err)});
+  }
 }
+// Pulls every custom upazila any officer has added (via the sheet) and
+// merges them into this device's local list, so a name added on one phone
+// shows up as a dropdown option on every other phone too.
+function syncCustomUpazilasFromServer(){
+  fetch(GAS_SYNC_ENDPOINT+"?customUpazila=1")
+    .then(function(res){return res.json()})
+    .then(function(data){
+      if(!data||!data.ok||!Array.isArray(data.items)) return;
+      data.items.forEach(function(it){
+        if(it.district&&it.upazilaName) addCustomUpazila(it.district,it.upazilaName,true);
+      });
+    })
+    .catch(function(err){console.warn("Custom upazila fetch failed:",err)});
+}
+
+// ── Personnel directory (SAAO / monitoring officer autocomplete) ──
+// Backed by User_Profile via ?directory=1 rather than a separate sheet —
+// see AppsScript.gs getDirectory_() for why. Cached in localStorage with
+// the same freshness pattern as national_entries_cache_v1.
+var DIRECTORY_CACHE_KEY="personnel_directory_cache_v1";
+var DIRECTORY_CACHE_MAX_AGE_MS=6*60*60*1000; // 6 hours — a personnel list changes rarely
+var _directoryPeople=null;
+
+function loadCachedDirectory(){
+  try{
+    var raw=localStorage.getItem(DIRECTORY_CACHE_KEY);
+    if(!raw) return null;
+    var parsed=JSON.parse(raw);
+    return (parsed&&Array.isArray(parsed.people))?parsed:null;
+  }catch(e){return null}
+}
+function saveDirectoryCache(people){
+  try{localStorage.setItem(DIRECTORY_CACHE_KEY,JSON.stringify({people:people,cachedAt:new Date().toISOString()}))}catch(e){}
+}
+function populateDirectoryDatalists(){
+  var saaoDL=document.getElementById("saaoDatalist"), officerDL=document.getElementById("officerDatalist");
+  if(!saaoDL||!officerDL||!_directoryPeople) return;
+  saaoDL.innerHTML=""; officerDL.innerHTML="";
+  _directoryPeople.forEach(function(p){
+    if(!p.name) return;
+    var opt=document.createElement("option"); opt.value=p.name;
+    // SAAO role -> SAAO datalist; anything else (AAO/AEO/UAO/ADD etc.) -> officer datalist
+    if(p.shortRole==="SAAO") saaoDL.appendChild(opt.cloneNode(true));
+    else officerDL.appendChild(opt.cloneNode(true));
+  });
+}
+function fetchDirectory(force){
+  var cached=!force?loadCachedDirectory():null;
+  if(cached){
+    _directoryPeople=cached.people;
+    populateDirectoryDatalists();
+    var ageMs=Date.now()-new Date(cached.cachedAt).getTime();
+    if(ageMs<DIRECTORY_CACHE_MAX_AGE_MS) return;
+  }
+  fetch(GAS_SYNC_ENDPOINT+"?directory=1")
+    .then(function(res){return res.json()})
+    .then(function(data){
+      if(!data||!data.ok||!Array.isArray(data.people)) return;
+      _directoryPeople=data.people;
+      saveDirectoryCache(data.people);
+      populateDirectoryDatalists();
+    })
+    .catch(function(err){console.warn("Directory fetch failed (using cache if any):",err)});
+}
+// When the typed name exactly matches a known person, auto-fill their
+// mobile number — saves re-typing a number that's already on record.
+window.onDirectoryNameInput=function(kind,name){
+  if(!_directoryPeople) return;
+  var match=_directoryPeople.find(function(p){return p.name===name});
+  if(!match) return;
+  var mobileField=document.getElementById(kind==="saao"?"fSaaoMobile":"fOfficerMobile");
+  if(mobileField&&!mobileField.value) mobileField.value=match.mobile;
+};
+
 function populateUpazilaDD(dd,district,selected){dd.innerHTML='<option value="">উপজেলা নির্বাচন করুন</option>';if(district&&BD_UPAZILA[district])BD_UPAZILA[district].forEach(function(u){var o=document.createElement("option");o.value=u;o.textContent=u;if(u===selected)o.selected=true;dd.appendChild(o)});if(district)getCustomUpazilas(district).forEach(function(u){var o=document.createElement("option");o.value=u;o.textContent=u+" (নতুন যোগ)";if(u===selected)o.selected=true;dd.appendChild(o)});if(district){var addOpt=document.createElement("option");addOpt.value="__add_new__";addOpt.textContent="➕ তালিকায় নেই — যোগ করুন";dd.appendChild(addOpt)}}
 // Shared handler: any <select> populated by populateUpazilaDD can wire
 // onchange="handleUpazilaAddNew(this)" to let the user type a missing

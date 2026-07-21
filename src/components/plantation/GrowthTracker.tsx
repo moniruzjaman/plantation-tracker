@@ -69,6 +69,16 @@ export default function GrowthTracker({ entryId, entryLabel, officerName, onClos
 
   const latest = readings[readings.length - 1];
 
+  const resolvedOfficerName = useCallback(() => {
+    if (officerName) return officerName;
+    try {
+      const raw = localStorage.getItem('dae_user_profile');
+      return raw ? (JSON.parse(raw).name || '') : '';
+    } catch {
+      return '';
+    }
+  }, [officerName]);
+
   const handleAdd = useCallback(async () => {
     setSaving(true);
     try {
@@ -79,7 +89,7 @@ export default function GrowthTracker({ entryId, entryLabel, officerName, onClos
         heightCm: heightCm ? parseFloat(heightCm) : null,
         healthStatus: health,
         note,
-        recordedBy: officerName || '',
+        recordedBy: resolvedOfficerName(),
       });
       setNdvi(''); setHeightCm(''); setNote(''); setHealth('healthy');
       setShowForm(false);
@@ -87,7 +97,7 @@ export default function GrowthTracker({ entryId, entryLabel, officerName, onClos
     } finally {
       setSaving(false);
     }
-  }, [entryId, ndvi, heightCm, health, note, officerName, load]);
+  }, [entryId, ndvi, heightCm, health, note, resolvedOfficerName, load]);
 
   const handleDelete = useCallback(async (id?: number) => {
     if (id == null) return;
