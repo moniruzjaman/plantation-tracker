@@ -1,35 +1,511 @@
+  if(stored){_cachedDeviceId=stored;return stored;}
+  var id=_generateFingerprint();
+  localStorage.setItem(DEVICE_ID_KEY,id);
+  _cachedDeviceId=id;
+  return id;
+}
+function _generateFingerprint(){
+  try{
+    // Try Capacitor Device plugin (Android native UUID)
+    if(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.Plugins&&window.Capacitor.Plugins.Device){
+      // async but we try sync first; if not available, fall through
+    }
+  }catch(e){}
+  // Web fingerprint from stable browser properties
+  var parts=[];
+  parts.push(screen.width+"x"+screen.height);
+  parts.push(screen.colorDepth);
+  parts.push(navigator.language||"");
+  parts.push(navigator.hardwareConcurrency||"");
+  parts.push(navigator.platform||"");
+  var canvas=document.createElement("canvas");
+  canvas.width=200;canvas.height=50;
+  try{
+    var ctx=canvas.getContext("2d");
+    ctx.textBaseline="top";ctx.font="14px Arial";
+    ctx.fillStyle="#f60";ctx.fillRect(125,1,62,20);
+    ctx.fillStyle="#069";ctx.fillText("DeviceID:"+navigator.userAgent,2,15);
+    ctx.fillStyle="rgba(102,204,0,0.7)";ctx.fillText("DeviceID:"+navigator.userAgent,4,17);
+    parts.push(canvas.toDataURL().slice(-50));
+  }catch(e){parts.push("no-canvas");}
+  var str=parts.join("||");
+  var hash=0;
+  for(var i=0;i<str.length;i++){hash=((hash<<5)-hash)+str.charCodeAt(i);hash|=0;}
+  return "D-"+Math.abs(hash).toString(36).toUpperCase();
+}
+// Async — try to get native device UUID (Capacitor Android) and upgrade fingerprint
+function upgradeDeviceIdAsync(){
+  try{
+    if(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.Plugins&&window.Capacitor.Plugins.Device){
+      window.Capacitor.Plugins.Device.getInfo().then(function(info){
+        if(info&&info.uuid){
+          var nativeId="N-"+info.uuid.slice(0,16).toUpperCase();
+          localStorage.setItem(DEVICE_ID_KEY,nativeId);
+          _cachedDeviceId=nativeId;
+          var p=getProfile();
+          if(p){p.deviceId=nativeId;saveProfile(p);}
+        }
+      }).catch(function(){});
+    }
+  }catch(e){}
+}
+var ROLE_LABELS={SAAO:"উপ-সহকারী কৃষি কর্মকর্তা",AEO2:"কৃষি সম্প্রসারণ কর্মকর্তা",AAO:"অতিরিক্ত কৃষি কর্মকর্তা",UAO:"উপজেলা কৃষি কর্মকর্তা",ADD:"অতিরিক্ত উপপরিচালক",DTO:"জেলা প্রশিক্ষণ কর্মকর্তা",DD:"উপপরিচালক"};
+var ALL_DISTRICTS=null;
+function getAllDistricts(){ if(!ALL_DISTRICTS){ ALL_DISTRICTS=Object.keys(BD_UPAZILA).sort(function(a,b){return a.localeCompare(b,"bn")}); } return ALL_DISTRICTS; }
+function populatePDistrictDD(selected){
+  var dd=document.getElementById("pDistrict");
+  dd.innerHTML='<option value="">জেলা নির্বাচন করুন</option>';
+  getAllDistricts().forEach(function(d){var o=document.createElement("option");o.value=d;o.textContent=d;if(d===selected)o.selected=true;dd.appendChild(o)});
+}
+window.onPDistrictChange=function(){ populateUpazilaDD(document.getElementById("pUpazila"),document.getElementById("pDistrict").value); };
+window.onPShortRoleChange=function(){
+  var shortRole=_val("pShortRole");
+  document.getElementById("pRoleLabel").value=ROLE_LABELS[shortRole]||shortRole;
+};
+window.onPBlockChange=function(){
+  var v=document.getElementById("pBlock").value, custom=document.getElementById("pBlockCustom");
+  if(v==="__other__"){custom.classList.remove("hidden");custom.value="";} else {custom.classList.add("hidden");}
+};
+function resolvedBlockValue(){
+  var v=_val("pBlock");
+  return v==="__other__" ? _val("pBlockCustom") : v;
+}
+window.onSourceTypeChange=function(){
+  var v=_val("fSourceType"),custom=document.getElementById("fSourceTypeCustom");
+  if(v==="অন্যান্য"){custom.classList.remove("hidden");} else {custom.classList.add("hidden");custom.value="";}
+};
+function resolvedSourceTypeValue(){
+  var v=_val("fSourceType");
+  return v==="অন্যান্য" ? (_val("fSourceTypeCustom")||"অন্যান্য") : v;
+}
 
-<!-- ==================== EDIT MODAL ==================== -->
-<div id="editModal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-bg p-4" style="background:rgba(0,0,0,.45)">
-<div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-5 sm:p-6 anim-in">
-<h2 class="text-lg font-bold text-green-700 mb-4">✏️ তথ্য সম্পাদনা</h2>
-<form id="editForm" novalidate>
-<input type="hidden" id="eId" value="">
-<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-<div><label class="block text-xs font-semibold text-gray-700 mb-1">অঞ্চল *</label><select id="eRegion" onchange="onEditRegionChange()" class="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">নির্বাচন</option></select></div>
-<div><label class="block text-xs font-semibold text-gray-700 mb-1">জেলা *</label><select id="eDistrict" onchange="onEditDistrictChange()" class="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">নির্বাচন</option></select></div>
-<div><label class="block text-xs font-semibold text-gray-700 mb-1">উপজেলা *</label><select id="eUpazila" class="w-full border rounded-md px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-green-400" style="border-color:#d1d5db"><option value="">উপজেলা নির্বাচন করুন</option></select></div>
-<div><label class="block text-xs font-semibold text-gray-700 mb-1">রোপণকারীর নাম *</label><input type="text" id="eNursery" class="w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-400" style="border-color:#d1d5db"></div>
-<div><label class="block text-xs font-semibold text-gray-700 mb-1">মোবাইল *</label><input type="text" id="eMobile" maxlength="11" inputmode="numeric" class="w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-400" style="border-color:#d1d5db"></div>
-<div><label class="block text-xs font-semibold text-gray-700 mb-1">মনিটরিং অফিসার / তদারককারীর নাম</label><input type="text" id="eCaretakerName" class="w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-400" style="border-color:#d1d5db"></div>
-<div><label class="block text-xs font-semibold text-gray-700 mb-1">মনিটরিং অফিসার / তদারককারীর মোবাইল নম্বর</label><input type="text" id="eCaretakerMobile" maxlength="11" inputmode="numeric" class="w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-400" style="border-color:#d1d5db"><p class="text-xs mt-0.5 hidden" data-error="eCaretakerMobile" style="color:#ef4444;font-size:0.75rem"></p></div>
-<div><label class="block text-xs font-semibold text-gray-700 mb-1">রোপণের তারিখ</label><input type="date" id="ePlantingDate" class="w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-400" style="border-color:#d1d5db"></div>
-<div><label class="block text-xs font-semibold text-gray-700 mb-1">জিও লোকেশন</label><input type="text" id="eGeo" class="w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-400" style="border-color:#d1d5db" onchange="if(window.onGeoLocationChange){window.onGeoLocationChange(this, 'eAddress')}"></div>
-<div class="sm:col-span-2"><label class="block text-xs font-semibold text-gray-700 mb-1">রোপণকৃত বৃক্ষের অবস্থান</label><textarea id="eAddress" rows="2" class="w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-400" style="border-color:#d1d5db"></textarea></div>
-<div><label class="block text-xs font-semibold text-gray-700 mb-1">মন্তব্য</label><input type="text" id="eRemarks" class="w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-400" style="border-color:#d1d5db"></div>
-</div>
-<div id="editSeedlingSections" class="space-y-3 mb-4"></div>
-<div class="flex gap-3 justify-end">
-<button type="button" onclick="closeEditModal()" class="text-white px-5 py-2 rounded-lg text-sm font-semibold transition" style="background:#9ca3af">বাতিল</button>
-<button type="submit" class="text-white px-5 py-2 rounded-lg text-sm font-semibold transition" style="background:#15803d">আপডেট করুন</button>
-</div>
-</form>
-</div>
-</div>
+window.lookupExistingUser=function(){
+  var mobile=_val("pMobile");
+  if(!/^\d{11}$/.test(mobile)) return;
+  var local=getProfile();
+  if(local&&local.mobile===mobile) return;
+  var note=document.getElementById("profileLookupNote");
+  note.textContent="খোঁজা হচ্ছে...";note.classList.remove("hidden");
+  fetch(GAS_SYNC_ENDPOINT+"?mobile="+encodeURIComponent(mobile))
+    .then(function(r){return r.json()})
+    .then(function(data){
+      if(data&&data.ok&&data.found&&data.user){
+        var u=data.user;
+        document.getElementById("pShortRole").value=u.shortRole||"SAAO";
+        document.getElementById("pRoleLabel").value=u.roleLabel||ROLE_LABELS[u.shortRole]||"";
+        document.getElementById("pName").value=u.name||"";
+        document.getElementById("pEmail").value=u.email||"";
+        document.getElementById("pDeviceId").value=u.deviceId||getDeviceId();
+        populatePDistrictDD(u.district||"");
+        populateUpazilaDD(document.getElementById("pUpazila"),u.district||"",u.upazila||"");
+        document.getElementById("pUnion").value=u.union||"";
+        var isStdBlock=["ব্লক-১","ব্লক-২","ব্লক-৩"].indexOf(u.block)>=0;
+        document.getElementById("pBlock").value=u.block?(isStdBlock?u.block:"__other__"):"";
+        if(u.block&&!isStdBlock){document.getElementById("pBlockCustom").classList.remove("hidden");document.getElementById("pBlockCustom").value=u.block;}
+        note.textContent="✓ User_Profile থেকে তথ্য পাওয়া গেছে — প্রয়োজনে সংশোধন করুন";
+        note.style.color="#15803d";
+      }else{
+        note.classList.add("hidden");
+      }
+    })
+    .catch(function(){note.classList.add("hidden")});
+};
 
-<!-- ==================== FOOTER ==================== -->
-<footer class="text-green-100 text-center py-4 px-4 text-xs sm:text-sm mt-auto no-print" style="background:#14532d;color:#dcfce7">
-<p class="mb-1">কৃষি সম্প্রসারণ অধিদপ্তর | গণপ্রজাতন্ত্রী বাংলাদেশ সরকার</p>
-<p class="mb-1 text-green-300" style="color:#a7f3d0">সাপোর্ট ইমেইল: <a href="mailto:krishiailive@gmail.com" class="underline hover:text-white transition">krishiailive@gmail.com</a></p>
-<p class="text-green-300 text-xs mt-0.5" style="color:#86efac">&copy; ২০২৬ সর্বস্বত্ব সংরক্ষিত</p>
-</footer>
+// ── User Profile (syncs to User_Profile sheet) ──
+function getProfile(){try{return JSON.parse(localStorage.getItem(PROFILE_KEY)||"null")}catch(e){return null}}
+function saveProfile(p){localStorage.setItem(PROFILE_KEY,JSON.stringify(p))}
+document.addEventListener("DOMContentLoaded",function(){
+  syncCustomUpazilasFromServer();
+  fetchDirectory();
+  ["pName","pMobile","pEmail","pDistrict","pUpazila","pUnion","pBlock","pBlockCustom"].forEach(function(id){
+    var e=document.getElementById(id);
+    if(!e) return;
+    e.addEventListener("input",function(){
+      var p=getProfile()||{};
+      p.name=document.getElementById("pName").value;
+      p.mobile=document.getElementById("pMobile").value;
+      p.email=document.getElementById("pEmail").value;
+      p.district=document.getElementById("pDistrict").value;
+      p.upazila=document.getElementById("pUpazila").value;
+      p.union=document.getElementById("pUnion").value;
+      p.block=resolvedBlockValue();
+      saveProfile(p);
+    });
+  });
+});
+window.openProfileModal=function(){
+  populatePDistrictDD();
+  document.getElementById("profileLookupNote").classList.add("hidden");
+  document.getElementById("pDeviceId").value=getDeviceId();
+  var p=getProfile();
+  if(p){
+    document.getElementById("pShortRole").value=p.shortRole||"SAAO";
+    document.getElementById("pRoleLabel").value=p.roleLabel||ROLE_LABELS[p.shortRole]||"";
+    document.getElementById("pName").value=p.name||"";
+    document.getElementById("pMobile").value=p.mobile||"";
+    document.getElementById("pEmail").value=p.email||"";
+    document.getElementById("pDeviceId").value=p.deviceId||getDeviceId();
+    populatePDistrictDD(p.district||"");
+    populateUpazilaDD(document.getElementById("pUpazila"),p.district||"",p.upazila||"");
+    document.getElementById("pUnion").value=p.union||"";
+    var isStdBlock=["ব্লক-১","ব্লক-২","ব্লক-৩"].indexOf(p.block)>=0;
+    document.getElementById("pBlock").value=p.block?(isStdBlock?p.block:"__other__"):"";
+    if(p.block&&!isStdBlock){document.getElementById("pBlockCustom").classList.remove("hidden");document.getElementById("pBlockCustom").value=p.block;}
+    document.getElementById("profileCancelBtn").classList.remove("hidden");
+  }else{
+    document.getElementById("pShortRole").value="SAAO";
+    document.getElementById("pRoleLabel").value=ROLE_LABELS["SAAO"];
+    document.getElementById("pEmail").value="";
+    document.getElementById("pDeviceId").value=getDeviceId();
+    document.getElementById("profileCancelBtn").classList.add("hidden");
+  }
+  document.getElementById("profileModal").classList.remove("hidden");
+};
+window.closeProfileModal=function(){document.getElementById("profileModal").classList.add("hidden")};
+window.saveProfileFromModal=function(){
+  var shortRole=_val("pShortRole");
+  var roleLabel=_val("pRoleLabel")||ROLE_LABELS[shortRole]||shortRole;
+  var name=_val("pName");
+  var mobile=_val("pMobile");
+  var district=_val("pDistrict");
+  var upazila=_val("pUpazila");
+  var union=_val("pUnion");
+  var block=resolvedBlockValue();
+  var err=document.getElementById("profileError");
+  if(!name||!/^01[3-9]\d{8}$/.test(mobile)||!district){err.classList.remove("hidden");return}
+  err.classList.add("hidden");
+  var email=_val("pEmail");
+  var deviceId=getDeviceId();
+  var p={shortRole:shortRole,roleLabel:roleLabel,name:name,mobile:mobile,email:email,deviceId:deviceId,district:district,upazila:upazila,union:union,block:block};
+  saveProfile(p);
+  applyProfileToForm();
+  closeProfileModal();
+  syncProfileToSheet(p);
+  if(typeof renderMyTab==="function") renderMyTab();
+};
+function postingLabel(p){
+  if(!p) return "";
+  return [p.district,p.upazila,p.union,p.block].filter(Boolean).join(" › ");
+}
+function applyProfileToForm(){
+  var p=getProfile();
+  var bar=document.getElementById("profileBarText");
+  if(!p){if(bar)bar.textContent="👤 প্রোফাইল সেট করুন";return}
+  var loc=postingLabel(p);
+  if(bar)bar.textContent="👤 "+p.name+" · "+(p.roleLabel||p.shortRole)+(loc?" · "+loc:"");
+  if(p.shortRole==="SAAO"){
+    var sn=document.getElementById("fSaaoName"),sm=document.getElementById("fSaaoMobile");
+    if(sn&&!sn.value)sn.value=p.name; if(sm&&!sm.value)sm.value=p.mobile;
+  }else if(["AEO2","AAO","UAO","ADD"].indexOf(p.shortRole)>=0){
+    var on=document.getElementById("fOfficerName"),om=document.getElementById("fOfficerMobile");
+    if(on&&!on.value)on.value=p.name; if(om&&!om.value)om.value=p.mobile;
+  }
+  if(p.district && !_val("fDistrict")){
+    var regionOfDist=null;
+    Object.keys(BD).forEach(function(r){ if(BD[r].indexOf(p.district)>=0) regionOfDist=r; });
+    if(regionOfDist){
+      document.getElementById("fRegion").value=regionOfDist;
+      onFormRegionChange();
+      document.getElementById("fDistrict").value=p.district;
+      onFormDistrictChange();
+      if(p.upazila) document.getElementById("fUpazila").value=p.upazila;
+    }
+  }
+  if(p.union && !_val("fUnion")) document.getElementById("fUnion").value=p.union;
+}
+function initProfile(){
+  var p=getProfile();
+  if(!p){openProfileModal();} else {applyProfileToForm();}
+  upgradeDeviceIdAsync();
+}
+function syncProfileToSheet(p){
+  try{
+    fetch(GAS_SYNC_ENDPOINT,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        entryType:"user_profile",
+        submissionId:genId(),
+        shortRole:p.shortRole,
+        roleLabel:p.roleLabel,
+        name:p.name,
+        mobile:p.mobile,
+        email:p.email||"",
+        deviceId:p.deviceId||getDeviceId(),
+        district:p.district||"",
+        upazila:p.upazila||"",
+        union:p.union||"",
+        block:p.block||""
+      })
+    }).catch(function(){});
+  }catch(e){}
+}
+
+
+// ── GPS → Division/Region/District/Upazila auto-select ──
+// Nominatim already returns structured admin names in its response; the
+// old code discarded everything except a flattened address string. This
+// matches those names against our own BD/BD_UPAZILA/BD_DIVISIONS lists so
+// the four cascading dropdowns fill themselves instead of the SAAO tapping
+// through each one by hand.
+function _norm(s){return (s||"").toString().replace(/\s*(district|zila|division|উপজেলা|জেলা|বিভাগ)\s*/gi,"").trim().toLowerCase()}
+function _findKeyMatch(candidates,keys){
+  for(var i=0;i<candidates.length;i++){
+    var c=_norm(candidates[i]); if(!c)continue;
+    for(var j=0;j<keys.length;j++){ if(_norm(keys[j])===c) return keys[j]; }
+  }
+  // fallback: substring match
+  for(var i=0;i<candidates.length;i++){
+    var c=_norm(candidates[i]); if(!c)continue;
+    for(var j=0;j<keys.length;j++){ var k=_norm(keys[j]); if(k&&(c.indexOf(k)>=0||k.indexOf(c)>=0)) return keys[j]; }
+  }
+  return null;
+}
+window.autoSelectAdminFromGeo=function(addr){
+  if(!addr) return;
+  try{
+    // Division (Nominatim "state" is typically "X Division" / "X বিভাগ")
+    var divMatch=_findKeyMatch([addr.state],BD_DIVISIONS);
+    if(divMatch){document.getElementById("fDivision").value=divMatch;}
+
+    // District → also tells us which DAE Region contains it
+    var districtCandidates=[addr.state_district,addr.district,addr.city,addr.county];
+    var distMatch=_findKeyMatch(districtCandidates,Object.keys(BD_UPAZILA));
+    if(distMatch){
+      var regionMatch=null;
+      Object.keys(BD).forEach(function(r){ if(BD[r].indexOf(distMatch)>=0) regionMatch=r; });
+      if(regionMatch){
+        document.getElementById("fRegion").value=regionMatch;
+        onFormRegionChange(); // repopulates fDistrict for that region
+        document.getElementById("fDistrict").value=distMatch;
+        onFormDistrictChange(); // repopulates fUpazila for that district
+
+        // Upazila (Nominatim "county"/"subdistrict" often holds this)
+        var upaMatch=_findKeyMatch([addr.county,addr.subdistrict,addr.suburb],BD_UPAZILA[distMatch]||[]);
+        if(upaMatch) document.getElementById("fUpazila").value=upaMatch;
+      }
+    }
+  }catch(e){console.error("Auto admin-select failed:",e)}
+};
+var chartDiv=null,chartCat=null,chartDist=null,chartSpec=null,isAdmin=false;
+
+function getSubmissions(){try{return JSON.parse(localStorage.getItem(LS_KEY)||"[]")}catch(e){return[]}}
+function saveSubmissions(d){localStorage.setItem(LS_KEY,JSON.stringify(d))}
+function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
+function getAdminPw(){return localStorage.getItem(PW_KEY)||"admin2026"}
+function setAdminPw(p){localStorage.setItem(PW_KEY,p)}
+
+// ── Tab switching ──
+window.switchTab=function(tab){
+try{
+document.querySelectorAll(".tab-content").forEach(function(el){el.classList.add("hidden")});
+document.querySelectorAll(".nav-btn").forEach(function(b){b.classList.remove("active")});
+var sec=document.getElementById("tab-"+tab);
+if(sec)sec.classList.remove("hidden");
+document.querySelectorAll('.nav-btn[data-tab="'+tab+'"]').forEach(function(b){b.classList.add("active")});
+hideBanner("successBanner");hideBanner("errorBanner");
+if(tab==="dashboard")renderDashboard();
+if(tab==="admin"&&isAdmin)renderAdminTable();
+if(tab==="map")renderMap();
+if(tab==="storedData")renderMyTab();
+window.scrollTo({top:0,behavior:"smooth"});
+}catch(err){console.error("Tab switch error:",err)}
+};
+
+function showBanner(id,text){var el=document.getElementById(id);if(!el)return;if(id==="errorBanner"&&text)document.getElementById("errorText").textContent=text;el.classList.remove("hidden");el.scrollIntoView({behavior:"smooth",block:"nearest"})}
+function hideBanner(id){var el=document.getElementById(id);if(el)el.classList.add("hidden")}
+window.showBanner=showBanner;window.hideBanner=hideBanner;
+
+// ── Share modal ──
+var SHARE_TITLE="বৃক্ষরোপণ ট্র্যাকার | কৃষি সম্প্রসারণ অধিদপ্তর";
+var SHARE_TEXT="\"০৫ বছরে ২৫ কোটি বৃক্ষরোপণ\" কর্মসূচির তথ্য সংগ্রহের জন্য এই অ্যাপটি ব্যবহার করুন:";
+function getShareUrl(){try{return window.location.href.split("#")[0]}catch(e){return window.location.href}}
+window.openShareModal=function(){
+try{
+var url=getShareUrl();
+var input=document.getElementById("shareLinkInput");if(input)input.value=url;
+var enc=encodeURIComponent(url),encText=encodeURIComponent(SHARE_TEXT);
+var wa=document.getElementById("shareWhatsapp");if(wa)wa.href="https://wa.me/?text="+encText+"%20"+enc;
+var fb=document.getElementById("shareFacebook");if(fb)fb.href="https://www.facebook.com/sharer/sharer.php?u="+enc;
+var tg=document.getElementById("shareTelegram");if(tg)tg.href="https://t.me/share/url?url="+enc+"&text="+encText;
+var em=document.getElementById("shareEmail");if(em)em.href="mailto:?subject="+encodeURIComponent(SHARE_TITLE)+"&body="+encText+"%0A%0A"+enc;
+var sm=document.getElementById("shareSms");if(sm)sm.href="sms:?body="+encText+"%20"+enc;
+document.getElementById("shareModal").classList.remove("hidden");
+}catch(err){console.error("Share modal error:",err)}
+};
+window.closeShareModal=function(){var m=document.getElementById("shareModal");if(m)m.classList.add("hidden")};
+window.copyShareLink=function(){
+var input=document.getElementById("shareLinkInput");if(!input)return;
+var finish=function(ok){var btn=document.getElementById("copyLinkBtn");if(!btn)return;var old=btn.textContent;btn.textContent=ok?"✅ কপি হয়েছে":"❌ ব্যর্থ";setTimeout(function(){btn.textContent=old},1800)};
+if(navigator.clipboard&&navigator.clipboard.writeText){
+navigator.clipboard.writeText(input.value).then(function(){finish(true)}).catch(function(){finish(false)});
+}else{try{input.select();document.execCommand("copy");finish(true)}catch(e){finish(false)}}
+};
+window.nativeShare=function(){
+var url=getShareUrl();
+if(navigator.share){
+navigator.share({title:SHARE_TITLE,text:SHARE_TEXT,url:url}).catch(function(){});
+}else{
+copyShareLink();
+showBanner&&showBanner("successBanner");
+}
+};
+window.shareAppIcon=function(){
+try{window.open("/icons/icon-512.webp","_blank")}catch(e){}
+};
+window.downloadShareImage=function(){
+try{
+var a=document.createElement("a");
+a.href="/og-image-large.png";
+a.download="plantation-tracker-share.png";
+document.body.appendChild(a);a.click();document.body.removeChild(a);
+}catch(e){console.error("Download share image error:",e)}
+};
+
+// ── User guide modal ──
+window.openGuideModal=function(){var m=document.getElementById("guideModal");if(m)m.classList.remove("hidden")};
+window.closeGuideModal=function(){var m=document.getElementById("guideModal");if(m)m.classList.add("hidden")};
+
+// ── Dropdowns ──
+function populateDivisionDD(dd,selected){dd.innerHTML='<option value="">বিভাগ নির্বাচন করুন</option>';BD_DIVISIONS.forEach(function(d){var o=document.createElement("option");o.value=d;o.textContent=d;if(d===selected)o.selected=true;dd.appendChild(o)})}
+function populateRegionDD(dd,selected){dd.innerHTML='<option value="">নির্বাচন করুন</option>';Object.keys(BD).forEach(function(d){var o=document.createElement("option");o.value=d;o.textContent=d;if(d===selected)o.selected=true;dd.appendChild(o)})}
+function populateDistrictDD(dd,region,selected){dd.innerHTML='<option value="">জেলা নির্বাচন করুন</option>';if(region&&BD[region])BD[region].forEach(function(d){var o=document.createElement("option");o.value=d;o.textContent=d;if(d===selected)o.selected=true;dd.appendChild(o)})}
+var CUSTOM_UPAZILA_KEY="custom_upazila_additions";
+function getCustomUpazilas(district){try{var obj=JSON.parse(localStorage.getItem(CUSTOM_UPAZILA_KEY)||"{}");return obj[district]||[]}catch(e){return []}}
+function addCustomUpazila(district,name,skipSync){
+  var obj={}; try{obj=JSON.parse(localStorage.getItem(CUSTOM_UPAZILA_KEY)||"{}")}catch(e){}
+  obj[district]=obj[district]||[];
+  if(obj[district].indexOf(name)<0) obj[district].push(name);
+  localStorage.setItem(CUSTOM_UPAZILA_KEY,JSON.stringify(obj));
+  // Sync to the sheet so every officer benefits from one person's addition,
+  // not just this device. Best-effort: a failed sync still leaves the name
+  // usable locally (matches this app's offline-first pattern elsewhere).
+  if(!skipSync){
+    var profile=getProfile()||{};
+    fetch(GAS_SYNC_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+      entryType:"custom_upazila", district:district, upazilaName:name,
+      addedBy:profile.name||"", deviceId:getDeviceId()
+    })}).catch(function(err){console.warn("Custom upazila sync failed (kept locally):",err)});
+  }
+}
+// Pulls every custom upazila any officer has added (via the sheet) and
+// merges them into this device's local list, so a name added on one phone
+// shows up as a dropdown option on every other phone too.
+function syncCustomUpazilasFromServer(){
+  fetch(GAS_SYNC_ENDPOINT+"?customUpazila=1")
+    .then(function(res){return res.json()})
+    .then(function(data){
+      if(!data||!data.ok||!Array.isArray(data.items)) return;
+      data.items.forEach(function(it){
+        if(it.district&&it.upazilaName) addCustomUpazila(it.district,it.upazilaName,true);
+      });
+    })
+    .catch(function(err){console.warn("Custom upazila fetch failed:",err)});
+}
+
+// ── Personnel directory (SAAO / monitoring officer autocomplete) ──
+// Backed by User_Profile via ?directory=1 rather than a separate sheet —
+// see AppsScript.gs getDirectory_() for why. Cached in localStorage with
+// the same freshness pattern as national_entries_cache_v1.
+var DIRECTORY_CACHE_KEY="personnel_directory_cache_v1";
+var DIRECTORY_CACHE_MAX_AGE_MS=6*60*60*1000; // 6 hours — a personnel list changes rarely
+var _directoryPeople=null;
+
+function loadCachedDirectory(){
+  try{
+    var raw=localStorage.getItem(DIRECTORY_CACHE_KEY);
+    if(!raw) return null;
+    var parsed=JSON.parse(raw);
+    return (parsed&&Array.isArray(parsed.people))?parsed:null;
+  }catch(e){return null}
+}
+function saveDirectoryCache(people){
+  try{localStorage.setItem(DIRECTORY_CACHE_KEY,JSON.stringify({people:people,cachedAt:new Date().toISOString()}))}catch(e){}
+}
+function populateDirectoryDatalists(){
+  var saaoDL=document.getElementById("saaoDatalist"), officerDL=document.getElementById("officerDatalist");
+  if(!saaoDL||!officerDL||!_directoryPeople) return;
+  saaoDL.innerHTML=""; officerDL.innerHTML="";
+  _directoryPeople.forEach(function(p){
+    if(!p.name) return;
+    var opt=document.createElement("option"); opt.value=p.name;
+    // SAAO role -> SAAO datalist; anything else (AAO/AEO/UAO/ADD etc.) -> officer datalist
+    if(p.shortRole==="SAAO") saaoDL.appendChild(opt.cloneNode(true));
+    else officerDL.appendChild(opt.cloneNode(true));
+  });
+}
+function fetchDirectory(force){
+  var cached=!force?loadCachedDirectory():null;
+  if(cached){
+    _directoryPeople=cached.people;
+    populateDirectoryDatalists();
+    var ageMs=Date.now()-new Date(cached.cachedAt).getTime();
+    if(ageMs<DIRECTORY_CACHE_MAX_AGE_MS) return;
+  }
+  fetch(GAS_SYNC_ENDPOINT+"?directory=1")
+    .then(function(res){return res.json()})
+    .then(function(data){
+      if(!data||!data.ok||!Array.isArray(data.people)) return;
+      _directoryPeople=data.people;
+      saveDirectoryCache(data.people);
+      populateDirectoryDatalists();
+    })
+    .catch(function(err){console.warn("Directory fetch failed (using cache if any):",err)});
+}
+// When the typed name exactly matches a known person, auto-fill their
+// mobile number — saves re-typing a number that's already on record.
+window.onDirectoryNameInput=function(kind,name){
+  if(!_directoryPeople) return;
+  var match=_directoryPeople.find(function(p){return p.name===name});
+  if(!match) return;
+  var mobileField=document.getElementById(kind==="saao"?"fSaaoMobile":"fOfficerMobile");
+  if(mobileField&&!mobileField.value) mobileField.value=match.mobile;
+};
+
+function populateUpazilaDD(dd,district,selected){dd.innerHTML='<option value="">উপজেলা নির্বাচন করুন</option>';if(district&&BD_UPAZILA[district])BD_UPAZILA[district].forEach(function(u){var o=document.createElement("option");o.value=u;o.textContent=u;if(u===selected)o.selected=true;dd.appendChild(o)});if(district)getCustomUpazilas(district).forEach(function(u){var o=document.createElement("option");o.value=u;o.textContent=u+" (নতুন যোগ)";if(u===selected)o.selected=true;dd.appendChild(o)});if(district){var addOpt=document.createElement("option");addOpt.value="__add_new__";addOpt.textContent="➕ তালিকায় নেই — যোগ করুন";dd.appendChild(addOpt)}}
+// Shared handler: any <select> populated by populateUpazilaDD can wire
+// onchange="handleUpazilaAddNew(this)" to let the user type a missing
+// upazila once; it's remembered (localStorage) and offered in the
+// dropdown for every future submission/profile on this device.
+window.handleUpazilaAddNew=function(selectEl){
+  if(selectEl.value!=="__add_new__") return;
+  var district=selectEl.getAttribute("data-district-source")?document.getElementById(selectEl.getAttribute("data-district-source")).value:"";
+  var name=prompt("উপজেলার নাম লিখুন:");
+  if(name){name=name.trim();}
+  if(!name){ selectEl.value=""; return; }
+  addCustomUpazila(district,name);
+  populateUpazilaDD(selectEl,district,name);
+};
+
+
+// ── Cascading ──
+// Region change → repopulate districts (resets district selection) + reset upazila + render
+window.onMapFilterChange=function(){populateDistrictDD(document.getElementById("mapDistrict"),document.getElementById("mapRegion").value);populateMapUpazilaDD();renderMap()};
+// District change → repopulate upazila from chosen district + render (do NOT re-populate districts)
+window.onMapDistrictChange=function(){populateMapUpazilaDD();renderMap()};
+window.onMapUpazilaChange=function(){renderMap()};
+function populateMapUpazilaDD(selected){
+  var dd=document.getElementById("mapUpazila");
+  var district=document.getElementById("mapDistrict").value;
+  dd.innerHTML='<option value="">সব উপজেলা</option>';
+  if(district&&BD_UPAZILA[district]){
+    BD_UPAZILA[district].forEach(function(u){var o=document.createElement("option");o.value=u;o.textContent=u;if(u===selected)o.selected=true;dd.appendChild(o)});
+    getCustomUpazilas(district).forEach(function(u){var o=document.createElement("option");o.value=u;o.textContent=u+" (নতুন যোগ)";if(u===selected)o.selected=true;dd.appendChild(o)});
+  }
+}
+
+// ── Per-upazila color palette ──
+// Deterministic hash → one of 24 visually distinct colors so the same
+// upazila always gets the same color across re-renders.
+var UPAZILA_PALETTE=[
+  '#e11d48','#db2777','#c026d3','#9333ea','#7c3aed','#4f46e5',
+  '#2563eb','#0284c7','#0891b2','#0d9488','#059669','#16a34a',
+  '#65a30d','#ca8a04','#d97706','#ea580c','#dc2626','#be185d',
+  '#6d28d9','#4338ca','#1d4ed8','#0369a1','#0e7490','#047857'
+];
+var _upazilaColorCache={};
+function upazilaColor(name){
+  if(!name)return'#6b7280';
+  if(_upazilaColorCache[name])return _upazilaColorCache[name];
+  var h=0;for(var i=0;i<name.length;i++)h=((h<<5)-h)+name.charCodeAt(i);
+  var idx=Math.abs(h)%UPAZILA_PALETTE.length;
