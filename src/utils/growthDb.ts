@@ -108,9 +108,47 @@ function tx<T>(storeName: string, mode: IDBTransactionMode, fn: (store: IDBObjec
 
 // ── growth_readings CRUD ──
 
+const GAS_SYNC_ENDPOINT = '/api/gas-sync';
+
+/**
+ * Best-effort sync of a growth reading to the Growth_Log sheet. Reads the
+ * same 'dae_device_id' / 'dae_user_profile' localStorage keys
+ * legacy-nursery.html already writes -- both surfaces share the same
+ * origin, so no separate device-identity scheme is needed here. A failed
+ * sync never blocks the local save; the reading already exists in
+ * IndexedDB regardless (matches this app's offline-first pattern
+ * everywhere else).
+ */
+function syncGrowthReadingToSheet_(reading: GrowthReading): void {
+  try {
+    const deviceId = localStorage.getItem('dae_device_id') || '';
+    const profileRaw = localStorage.getItem('dae_user_profile');
+    const profile = profileRaw ? JSON.parse(profileRaw) : {};
+    fetch(GAS_SYNC_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        entryType: 'growth_reading',
+        entryId: reading.entryId,
+        readingDate: reading.readingDate,
+        ndvi: reading.ndvi,
+        heightCm: reading.heightCm,
+        healthStatus: reading.healthStatus,
+        note: reading.note,
+        recordedBy: reading.recordedBy || profile.name || '',
+        deviceId,
+      }),
+    }).catch((err) => console.warn('Growth reading sync failed (kept locally):', err));
+  } catch (err) {
+    console.warn('Growth reading sync skipped:', err);
+  }
+}
+
 export async function addGrowthReading(reading: Omit<GrowthReading, 'id' | 'createdAt'>): Promise<number> {
   const full: GrowthReading = { ...reading, createdAt: new Date().toISOString() };
-  return tx<number>(STORE_READINGS, 'readwrite', (store) => store.add(full) as IDBRequest<number>);
+  const id = await tx<number>(STORE_READINGS, 'readwrite', (store) => store.add(full) as IDBRequest<number>);
+  syncGrowthReadingToSheet_(full);
+  return id;
 }
 
 export async function deleteGrowthReading(id: number): Promise<void> {

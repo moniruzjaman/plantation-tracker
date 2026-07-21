@@ -1,5 +1,6 @@
 /**
- * Google Apps Script — App_Entry + User_Profile sheet backend.
+ * Google Apps Script — App_Entry + User_Profile + Growth_Log +
+ * Custom_Upazila sheet backend.
  *
  * This file is NOT deployed by Vercel/git. Copy its contents into the
  * Apps Script project bound to the Tree Plantation Reporting Workbook
@@ -10,19 +11,35 @@
  * failing), it always goes through the /api/gas-sync proxy in this repo.
  *
  * Responsibilities:
- *   doPost(e)  -- entryType="user_profile" -> User_Profile sheet
- *                  otherwise                  -> App_Entry sheet (seedling row)
+ *   doPost(e)  -- entryType="user_profile"    -> User_Profile sheet
+ *               -- entryType="growth_reading" -> Growth_Log sheet
+ *               -- entryType="custom_upazila" -> Custom_Upazila sheet
+ *               -- otherwise                  -> App_Entry sheet (seedling row)
  *   doGet(e)   -- ?mobile=01XXXXXXXXX       -> User_Profile lookup by mobile
  *               -- ?list=1[&district=..]    -> every App_Entry row, grouped
+ *               -- ?directory=1[&role=..]   -> personnel directory (deduped
+ *                                              from User_Profile by mobile,
+ *                                              most recent submission wins)
+ *                                              -- powers SAAO/officer
+ *                                              autocomplete; no separate
+ *                                              directory sheet needed
+ *               -- ?customUpazila=1[&district=..] -> all custom upazila
+ *                                              names added across every
+ *                                              device, so one officer's
+ *                                              addition is visible to all
  *
- * IMPORTANT — one-time manual step after deploying this version: add a
- * 'ব্লক' header in the App_Entry sheet's LAST column (after 'সিঙ্কের সময়').
- * This script appends to that position; it does not insert or reorder any
- * existing columns, so already-written rows are unaffected.
+ * IMPORTANT — one-time manual steps after deploying this version:
+ *   1. Add a 'ব্লক' header in the App_Entry sheet's LAST column (after
+ *      'সিঙ্কের সময়'), if not already done from a previous update.
+ *   2. Growth_Log and Custom_Upazila sheets are created automatically on
+ *      first write (same pattern as User_Profile) -- no manual sheet setup
+ *      needed for those two.
  */
 
 var SHEET_NAME = 'App_Entry';
 var PROFILE_SHEET_NAME = 'User_Profile';
+var GROWTH_SHEET_NAME = 'Growth_Log';
+var CUSTOM_UPAZILA_SHEET_NAME = 'Custom_Upazila';
 
 var COLUMNS = [
   'জমার সময়', 'অ্যাপ জমা আইডি', 'বিভাগ', 'অঞ্চল', 'জেলা', 'উপজেলা',
@@ -70,6 +87,15 @@ var PROFILE_COLUMNS = [
   'জেলা', 'উপজেলা', 'ইউনিয়ন', 'ব্লক'
 ];
 
+var GROWTH_COLUMNS = [
+  'জমার সময়', 'এন্ট্রি আইডি', 'পর্যবেক্ষণের তারিখ', 'NDVI',
+  'উচ্চতা (cm)', 'অবস্থা', 'মন্তব্য', 'রেকর্ডকারী', 'ডিভাইস আইডি'
+];
+
+var CUSTOM_UPAZILA_COLUMNS = [
+  'জমার সময়', 'জেলা', 'উপজেলার নাম', 'যোগকারী', 'ডিভাইস আইডি'
+];
+
 function getSheet_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(SHEET_NAME);
@@ -84,6 +110,28 @@ function getProfileSheet_() {
     sheet = ss.insertSheet(PROFILE_SHEET_NAME);
     sheet.appendRow(PROFILE_COLUMNS);
     sheet.getRange(1, 1, 1, PROFILE_COLUMNS.length).setFontWeight('bold');
+  }
+  return sheet;
+}
+
+function getGrowthSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(GROWTH_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(GROWTH_SHEET_NAME);
+    sheet.appendRow(GROWTH_COLUMNS);
+    sheet.getRange(1, 1, 1, GROWTH_COLUMNS.length).setFontWeight('bold');
+  }
+  return sheet;
+}
+
+function getCustomUpazilaSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(CUSTOM_UPAZILA_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(CUSTOM_UPAZILA_SHEET_NAME);
+    sheet.appendRow(CUSTOM_UPAZILA_COLUMNS);
+    sheet.getRange(1, 1, 1, CUSTOM_UPAZILA_COLUMNS.length).setFontWeight('bold');
   }
   return sheet;
 }
@@ -113,6 +161,34 @@ function doPost(e) {
         raw.upazila || '',
         raw.union || '',
         raw.block || ''
+      ]);
+      return jsonOut_({ ok: true });
+    }
+
+    if (raw.entryType === 'growth_reading') {
+      var gs = getGrowthSheet_();
+      gs.appendRow([
+        new Date().toISOString(),
+        raw.entryId || '',
+        raw.readingDate || '',
+        raw.ndvi != null ? raw.ndvi : '',
+        raw.heightCm != null ? raw.heightCm : '',
+        raw.healthStatus || '',
+        raw.note || '',
+        raw.recordedBy || '',
+        raw.deviceId || ''
+      ]);
+      return jsonOut_({ ok: true });
+    }
+
+    if (raw.entryType === 'custom_upazila') {
+      var cus = getCustomUpazilaSheet_();
+      cus.appendRow([
+        new Date().toISOString(),
+        raw.district || '',
+        raw.upazilaName || '',
+        raw.addedBy || '',
+        raw.deviceId || ''
       ]);
       return jsonOut_({ ok: true });
     }
@@ -165,10 +241,83 @@ function doGet(e) {
   try {
     if (params.list) return jsonOut_(listEntries_(params.district, params.region));
     if (params.mobile) return jsonOut_(lookupByMobile_(params.mobile));
-    return jsonOut_({ ok: false, error: 'mobile or list query param required' });
+    if (params.directory) return jsonOut_(getDirectory_(params.role, params.upazila));
+    if (params.customUpazila) return jsonOut_(getCustomUpazilas_(params.district));
+    return jsonOut_({ ok: false, error: 'mobile, list, directory, or customUpazila query param required' });
   } catch (err) {
     return jsonOut_({ ok: false, error: String(err) });
   }
+}
+
+/**
+ * Personnel directory, deduplicated from User_Profile by mobile number
+ * (most recent submission per person wins). This is deliberately NOT a
+ * separate sheet -- User_Profile already is the single source of truth
+ * for "who is this officer" across every role (ADD/AAO/AEO/UAO/SAAO);
+ * duplicating it into a second sheet would just create two records that
+ * can drift out of sync with each other.
+ */
+function getDirectory_(role, upazila) {
+  var ps = getProfileSheet_();
+  var values = ps.getDataRange().getValues();
+  if (values.length < 2) return { ok: true, count: 0, people: [] };
+  var header = values[0];
+  var idx = {};
+  header.forEach(function(h, i) { idx[String(h).trim()] = i; });
+
+  var byMobile = {};
+  var order = [];
+  for (var r = 1; r < values.length; r++) {
+    var v = values[r];
+    if (!v.join('')) continue;
+    var get = function(col) { return idx.hasOwnProperty(col) ? v[idx[col]] : ''; };
+    var mobile = String(get('মোবাইল') || '');
+    if (!mobile) continue;
+    // Later rows overwrite earlier ones for the same mobile -> "most recent wins"
+    if (!byMobile[mobile]) order.push(mobile);
+    byMobile[mobile] = {
+      shortRole: String(get('সংক্ষিপ্ত পদবি') || ''),
+      roleLabel: String(get('পদবি') || ''),
+      name:      String(get('নাম') || ''),
+      mobile:    mobile,
+      district:  String(get('জেলা') || ''),
+      upazila:   String(get('উপজেলা') || ''),
+      union:     String(get('ইউনিয়ন') || ''),
+      block:     String(get('ব্লক') || '')
+    };
+  }
+
+  var people = order.map(function(m) { return byMobile[m]; });
+  if (role) people = people.filter(function(p) { return p.shortRole === role; });
+  if (upazila) people = people.filter(function(p) { return p.upazila === upazila; });
+  return { ok: true, count: people.length, people: people };
+}
+
+/** Every custom upazila name any officer has added, across all devices. */
+function getCustomUpazilas_(district) {
+  var cus = getCustomUpazilaSheet_();
+  var values = cus.getDataRange().getValues();
+  if (values.length < 2) return { ok: true, count: 0, items: [] };
+  var header = values[0];
+  var idx = {};
+  header.forEach(function(h, i) { idx[String(h).trim()] = i; });
+
+  var seen = {};
+  var items = [];
+  for (var r = 1; r < values.length; r++) {
+    var v = values[r];
+    if (!v.join('')) continue;
+    var get = function(col) { return idx.hasOwnProperty(col) ? v[idx[col]] : ''; };
+    var d = String(get('জেলা') || '');
+    var name = String(get('উপজেলার নাম') || '');
+    if (!name) continue;
+    if (district && d !== district) continue;
+    var key = d + '|' + name;
+    if (seen[key]) continue;
+    seen[key] = true;
+    items.push({ district: d, upazilaName: name });
+  }
+  return { ok: true, count: items.length, items: items };
 }
 
 function readAllRows_() {
