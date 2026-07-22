@@ -258,7 +258,7 @@ export default function GeolocationIndicator({ onStateChange }: GeolocationIndic
   };
 
   return (
-    <div className="hidden md:block absolute top-16 right-4 z-50 pointer-events-none font-sans" id="geolocationIndicatorContainer">
+    <div className="block absolute top-16 right-2 sm:right-4 z-50 pointer-events-none font-sans" id="geolocationIndicatorContainer">
       <div className="flex flex-col items-end gap-2 pointer-events-auto">
         {/* Floating Toggle Pill */}
         <motion.button
@@ -304,7 +304,7 @@ export default function GeolocationIndicator({ onStateChange }: GeolocationIndic
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -8, scale: 0.95 }}
               transition={{ duration: 0.12 }}
-              className="w-72 bg-container border border-gray-150 rounded-xl p-4 shadow-xl text-gray-800 text-xs flex flex-col gap-3"
+              className="w-72 max-w-[calc(100vw-1rem)] bg-container border border-gray-150 rounded-xl p-4 shadow-xl text-gray-800 text-xs flex flex-col gap-3"
             >
               {/* Header */}
               <div className="border-b border-gray-100 pb-2 flex items-center justify-between">

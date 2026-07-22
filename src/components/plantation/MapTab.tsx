@@ -436,6 +436,15 @@ export default function MapTab({ geoState, onMapReady }: MapTabProps) {
                 <div className="font-bold text-blue-700 mb-1">{entry.farmerName || entry.nurseryName || entry.village || 'অজানা'}</div>
                 <div className="text-[11px] text-slate-700"><b>উপজেলা/জেলা:</b> {entry.upazila}, {entry.district}</div>
                 <div className="text-[10px] text-blue-600 mt-1">📡 AppScript তথ্য</div>
+                <button
+                  onClick={() => setGrowthTarget({
+                    entryId: String(entry.id || entry.submissionId || `${pos[0]},${pos[1]}`),
+                    label: `${entry.farmerName || entry.nurseryName || entry.village || 'অজানা'}, ${entry.district || ''}`,
+                  })}
+                  className="mt-2 w-full bg-emerald-700 hover:bg-emerald-800 text-white text-[10px] font-semibold py-1.5 rounded-lg cursor-pointer"
+                >
+                  📈 বৃদ্ধি ট্র্যাক করুন
+                </button>
               </div>
             </Popup>
           </Marker>
