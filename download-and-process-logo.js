@@ -17,8 +17,7 @@ function allFilesExist() {
     'logo.svg',
     'logo.png',
     'apple-touch-icon.png',
-    'og-image.png',
-    'og-image-large.png',
+    'og-share-v3.png',
     'favicon-32x32.png',
     'favicon-16x16.png',
     'favicon.ico',
@@ -137,16 +136,7 @@ async function processIcons(svgContent) {
     .toFile(path.join(PUBLIC_DIR, 'apple-touch-icon.png'));
   console.log('✅ Created public/apple-touch-icon.png');
 
-  // 5. Create og-image.png (512x512)
-  const ogBgSquare = Buffer.from('<svg width="512" height="512"><rect width="512" height="512" fill="#ffffff"/></svg>');
-  const ogSealResized = await sharp(svgBuffer).resize(450, 450).png().toBuffer();
-  await sharp(ogBgSquare)
-    .composite([{ input: ogSealResized, gravity: 'center' }])
-    .png()
-    .toFile(path.join(PUBLIC_DIR, 'og-image.png'));
-  console.log('✅ Created public/og-image.png');
-
-  // 6. Create favicon-32x32.png
+  // 5. Create favicon-32x32.png
   const fav32BgCircle = Buffer.from('<svg width="32" height="32"><circle cx="16" cy="16" r="16" fill="#ffffff"/></svg>');
   const fav32SealResized = await sharp(svgBuffer).resize(28, 28).png().toBuffer();
   await sharp(fav32BgCircle)
@@ -171,28 +161,9 @@ async function processIcons(svgContent) {
     .toFile(path.join(PUBLIC_DIR, 'favicon-16x16.png'));
   console.log('✅ Created public/favicon-16x16.png');
 
-  // 8. Create og-image-large.png (1200x630)
-  const bgLarge = await sharp({
-    create: {
-      width: 1200,
-      height: 630,
-      channels: 4,
-      background: { r: 21, g: 128, b: 61, alpha: 1 }
-    }
-  });
-
-  const backdropCircleLarge = Buffer.from('<svg width="430" height="430"><circle cx="215" cy="215" r="215" fill="#ffffff" /></svg>');
-  const sealResizedLarge = await sharp(svgBuffer).resize(400, 400).png().toBuffer();
-
-  await bgLarge
-    .composite([
-      { input: backdropCircleLarge, gravity: 'center' },
-      { input: sealResizedLarge, gravity: 'center' }
-    ])
-    .png()
-    .toFile(path.join(PUBLIC_DIR, 'og-image-large.png'));
-    
-  console.log('✅ Created public/og-image-large.png');
+  // Note: og-image.png / og-image-large.png are intentionally no longer
+  // generated. og-share-v3.png (the official campaign logo) is the sole
+  // sharing image, referenced directly in index.html's og:image/twitter:image.
   console.log('✨ All icons and share assets updated successfully!');
 }
 
