@@ -17,12 +17,15 @@ function allFilesExist() {
     'logo.svg',
     'logo.png',
     'apple-touch-icon.png',
+    'og-image.png',
     'og-share-v3.png',
     'favicon-32x32.png',
     'favicon-16x16.png',
     'favicon.ico',
     'pwa-192x192.svg',
-    'pwa-512x512.svg'
+    'pwa-512x512.svg',
+    'icon-192.png',
+    'icon-512.png'
   ];
   
   return requiredFiles.every(file => fs.existsSync(path.join(PUBLIC_DIR, file)));
