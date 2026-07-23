@@ -3,6 +3,13 @@ import fs from 'fs';
 import path from 'path';
 
 const ANDROID_RES_DIR = 'android/app/src/main/res';
+const LOGO_SOURCE = path.resolve('public', 'logo.png');
+
+// Check if logo.png exists
+if (!fs.existsSync(LOGO_SOURCE)) {
+  console.error('Error: public/logo.png not found. Run download-and-process-logo.js first.');
+  process.exit(1);
+}
 
 // Icon dimensions for each density
 const ICON_DENSITIES = {
@@ -64,45 +71,37 @@ async function generateIcon(density, size, iconType) {
   }
   
   if (iconType === 'ic_launcher_background') {
-    // Solid green background
+    // White background
     await sharp({
       create: {
         width: size,
         height: size,
         channels: 4,
-        background: { r: 16, g: 185, b: 129, alpha: 1 } // Green #10b981
+        background: { r: 255, g: 255, b: 255, alpha: 1 }
       }
     })
     .png()
     .toFile(filepath);
   } else if (iconType === 'ic_launcher_foreground') {
-    // Tree emoji on transparent background
-    const svg = `
-      <svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
-        <text x="50%" y="50%" font-size="${size * 0.7}" text-anchor="middle" dominant-baseline="central">🌳</text>
-      </svg>
-    `;
-    
-    await sharp(Buffer.from(svg))
-      .resize(size, size)
+    // App logo on transparent background
+    await sharp(LOGO_SOURCE)
+      .resize(size, size, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
       .png()
       .toFile(filepath);
   } else {
-    // ic_launcher and ic_launcher_round - green circle with tree
-    const svg = `
-      <svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="${size/2}" cy="${size/2}" r="${size/2}" fill="#10b981"/>
-        <text x="50%" y="50%" font-size="${size * 0.6}" text-anchor="middle" dominant-baseline="central" fill="white">🌳</text>
-      </svg>
-    `;
-    
-    await sharp(Buffer.from(svg))
-      .resize(size, size)
+    // ic_launcher and ic_launcher_round - white circle with app logo
+    const bgSvg = `<svg width="${size}" height="${size}"><circle cx="${size/2}" cy="${size/2}" r="${size/2}" fill="#ffffff"/></svg>`;
+    const logoResized = await sharp(LOGO_SOURCE)
+      .resize(Math.round(size * 0.8), Math.round(size * 0.8), { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .png()
+      .toBuffer();
+    await sharp(Buffer.from(bgSvg))
+      .composite([{ input: logoResized, gravity: 'center' }])
       .png()
       .toFile(filepath);
   }
   
-  console.log(`✅ Generated ${filepath} (${size}x${size})`);
+  console.log(`  ${filepath} (${size}x${size})`);
 }
 
 async function generateSplash(density, dimensions, isNight = false) {
@@ -118,60 +117,62 @@ async function generateSplash(density, dimensions, isNight = false) {
   
   // Background color (green for day, darker green for night)
   const bgColor = isNight 
-    ? { r: 5, g: 150, b: 105 } // Darker green for night mode
-    : { r: 16, g: 185, b: 129 }; // Regular green for day mode
+    ? { r: 0, g: 80, b: 50, alpha: 1 }
+    : { r: 0, g: 106, b: 62, alpha: 1 };
   
-  // Create splash screen with tree emoji
-  const svg = `
-    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-      <rect width="${width}" height="${height}" fill="rgb(${bgColor.r},${bgColor.g},${bgColor.b})"/>
-      <text x="50%" y="50%" font-size="${Math.min(width, height) * 0.4}" text-anchor="middle" dominant-baseline="central" fill="white">🌳</text>
-      <text x="50%" y="${height * 0.75}" font-size="${Math.min(width, height) * 0.05}" text-anchor="middle" fill="white" font-family="sans-serif">বৃক্ষরোপণ কর্মসূচি</text>
-    </svg>
-  `;
-  
-  await sharp(Buffer.from(svg))
-    .resize(width, height)
+  // Create splash with green bg and centered logo
+  const bgBuffer = await sharp({
+    create: { width, height, channels: 4, background: bgColor }
+  }).png().toBuffer();
+
+  const logoSize = Math.round(Math.min(width, height) * 0.3);
+  const logoBuffer = await sharp(LOGO_SOURCE)
+    .resize(logoSize, logoSize, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .png()
+    .toBuffer();
+
+  await sharp(bgBuffer)
+    .composite([{ input: logoBuffer, gravity: 'center' }])
     .png()
     .toFile(filepath);
   
-  console.log(`✅ Generated ${filepath} (${width}x${height})`);
+  console.log(`  ${filepath} (${width}x${height})`);
 }
 
 async function main() {
-  console.log('🎨 Generating Android launcher icons...\n');
+  console.log('Generating Android launcher icons from public/logo.png...\n');
   
   // Generate launcher icons
   for (const [density, size] of Object.entries(ICON_DENSITIES)) {
-    console.log(`\n📱 Processing ${density} (${size}x${size}):`);
+    console.log(`Processing ${density} (${size}x${size}):`);
     
     for (const iconType of ICON_TYPES) {
       try {
         await generateIcon(density, size, iconType);
       } catch (error) {
-        console.error(`❌ Error generating ${iconType} for ${density}:`, error.message);
+        console.error(`  Error generating ${iconType} for ${density}:`, error.message);
       }
     }
   }
   
-  console.log('\n\n🎨 Generating Android splash screens...\n');
+  console.log('\nGenerating Android splash screens...\n');
   
   // Generate splash screens
   for (const [density, dimensions] of Object.entries(SPLASH_DENSITIES)) {
-    console.log(`\n📱 Processing ${density} (${dimensions.width}x${dimensions.height}):`);
+    console.log(`Processing ${density} (${dimensions.width}x${dimensions.height}):`);
     
     try {
       const isNight = density.includes('night');
       await generateSplash(density, dimensions, isNight);
     } catch (error) {
-      console.error(`❌ Error generating splash for ${density}:`, error.message);
+      console.error(`  Error generating splash for ${density}:`, error.message);
     }
   }
   
-  console.log('\n✨ All Android icons and splash screens generated successfully!');
+  console.log('\nAll Android icons and splash screens generated successfully!');
 }
 
 main().catch(error => {
-  console.error('❌ Fatal error:', error);
+  console.error('Fatal error:', error);
   process.exit(1);
 });

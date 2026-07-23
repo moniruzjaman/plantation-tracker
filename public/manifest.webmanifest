@@ -1,41 +1,19 @@
 {
-  "name": "plantation-tracker",
-  "short_name": "বৃক্ষরোপণ ট্র্যাকার",
-  "description": "\u201c\u09e6\u09eb \u09ac\u099b\u09b0\u09c7 \u09e8\u09eb \u0995\u09cb\u099f\u09bf \u09ac\u09c3\u0995\u09cd\u09b7\u09b0\u09cb\u09aa\u09a3\u201d \u0995\u09b0\u09cd\u09ae\u09b8\u09c2\u099a\u09c0 - \u0985\u09cd\u09af\u09be\u09aa | \u09b8\u09cd\u09ac\u09af\u09bc\u0982\u0995\u09cd\u09b0\u09bf\u09af\u09bc \u099c\u09bf\u0993-\u0995\u09cb\u0985\u09b0\u09cd\u09a1\u09bf\u09a8\u09c7\u099f, \u09b8\u09cd\u09ac\u09af\u09bc\u0982\u0995\u09cd\u09b0\u09bf\u09af\u09bc \u09ab\u09b0\u09cd\u09ae \u09aa\u09c2\u09b0\u09a3, \u09b2\u09cb\u0995\u09be\u09b2 \u09b8\u09cd\u099f\u09cb\u09b0\u09c7\u099c, \u0985\u099f\u09cb \u09b8\u09bf\u0999\u09cd\u0995, \u09b8\u09be\u09b0\u09cd\u09ad\u09be\u09b0/Kobo/ODK \u09b8\u09bf\u0999\u09cd\u0995 (\u0986\u09b8\u09a8\u09cd\u09a8)",
+  "name": "বৃক্ষ রোপণে সাজাই দেশ",
+  "short_name": "সাজাই দেশ",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#006A4E",
-  "theme_color": "#006A4E",
-  "orientation": "any",
-  "scope": "/",
+  "background_color": "#ffffff",
+  "theme_color": "#0b6623",
   "icons": [
     {
-      "src": "/logo.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/pwa-192x192.svg",
+      "src": "/icon-192.png",
       "sizes": "192x192",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "type": "image/png"
     },
     {
-      "src": "/pwa-512x512.svg",
+      "src": "/icon-512.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/logo.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/apple-touch-icon.png",
-      "sizes": "180x180",
       "type": "image/png"
     }
   ]

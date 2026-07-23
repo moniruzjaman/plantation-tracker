@@ -1,1 +1,20 @@
-{"name":"plantation-tracker","short_name":"বৃক্ষরোপণ ট্র্যাকার","description":"“০৫ বছরে ২৫ কোটি বৃক্ষরোপণ” কর্মসূচী - অ্যাপ | স্বয়ংক্রিয় জিও-কোঅর্ডিনেট, স্বয়ংক্রিয় ফর্ম পূরণ, লোকাল স্টোরেজ, অটো সিঙ্ক, সার্ভার/Kobo/ODK সিঙ্ক (আসন্ন)","start_url":"/","display":"standalone","background_color":"#15803d","theme_color":"#15803d","lang":"en","scope":"/","orientation":"any","icons":[{"src":"logo.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"},{"src":"pwa-192x192.svg","sizes":"192x192","type":"image/svg+xml","purpose":"any maskable"},{"src":"pwa-512x512.svg","sizes":"512x512","type":"image/svg+xml","purpose":"any maskable"},{"src":"logo.png","sizes":"512x512","type":"image/png","purpose":"any maskable"},{"src":"apple-touch-icon.png","sizes":"180x180","type":"image/png"}]}
+{
+  "name": "বৃক্ষ রোপণে সাজাই দেশ",
+  "short_name": "সাজাই দেশ",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0b6623",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
