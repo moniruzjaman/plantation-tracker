@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Geolocation as CapGeolocation } from '@capacitor/geolocation';
 import { Capacitor } from '@capacitor/core';
@@ -257,45 +258,102 @@ export default function GeolocationIndicator({ onStateChange }: GeolocationIndic
     return { label: 'দুর্বল জিপিএস সংকেত', color: 'bg-amber-100 text-amber-800 border-amber-200' };
   };
 
+  // Portal target: the placeholder div inside the iframe header
+  const portalContainer = useRef<Element | null>(null);
+  useEffect(() => {
+    const tryFind = () => {
+      const iframe = document.querySelector('iframe') as HTMLIFrameElement | null;
+      if (iframe?.contentDocument?.getElementById('header-react-slots')) {
+        portalContainer.current = iframe.contentDocument.getElementById('header-react-slots');
+      }
+      return portalContainer.current !== null;
+    };
+    if (tryFind()) return;
+    const interval = setInterval(() => { if (tryFind()) clearInterval(interval); }, 200);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Compact pill for the header slot (white/transparent style for dark green bg)
+  const headerPill = (
+    <motion.button
+      id="geolocationBadge"
+      layout
+      onClick={() => setIsExpanded(!isExpanded)}
+      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border transition-all text-[10px] font-semibold cursor-pointer ${
+        geo.error
+          ? 'bg-red-500/20 border-red-400/50 text-red-100 hover:bg-red-500/30'
+          : geo.loading
+          ? 'bg-white/15 border-white/20 text-cyan-200 hover:bg-white/25'
+          : 'bg-white/15 border-white/20 text-white hover:bg-white/25'
+      }`}
+      whileHover={{ scale: 1.03 }}
+      whileTap={{ scale: 0.97 }}
+    >
+      {geo.loading ? (
+        <Locate className="w-3 h-3 text-cyan-300 animate-spin" />
+      ) : geo.error ? (
+        <AlertCircle className="w-3 h-3 text-red-300" />
+      ) : (
+        <div className="relative flex items-center justify-center">
+          <span className="absolute animate-ping h-2 w-2 rounded-full bg-primary-300 opacity-75"></span>
+          <MapPin className="relative w-3 h-3 text-primary-200" />
+        </div>
+      )}
+
+      <span>
+        {geo.loading
+          ? 'জিপিএস সন্ধান...'
+          : geo.error
+          ? 'জিপিএস ত্রুটি!'
+          : `জিপিএস: ±${geo.coords?.accuracy.toFixed(0)}m`}
+      </span>
+    </motion.button>
+  );
+
   return (
-    <div className="block absolute top-16 right-2 sm:right-4 z-50 pointer-events-none font-sans" id="geolocationIndicatorContainer">
-      <div className="flex flex-col items-end gap-2 pointer-events-auto">
-        {/* Floating Toggle Pill */}
-        <motion.button
-          id="geolocationBadge"
-          layout
-          onClick={() => setIsExpanded(!isExpanded)}
-          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full shadow-lg border backdrop-blur-sm transition-all text-xs font-semibold cursor-pointer ${
-            geo.error 
-              ? 'bg-red-50/95 border-red-200 text-red-800 hover:bg-red-100/95' 
-              : geo.loading 
-              ? 'bg-cyan-50/95 border-cyan-200 text-cyan-800 hover:bg-cyan-100/95' 
-              : 'bg-primary-50/95 border-primary-200 text-primary-700 hover:bg-primary-100/95'
-          }`}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-        >
-          {geo.loading ? (
-            <Locate className="w-4 h-4 text-cyan-500 animate-spin" />
-          ) : geo.error ? (
-            <AlertCircle className="w-4 h-4 text-red-500" />
-          ) : (
-            <div className="relative flex items-center justify-center">
-              <span className="absolute animate-ping h-2.5 w-2.5 rounded-full bg-primary-300 opacity-75"></span>
-              <MapPin className="relative w-4 h-4 text-primary-500" />
-            </div>
+    <>
+      {/* Portal: render compact pill into iframe header slot */}
+      {portalContainer.current && createPortal(headerPill, portalContainer.current)}
+
+      {/* Overlay container for expanded detail panel (always rendered outside iframe) */}
+      <div className={portalContainer.current ? 'fixed z-[60] pointer-events-none font-sans' : 'absolute top-16 right-2 sm:right-4 z-50 block pointer-events-none font-sans'} style={portalContainer.current ? { top: '60px', right: '8px' } : undefined}>
+        <div className="flex flex-col items-end gap-2 pointer-events-auto">
+          {/* Fallback pill shown only before portal mounts */}
+          {!portalContainer.current && (
+            <motion.button
+              layout
+              onClick={() => setIsExpanded(!isExpanded)}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full shadow-lg border backdrop-blur-sm transition-all text-xs font-semibold cursor-pointer ${
+                geo.error
+                  ? 'bg-red-50/95 border-red-200 text-red-800 hover:bg-red-100/95'
+                  : geo.loading
+                  ? 'bg-cyan-50/95 border-cyan-200 text-cyan-800 hover:bg-cyan-100/95'
+                  : 'bg-primary-50/95 border-primary-200 text-primary-700 hover:bg-primary-100/95'
+              }`}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              {geo.loading ? (
+                <Locate className="w-4 h-4 text-cyan-500 animate-spin" />
+              ) : geo.error ? (
+                <AlertCircle className="w-4 h-4 text-red-500" />
+              ) : (
+                <div className="relative flex items-center justify-center">
+                  <span className="absolute animate-ping h-2.5 w-2.5 rounded-full bg-primary-300 opacity-75"></span>
+                  <MapPin className="relative w-4 h-4 text-primary-500" />
+                </div>
+              )}
+              <span>
+                {geo.loading
+                  ? 'জিপিএস সন্ধান করা হচ্ছে...'
+                  : geo.error
+                  ? 'জিপিএস ত্রুটি!'
+                  : `জিপিএস নির্ভুলতা: ±${geo.coords?.accuracy.toFixed(0)} মিটার`}
+              </span>
+            </motion.button>
           )}
 
-          <span>
-            {geo.loading 
-              ? 'জিপিএস সন্ধান করা হচ্ছে...' 
-              : geo.error 
-              ? 'জিপিএস ত্রুটি!' 
-              : `জিপিএস নির্ভুলতা: ±${geo.coords?.accuracy.toFixed(0)} মিটার`}
-          </span>
-        </motion.button>
-
-        {/* Info detail Overlay Panel */}
+          {/* Info detail Overlay Panel */}
         <AnimatePresence>
           {isExpanded && (
             <motion.div
@@ -393,7 +451,8 @@ export default function GeolocationIndicator({ onStateChange }: GeolocationIndic
             </motion.div>
           )}
         </AnimatePresence>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
