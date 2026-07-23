@@ -81,13 +81,18 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <img src="/dae-logo.webp" onerror="this.onerror=null;this.src='/dae-logo.png'" alt="কৃষি সম্প্রসারণ অধিদপ্তর" class="w-11 h-11 sm:w-14 sm:h-14 bg-white rounded-full p-1 shadow flex-shrink-0">
 </div>
 <div style="height:3px;background:linear-gradient(to right,#166534,#dc2626 50%,#166534);margin-top:10px;border-radius:2px;opacity:.9;position:relative;z-index:1"></div>
-<div class="max-w-6xl mx-auto flex items-center justify-end gap-4" style="position:relative;z-index:1;margin-top:6px">
+<div class="max-w-6xl mx-auto flex items-center justify-between" style="position:relative;z-index:1;margin-top:6px">
+<!-- React-portal slots: GPS Accuracy + Mobile Control -->
+<div id="header-react-slots" class="flex items-center gap-2" style="min-height:28px"></div>
+<!-- Instruction & Share buttons -->
+<div class="flex items-center gap-4">
 <button onclick="openGuideModal()" title="ব্যবহার নির্দেশিকা" aria-label="ব্যবহার নির্দেশিকা" class="header-icon-plain flex items-center gap-1 cursor-pointer" style="background:transparent;border:none;color:#dcfce7;padding:2px 4px">
 <span style="font-size:15px;line-height:1">📘</span><span class="text-[10px] font-semibold">নির্দেশিকা</span>
 </button>
 <button onclick="openShareModal()" title="অ্যাপ শেয়ার করুন" aria-label="অ্যাপ শেয়ার করুন" class="header-icon-plain flex items-center gap-1 cursor-pointer" style="background:transparent;border:none;color:#fecaca;padding:2px 4px">
 <span style="font-size:15px;line-height:1">📤</span><span class="text-[10px] font-semibold">শেয়ার</span>
 </button>
+</div>
 </div>
 </header>
 
