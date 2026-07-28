@@ -198,6 +198,8 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 </div>
 <form id="nurseryForm" novalidate>
 <input type="hidden" id="editId" value="">
+<input type="hidden" id="fGeoFencePoints" value="">
+<input type="hidden" id="fGeoFenceAreaSqm" value="">
 
 <!-- ===== 1. GENERAL INFO ===== -->
 <fieldset style="border-color:#86efac;background:#f9fafb" class="rounded-xl border-2 p-4 sm:p-5 mb-4">
@@ -310,11 +312,46 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 </div>
 
 <div class="sm:col-span-2">
-<label class="block text-xs font-semibold text-gray-700 mb-1">জিও লোকেশন <button type="button" onclick="fetchGeoLocation()" id="geoBtn" class="ml-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full transition" style="font-size:10px;font-weight:500;color:#15803d;background:#f0fdf4;border:1px solid #bbf7d0" title="লোকেশন আপডেট করুন"><svg id="geoIcon" style="height:12px;width:12px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg><span id="geoBtnText">স্বয়ংক্রিয়</span></button></label>
+<label class="block text-xs font-semibold text-gray-700 mb-1">জিও লোকেশন
+<button type="button" onclick="fetchGeoLocation()" id="geoBtn" class="ml-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full transition" style="font-size:10px;font-weight:500;color:#15803d;background:#f0fdf4;border:1px solid #bbf7d0" title="লোকেশন আপডেট করুন"><svg id="geoIcon" style="height:12px;width:12px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg><span id="geoBtnText">স্বয়ংক্রিয়</span></button>
+<button type="button" onclick="toggleGeoManualPanel()" id="geoManualToggleBtn" class="ml-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full transition" style="font-size:10px;font-weight:500;color:#1d4ed8;background:#eff6ff;border:1px solid #93c5fd" title="ম্যাপ দেখুন / নিজে কোঅর্ডিনেট লিখুন">🗺️ <span id="geoManualToggleText">ম্যাপ/ম্যানুয়াল</span></button>
+</label>
 <div class="flex gap-2">
 <input type="text" id="fGeo" placeholder="অক্ষাংশ, দ্রাঘিমাংশ" class="flex-1 border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db" onchange="if(window.onGeoLocationChange){window.onGeoLocationChange(this, 'fAddress')}">
 </div>
 <p id="geoStatus" class="hidden mt-0.5" style="font-size:10px;color:#9ca3af"><span id="geoStatusText"></span></p>
+
+<!-- ===== Manual coordinate entry + OpenStreetMap + geofence walker ===== -->
+<div id="geoManualPanel" class="hidden mt-2 p-3 rounded-lg border" style="background:#f8fafc;border-color:#dbeafe">
+
+  <div class="grid grid-cols-2 gap-2 mb-2">
+    <div>
+      <label class="block text-[10px] font-bold text-gray-500 mb-0.5">অক্ষাংশ (Latitude)</label>
+      <input type="text" inputmode="decimal" id="fGeoLatManual" placeholder="যেমন: 25.805417" class="w-full border rounded px-2 py-1.5 text-sm" style="border-color:#93c5fd">
+    </div>
+    <div>
+      <label class="block text-[10px] font-bold text-gray-500 mb-0.5">দ্রাঘিমাংশ (Longitude)</label>
+      <input type="text" inputmode="decimal" id="fGeoLngManual" placeholder="যেমন: 89.636861" class="w-full border rounded px-2 py-1.5 text-sm" style="border-color:#93c5fd">
+    </div>
+  </div>
+  <div class="flex gap-2 mb-2">
+    <button type="button" onclick="showManualGeoOnMap()" id="geoManualShowBtn" class="flex-1 text-white rounded-md py-1.5 text-xs font-semibold" style="background:#1d4ed8">📍 ম্যানুয়াল কোঅর্ডিনেট ম্যাপে দেখান</button>
+  </div>
+  <p id="geoManualStatus" class="hidden mb-2" style="font-size:10px;color:#9ca3af"></p>
+
+  <div id="fGeoMap" class="w-full rounded-lg border" style="height:240px;border-color:#93c5fd"></div>
+  <p style="font-size:10px;color:#6b7280" class="mt-1">মানচিত্রে ট্যাপ করুন অথবা মার্কার টেনে সঠিক অবস্থান নির্ধারণ করুন। ম্যানুয়াল ইনপুট ঘরে যা লিখবেন, মার্কার ঠিক সেই কোঅর্ডিনেটেই বসবে।</p>
+
+  <!-- Geo-fencing: walk the boundary of a plant cluster to record its outline -->
+  <div class="mt-3 pt-3" style="border-top:1px dashed #bfdbfe">
+    <p class="text-xs font-bold text-gray-700 mb-1.5">🚶 জিও-ফেন্সিং (ক্লাস্টার/সারিবদ্ধ চারার সীমানা হাঁটার মাধ্যমে রেকর্ড করুন)</p>
+    <div class="flex gap-2 flex-wrap">
+      <button type="button" onclick="toggleGeoFenceWalk()" id="geoFenceWalkBtn" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-semibold text-white" style="background:#15803d">🚶 হাঁটা শুরু করুন</button>
+      <button type="button" onclick="clearGeoFence()" id="geoFenceClearBtn" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-semibold" style="background:#fee2e2;color:#b91c1c">✕ সীমানা মুছুন</button>
+    </div>
+    <p id="geoFenceInfo" class="mt-1.5" style="font-size:10px;color:#6b7280">এখনও কোনো সীমানা রেকর্ড করা হয়নি। হাঁটা শুরু করুন এবং ক্লাস্টারের চারপাশ ঘুরে আসুন।</p>
+  </div>
+</div>
 </div>
 
 <div class="sm:col-span-2">
@@ -1570,12 +1607,51 @@ function addSeedlingRow(containerId, data){
     + '<select class="seedling-category w-full border rounded px-2 py-1.5 text-sm bg-white" style="border-color:#d1d5db">'+catOpts+'</select></div>'
     + '<div class="col-span-4 sm:col-span-2"><label class="block text-[10px] font-bold text-gray-500 mb-0.5">সংখ্যা</label>'
     + '<input type="number" min="1" placeholder="০" value="'+qtyVal+'" class="seedling-quantity w-full border rounded px-2 py-1.5 text-sm" style="border-color:#d1d5db"></div>'
-    + '<div class="col-span-2 sm:col-span-2 flex justify-end">'
+    + '<div class="col-span-8 sm:col-span-2 flex justify-end gap-1">'
+    + '<button type="button" onclick="saveSeedlingRow(this)" class="seedling-save-btn text-white text-[11px] font-semibold px-2.5 py-1.5 rounded whitespace-nowrap" style="background:#15803d">💾 সংরক্ষণ</button>'
     + '<button type="button" onclick="this.closest(\'.seedling-row\').remove()" class="text-red-500 text-xs px-2 py-1.5 hover:bg-red-50 rounded">✕</button></div>'
     + '</div>';
   container.insertAdjacentHTML("beforeend", html);
 }
 window.addSeedlingRow = addSeedlingRow;
+
+// Per-row "save": locks in a seedling entry (validates species + quantity,
+// then disables the fields and flips the button to an editable "saved"
+// state) so a user adding many species can confirm each one as they go,
+// rather than only finding out about a missing field at final submit time.
+window.saveSeedlingRow = function(btn){
+  var row = btn.closest(".seedling-row");
+  if(!row) return;
+  var nameEl = row.querySelector(".seedling-name");
+  var catEl = row.querySelector(".seedling-category");
+  var qtyEl = row.querySelector(".seedling-quantity");
+  var isSaved = row.classList.contains("seedling-saved");
+
+  if(isSaved){
+    row.classList.remove("seedling-saved");
+    row.style.background = "";
+    [nameEl, catEl, qtyEl].forEach(function(el){ if(el) el.disabled = false; });
+    btn.textContent = "💾 সংরক্ষণ";
+    btn.style.background = "#15803d";
+    return;
+  }
+
+  var qtyOk = parseInt(qtyEl && qtyEl.value) > 0;
+  if(!nameEl || !nameEl.value.trim() || !qtyOk){
+    [nameEl, qtyEl].forEach(function(el){
+      if(!el) return;
+      el.classList.add("shake"); el.style.borderColor = "#ef4444";
+      setTimeout(function(){ el.classList.remove("shake"); el.style.borderColor = "#d1d5db"; }, 350);
+    });
+    return;
+  }
+
+  row.classList.add("seedling-saved");
+  row.style.background = "#f0fdf4";
+  [nameEl, catEl, qtyEl].forEach(function(el){ if(el) el.disabled = true; });
+  btn.textContent = "✅ সংরক্ষিত (সম্পাদনা)";
+  btn.style.background = "#047857";
+};
 
 function collectSeedlings(containerId){
   containerId = containerId || "seedlingRows";
@@ -1739,6 +1815,8 @@ function buildBaseSubmission(prefix){
     latitude:    lat,
     longitude:   lng,
     geoLocation: geoStr,
+    geoFencePoints:   prefix === "f" ? _val(prefix+"GeoFencePoints") : "",
+    geoFenceAreaSqm:  prefix === "f" ? _val(prefix+"GeoFenceAreaSqm") : "",
     plantingDate:pDateVal,
     farmerName:  _val(prefix+"Nursery"),
     farmerMobile:_val(prefix+"Mobile"),
@@ -1855,6 +1933,8 @@ if(photoWrap) photoWrap.classList.add("hidden");
 var ndviEl = document.getElementById("fNdvi");
 if(ndviEl) ndviEl.value = "";
 document.getElementById("fSourceTypeCustom").classList.add("hidden");
+if(window.clearGeoFence) window.clearGeoFence();
+if(geoManualMarker && geoManualMap){ geoManualMap.removeLayer(geoManualMarker); geoManualMarker = null; }
 applyProfileToForm();
 fetchGeoLocation();
 };
@@ -1930,6 +2010,214 @@ window.reverseGeocode(lat, lng, "fAddress");
 window.autoFillNdvi && window.autoFillNdvi(lat, lng);
 },function(err){var msg="";switch(err.code){case 1:msg="❌ লোকেশন অনুমতি দেওয়া হয়নি। ব্রাউজার সেটিংস থেকে অনুমতি দিন।";break;case 2:msg="⚠️ লোকেশন পাওয়া যায়নি।";break;case 3:msg="⏱️ লোকেশন খোঁজার সময় শেষ হয়ে গেছে।";break;default:msg="⚠️ অজানা ত্রুটি হয়েছে।"}geoStatusText.textContent=msg;geoStatus.style.color="#dc2626";geoBtnText.textContent="আবার চেষ্টা"},{enableHighAccuracy:true,timeout:10000,maximumAge:300000});
 }catch(e){console.error("Geo error:",e)}
+};
+
+// ── Manual coordinate entry + OpenStreetMap + geofence walker ──
+var geoManualMap = null, geoManualMarker = null, geoFenceLayer = null;
+var geoFenceWatchId = null, geoFencePoints = [], geoFenceWalking = false;
+
+function _setFGeoFromLatLng(lat, lng, exact){
+  // `exact` preserves whatever precision was typed/tapped rather than forcing
+  // a fixed rounding, per the "bound to follow exact input" requirement.
+  var latStr = exact ? String(lat) : Number(lat).toFixed(6);
+  var lngStr = exact ? String(lng) : Number(lng).toFixed(6);
+  var geoField = document.getElementById("fGeo");
+  if(geoField) geoField.value = latStr + ", " + lngStr;
+  var latManual = document.getElementById("fGeoLatManual");
+  var lngManual = document.getElementById("fGeoLngManual");
+  if(latManual) latManual.value = latStr;
+  if(lngManual) lngManual.value = lngStr;
+}
+
+function _ensureGeoManualMap(){
+  if(geoManualMap) return geoManualMap;
+  var el = document.getElementById("fGeoMap");
+  if(!el || typeof L === "undefined") return null;
+
+  var startLat = 23.8103, startLng = 90.4125, startZoom = 7;
+  var existing = (_val("fGeo") || "").split(",");
+  var eLat = parseFloat(existing[0]), eLng = parseFloat(existing[1]);
+  if(!isNaN(eLat) && !isNaN(eLng)){ startLat = eLat; startLng = eLng; startZoom = 17; }
+
+  geoManualMap = L.map("fGeoMap").setView([startLat, startLng], startZoom);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+  }).addTo(geoManualMap);
+
+  if(startZoom === 17){
+    geoManualMarker = L.marker([startLat, startLng], {draggable:true}).addTo(geoManualMap);
+    _bindGeoManualMarkerEvents();
+  }
+
+  geoManualMap.on("click", function(e){
+    _placeGeoManualMarker(e.latlng.lat, e.latlng.lng, false);
+  });
+
+  // Geofence walking must draw on this same map instance.
+  if(geoFencePoints.length){ _redrawGeoFence(); }
+
+  return geoManualMap;
+}
+
+function _bindGeoManualMarkerEvents(){
+  if(!geoManualMarker) return;
+  geoManualMarker.on("dragend", function(){
+    var ll = geoManualMarker.getLatLng();
+    _setFGeoFromLatLng(ll.lat.toFixed(6), ll.lng.toFixed(6), true);
+    window.reverseGeocode && window.reverseGeocode(ll.lat.toFixed(6), ll.lng.toFixed(6), "fAddress");
+    window.autoFillNdvi && window.autoFillNdvi(ll.lat.toFixed(6), ll.lng.toFixed(6));
+  });
+}
+
+function _placeGeoManualMarker(lat, lng, exact){
+  var map = _ensureGeoManualMap();
+  if(!map) return;
+  var latlng = [lat, lng];
+  if(!geoManualMarker){
+    geoManualMarker = L.marker(latlng, {draggable:true}).addTo(map);
+    _bindGeoManualMarkerEvents();
+  } else {
+    geoManualMarker.setLatLng(latlng);
+  }
+  map.setView(latlng, Math.max(map.getZoom(), 17));
+  _setFGeoFromLatLng(lat, lng, exact);
+  window.reverseGeocode && window.reverseGeocode(exact ? lat : Number(lat).toFixed(6), exact ? lng : Number(lng).toFixed(6), "fAddress");
+  window.autoFillNdvi && window.autoFillNdvi(lat, lng);
+}
+
+window.toggleGeoManualPanel = function(){
+  var panel = document.getElementById("geoManualPanel");
+  if(!panel) return;
+  var isHidden = panel.classList.contains("hidden");
+  panel.classList.toggle("hidden");
+  if(isHidden){
+    // Leaflet needs a visible, sized container — init/measure after the
+    // panel becomes visible, same fix already used for the satellite map.
+    setTimeout(function(){
+      var map = _ensureGeoManualMap();
+      if(map){ map.invalidateSize(); }
+    }, 50);
+  }
+};
+
+window.showManualGeoOnMap = function(){
+  var latRaw = _val("fGeoLatManual"), lngRaw = _val("fGeoLngManual");
+  var statusEl = document.getElementById("geoManualStatus");
+  var lat = parseFloat(latRaw), lng = parseFloat(lngRaw);
+  if(latRaw === "" || lngRaw === "" || isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180){
+    if(statusEl){ statusEl.textContent = "⚠️ সঠিক অক্ষাংশ (-90 থেকে 90) ও দ্রাঘিমাংশ (-180 থেকে 180) লিখুন।"; statusEl.style.color = "#dc2626"; statusEl.classList.remove("hidden"); }
+    return;
+  }
+  // Pass through the raw typed strings (trimmed) so the marker — and the
+  // saved geo field — reflect exactly what the user entered, not a rounded copy.
+  _placeGeoManualMarker(latRaw.trim(), lngRaw.trim(), true);
+  if(statusEl){ statusEl.textContent = "✅ মার্কার নির্ধারিত কোঅর্ডিনেটে বসানো হয়েছে।"; statusEl.style.color = "#15803d"; statusEl.classList.remove("hidden"); setTimeout(function(){statusEl.classList.add("hidden")}, 3000); }
+};
+
+// Haversine distance in meters — used to filter GPS noise while walking.
+function _haversineMeters(lat1, lng1, lat2, lng2){
+  var R = 6371000;
+  var dLat = (lat2 - lat1) * Math.PI / 180;
+  var dLng = (lng2 - lng1) * Math.PI / 180;
+  var a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// Polygon area via the shoelace formula on a local equirectangular
+// projection (metres) — accurate enough for small plantation plots.
+function _polygonAreaSqm(points){
+  if(points.length < 3) return 0;
+  var lat0 = points[0].lat * Math.PI / 180;
+  var mPerDegLat = 111320;
+  var mPerDegLng = 111320 * Math.cos(lat0);
+  var pts = points.map(function(p){ return { x: p.lng * mPerDegLng, y: p.lat * mPerDegLat }; });
+  var area = 0;
+  for(var i=0;i<pts.length;i++){
+    var j = (i+1) % pts.length;
+    area += pts[i].x * pts[j].y - pts[j].x * pts[i].y;
+  }
+  return Math.abs(area / 2);
+}
+
+function _redrawGeoFence(){
+  var map = _ensureGeoManualMap();
+  if(!map) return;
+  if(geoFenceLayer){ map.removeLayer(geoFenceLayer); geoFenceLayer = null; }
+  if(geoFencePoints.length < 2) return;
+  var latlngs = geoFencePoints.map(function(p){ return [p.lat, p.lng]; });
+  if(geoFenceWalking){
+    geoFenceLayer = L.polyline(latlngs, { color: "#ea580c", weight: 3 }).addTo(map);
+  } else {
+    geoFenceLayer = L.polygon(latlngs, { color: "#15803d", weight: 3, fillOpacity: 0.15 }).addTo(map);
+    map.fitBounds(geoFenceLayer.getBounds(), { maxZoom: 19, padding: [20,20] });
+  }
+}
+
+function _updateGeoFenceInfo(){
+  var infoEl = document.getElementById("geoFenceInfo");
+  if(!infoEl) return;
+  if(!geoFencePoints.length){
+    infoEl.textContent = "এখনও কোনো সীমানা রেকর্ড করা হয়নি। হাঁটা শুরু করুন এবং ক্লাস্টারের চারপাশ ঘুরে আসুন।";
+    return;
+  }
+  var areaSqm = _polygonAreaSqm(geoFencePoints);
+  var areaDecimal = areaSqm / 40.4686; // 1 decimal (শতক) ≈ 40.4686 sqm — familiar local land unit
+  var txt = geoFencePoints.length + "টি পয়েন্ট রেকর্ড হয়েছে।";
+  if(geoFencePoints.length >= 3 && !geoFenceWalking){
+    txt += " আনুমানিক আয়তন: " + areaSqm.toFixed(1) + " বর্গমিটার (≈ " + areaDecimal.toFixed(2) + " শতক)।";
+  } else if(geoFenceWalking){
+    txt += " হাঁটা চলছে...";
+  }
+  infoEl.textContent = txt;
+}
+
+window.toggleGeoFenceWalk = function(){
+  var btn = document.getElementById("geoFenceWalkBtn");
+  if(!geoFenceWalking){
+    if(!navigator.geolocation){
+      var infoEl = document.getElementById("geoFenceInfo");
+      if(infoEl){ infoEl.textContent = "⚠️ আপনার ব্রাউজার লোকেশন সাপোর্ট করে না।"; }
+      return;
+    }
+    _ensureGeoManualMap();
+    geoFenceWalking = true;
+    geoFencePoints = [];
+    if(btn){ btn.textContent = "⏹ হাঁটা শেষ করুন"; btn.style.background = "#dc2626"; }
+    geoFenceWatchId = navigator.geolocation.watchPosition(function(pos){
+      var lat = pos.coords.latitude, lng = pos.coords.longitude;
+      var last = geoFencePoints[geoFencePoints.length - 1];
+      // Ignore GPS jitter: only record a new vertex once the walker has
+      // actually moved at least ~2 metres from the last recorded point.
+      if(!last || _haversineMeters(last.lat, last.lng, lat, lng) >= 2){
+        geoFencePoints.push({ lat: lat, lng: lng });
+        _redrawGeoFence();
+        _updateGeoFenceInfo();
+      }
+    }, function(err){
+      var infoEl = document.getElementById("geoFenceInfo");
+      if(infoEl){ infoEl.textContent = "⚠️ লোকেশন ট্র্যাক করতে সমস্যা হয়েছে (কোড " + err.code + ")।"; }
+    }, { enableHighAccuracy: true, maximumAge: 1000, timeout: 15000 });
+  } else {
+    geoFenceWalking = false;
+    if(geoFenceWatchId !== null){ navigator.geolocation.clearWatch(geoFenceWatchId); geoFenceWatchId = null; }
+    if(btn){ btn.textContent = "🚶 হাঁটা শুরু করুন"; btn.style.background = "#15803d"; }
+    if(geoFencePoints.length >= 3){
+      document.getElementById("fGeoFencePoints").value = JSON.stringify(geoFencePoints);
+      document.getElementById("fGeoFenceAreaSqm").value = _polygonAreaSqm(geoFencePoints).toFixed(1);
+    }
+    _redrawGeoFence();
+    _updateGeoFenceInfo();
+  }
+};
+
+window.clearGeoFence = function(){
+  if(geoFenceWalking){ window.toggleGeoFenceWalk(); }
+  geoFencePoints = [];
+  if(geoFenceLayer && geoManualMap){ geoManualMap.removeLayer(geoFenceLayer); geoFenceLayer = null; }
+  document.getElementById("fGeoFencePoints").value = "";
+  document.getElementById("fGeoFenceAreaSqm").value = "";
+  _updateGeoFenceInfo();
 };
 
 // ── NDVI auto-fill ──
