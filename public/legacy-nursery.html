@@ -115,7 +115,7 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <span class="text-lg">📂</span>আমার তথ্য
 <div class="nav-dot"></div>
 </button>
-<button onclick="switchTab('admin')" class="nav-btn flex-1 py-3.5 text-sm font-semibold text-gray-500 hover:text-green-700 hover:bg-green-50 flex flex-col items-center gap-1" data-tab="admin">
+<button onclick="switchTab('storedData');switchMyDataSubTab('admin')" class="nav-btn flex-1 py-3.5 text-sm font-semibold text-gray-500 hover:text-green-700 hover:bg-green-50 flex flex-col items-center gap-1" data-tab="storedData">
 <span class="text-lg">🔐</span>এডমিন
 <div class="nav-dot"></div>
 </button>
@@ -140,7 +140,7 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <span class="text-xl">📂</span><span class="text-xs font-semibold" style="font-size:10px">আমার তথ্য</span>
 <div class="nav-dot mt-0.5"></div>
 </button>
-<button onclick="switchTab('admin')" class="nav-btn flex-1 py-2.5 flex flex-col items-center gap-0.5 text-gray-400" data-tab="admin">
+<button onclick="switchTab('storedData');switchMyDataSubTab('admin')" class="nav-btn flex-1 py-2.5 flex flex-col items-center gap-0.5 text-gray-400" data-tab="storedData">
 <span class="text-xl">🔐</span><span class="text-xs font-semibold" style="font-size:10px">এডমিন</span>
 <div class="nav-dot mt-0.5"></div>
 </button>
@@ -611,6 +611,14 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <section id="tab-storedData" class="tab-content hidden">
 <div class="max-w-4xl mx-auto">
 
+<!-- Sub-tabs: আমার এন্ট্রি vs এডমিন (admin now lives inside এই ট্যাবে, not a separate top-level tab) -->
+<div class="flex gap-1 mb-4 p-1 rounded-lg" style="background:#f3f4f6;max-width:22rem">
+<button onclick="switchMyDataSubTab('mine')" id="myDataSubBtnMine" class="flex-1 text-xs sm:text-sm font-semibold py-2 rounded-md transition cursor-pointer" style="background:#ffffff;color:#15803d;box-shadow:0 1px 2px rgba(0,0,0,.06)">📂 আমার এন্ট্রি</button>
+<button onclick="switchMyDataSubTab('admin')" id="myDataSubBtnAdmin" class="flex-1 text-xs sm:text-sm font-semibold py-2 rounded-md transition cursor-pointer text-gray-500">🔐 এডমিন</button>
+</div>
+
+<div id="myDataPane-mine">
+
 <!-- Profile summary (merged from Profile modal) -->
 <div id="myProfileCard" class="bg-white rounded-xl shadow p-4 sm:p-5 mb-4"></div>
 
@@ -676,10 +684,10 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 
 <div id="mySubmissionsList" class="space-y-3"></div>
 </div>
-</section>
+<!-- /myDataPane-mine -->
 
-<!-- ========== TAB: ADMIN ========== -->
-<section id="tab-admin" class="tab-content hidden">
+<!-- ========== SUB-TAB: ADMIN (moved from the old standalone tab-admin) ========== -->
+<div id="myDataPane-admin" class="hidden">
 <div id="adminLogin" class="max-w-sm mx-auto bg-white rounded-xl shadow p-6 mt-8">
 <div class="text-center mb-4"><span class="text-4xl">🔐</span><h2 class="text-lg font-bold text-green-700 mt-2">এডমিন লগইন</h2></div>
 <div class="space-y-3">
@@ -689,7 +697,7 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 </div>
 </div>
 <div id="adminPanel" class="hidden">
-<div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+<div class="flex items-center justify-between mb-2 flex-wrap gap-2">
 <div class="flex items-center gap-2"><span class="text-xs font-semibold px-3 py-1 rounded-full" style="background:#dcfce7;color:#166534">✅ এডমিন</span><button onclick="changePassword()" class="text-xs underline" style="color:#2563eb">পাসওয়ার্ড পরিবর্তন</button></div>
 <div class="flex gap-2 flex-wrap">
 <button onclick="exportToGovExcel('admin')" class="text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition hover:opacity-90 cursor-pointer" style="background:#0284c7">📥 মন্ত্রণালয় ছক (Excel)</button>
@@ -701,6 +709,10 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <button onclick="adminLogout()" class="text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition hover:opacity-90 cursor-pointer" style="background:#dc2626">🚪 লগআউট</button>
 </div>
 </div>
+<div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+<span id="adminDataSourceNote" class="text-xs text-gray-400">লোকাল + জাতীয় App_Entry ডাটা মার্জ করা হয়েছে</span>
+<button onclick="refreshAdminNationalData()" class="text-xs font-semibold px-3 py-1.5 rounded-md border cursor-pointer hover:bg-gray-50 transition" style="border-color:#15803d;color:#15803d" id="adminRefreshBtn">🔄 রিফ্রেশ</button>
+</div>
 <div class="bg-white rounded-xl shadow p-3 mb-4">
 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
 <select id="adminRegion" onchange="onAdminRegionChange()" class="border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব অঞ্চল</option></select>
@@ -709,10 +721,14 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 </div>
 <div class="bg-white rounded-xl shadow overflow-x-auto">
 <table class="w-full text-xs sm:text-sm" id="adminTable">
-<thead><tr style="background:#f0fdf4;color:#166534"><th class="px-2 py-2 text-left whitespace-nowrap">ক্রম</th><th class="px-2 py-2 text-left whitespace-nowrap">অঞ্চল</th><th class="px-2 py-2 text-left whitespace-nowrap">জেলা</th><th class="px-2 py-2 text-left whitespace-nowrap">উপজেলা</th><th class="px-2 py-2 text-left whitespace-nowrap">রোপণকারীর নাম</th><th class="px-2 py-2 text-left whitespace-nowrap">মোবাইল</th><th class="px-2 py-2 text-left whitespace-nowrap">চারা</th><th class="px-2 py-2 text-left whitespace-nowrap">তারিখ</th><th class="px-2 py-2 text-center whitespace-nowrap">অ্যাকশন</th></tr></thead>
+<thead><tr style="background:#f0fdf4;color:#166534"><th class="px-2 py-2 text-left whitespace-nowrap">ক্রম</th><th class="px-2 py-2 text-left whitespace-nowrap">উৎস</th><th class="px-2 py-2 text-left whitespace-nowrap">অঞ্চল</th><th class="px-2 py-2 text-left whitespace-nowrap">জেলা</th><th class="px-2 py-2 text-left whitespace-nowrap">উপজেলা</th><th class="px-2 py-2 text-left whitespace-nowrap">রোপণকারীর নাম</th><th class="px-2 py-2 text-left whitespace-nowrap">মোবাইল</th><th class="px-2 py-2 text-left whitespace-nowrap">চারা</th><th class="px-2 py-2 text-left whitespace-nowrap">তারিখ</th><th class="px-2 py-2 text-center whitespace-nowrap">অ্যাকশন</th></tr></thead>
 <tbody id="adminTableBody"></tbody>
 </table>
 <p id="adminNoData" class="hidden text-center text-gray-400 py-8">কোনো তথ্য নেই।</p>
+</div>
+</div>
+<!-- /myDataPane-admin -->
+
 </div>
 </div>
 </section>
@@ -908,13 +924,8 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 </div>
 
 <div class="guide-section rounded-lg p-3" style="background:#f9fafb">
-<p class="font-bold text-sm mb-1" style="color:#166534">📂 ৪. আমার তথ্য — সংরক্ষিত এন্ট্রি</p>
-<p class="text-xs text-gray-600 leading-relaxed">আপনার মোবাইলে জমাকৃত সকল তথ্যের তালিকা দেখুন, প্রয়োজনে সম্পাদনা (✏️) করুন অথবা মুছে ফেলুন। সিঙ্ক না হওয়া তথ্য এখানে চিহ্নিত অবস্থায় দেখা যাবে।</p>
-</div>
-
-<div class="guide-section rounded-lg p-3" style="background:#f9fafb">
-<p class="font-bold text-sm mb-1" style="color:#166534">🔐 ৫. এডমিন — ব্যবস্থাপনা</p>
-<p class="text-xs text-gray-600 leading-relaxed">নির্ধারিত পাসওয়ার্ড দিয়ে প্রবেশ করে সকল তথ্য পর্যালোচনা, এক্সপোর্ট (Excel) এবং প্রয়োজনে মুছে ফেলা যায়। শুধুমাত্র অনুমোদিত ব্যবহারকারীর জন্য।</p>
+<p class="font-bold text-sm mb-1" style="color:#166534">📂 ৪. আমার তথ্য — সংরক্ষিত এন্ট্রি ও এডমিন</p>
+<p class="text-xs text-gray-600 leading-relaxed">আপনার মোবাইলে জমাকৃত সকল তথ্যের তালিকা দেখুন, প্রয়োজনে সম্পাদনা (✏️) করুন অথবা মুছে ফেলুন। সিঙ্ক না হওয়া তথ্য এখানে চিহ্নিত অবস্থায় দেখা যাবে। এই ট্যাবের ভেতরে "🔐 এডমিন" সাব-ট্যাবে নির্ধারিত পাসওয়ার্ড দিয়ে প্রবেশ করলে App_Entry শীটের সকল কর্মকর্তার (জাতীয়) তথ্যসহ সব রেকর্ড পর্যালোচনা, এক্সপোর্ট (Excel) এবং প্রয়োজনে মুছে ফেলা যায়। শুধুমাত্র অনুমোদিত ব্যবহারকারীর জন্য।</p>
 </div>
 
 <div class="rounded-lg p-3" style="background:#fef2f2;border:1px solid #fecaca">
@@ -1370,11 +1381,33 @@ if(sec)sec.classList.remove("hidden");
 document.querySelectorAll('.nav-btn[data-tab="'+tab+'"]').forEach(function(b){b.classList.add("active")});
 hideBanner("successBanner");hideBanner("errorBanner");
 if(tab==="dashboard")renderDashboard();
-if(tab==="admin"&&isAdmin)renderAdminTable();
 if(tab==="map")renderMap();
-if(tab==="storedData")renderMyTab();
+if(tab==="storedData")switchMyDataSubTab(window.currentMyDataSubTab||"mine");
 window.scrollTo({top:0,behavior:"smooth"});
 }catch(err){console.error("Tab switch error:",err)}
+};
+
+// এডমিন এখন আলাদা টপ-লেভেল ট্যাব নয় — "আমার তথ্য" ট্যাবের ভেতরে একটি সাব-ট্যাব।
+// sub === "mine" | "admin"
+window.currentMyDataSubTab = "mine";
+window.switchMyDataSubTab=function(sub){
+try{
+window.currentMyDataSubTab=sub;
+var mineBtn=document.getElementById("myDataSubBtnMine"),adminBtn=document.getElementById("myDataSubBtnAdmin");
+var minePane=document.getElementById("myDataPane-mine"),adminPane=document.getElementById("myDataPane-admin");
+if(!mineBtn||!adminBtn||!minePane||!adminPane)return;
+var activeStyle="background:#ffffff;color:#15803d;box-shadow:0 1px 2px rgba(0,0,0,.06)";
+var inactiveStyle="color:#6b7280";
+if(sub==="admin"){
+  minePane.classList.add("hidden"); adminPane.classList.remove("hidden");
+  mineBtn.setAttribute("style",inactiveStyle); adminBtn.setAttribute("style",activeStyle);
+  if(isAdmin)renderAdminTable();
+}else{
+  adminPane.classList.add("hidden"); minePane.classList.remove("hidden");
+  adminBtn.setAttribute("style",inactiveStyle); mineBtn.setAttribute("style",activeStyle);
+  renderMyTab();
+}
+}catch(err){console.error("My Data sub-tab switch error:",err)}
 };
 
 function showBanner(id,text){var el=document.getElementById(id);if(!el)return;if(id==="errorBanner"&&text)document.getElementById("errorText").textContent=text;el.classList.remove("hidden");el.scrollIntoView({behavior:"smooth",block:"nearest"})}
@@ -2550,7 +2583,10 @@ function getDashEntries(){
 function getFiltered(prefix){
 var r=document.getElementById(prefix+"Region")&&document.getElementById(prefix+"Region").value;
 var d=document.getElementById(prefix+"District")&&document.getElementById(prefix+"District").value;
-return getSubmissions().filter(function(s){if(r&&s.region!==r)return false;if(d&&s.district!==d)return false;return true});
+var byId={},merged=[];
+(_nationalEntries||[]).forEach(function(s){var key=s.submissionId||s.id;if(key)byId[key]=true;merged.push(s)});
+getSubmissions().forEach(function(s){var key=s.submissionId||s.id;if(key&&byId[key])return;s._source=s._source||"local";merged.push(s)});
+return merged.filter(function(s){if(r&&s.region!==r)return false;if(d&&s.district!==d)return false;return true});
 }
 window.currentDashboardViewMode = "gov";
 window.onDashFilterChange=function(){populateDistrictDD(document.getElementById("dashDistrict"),document.getElementById("dashRegion").value);populateDashUpazilaDD();renderDashboard()};
@@ -3363,9 +3399,25 @@ window.adminLogin=function(){if(document.getElementById("adminPass").value===get
 window.adminLogout=function(){isAdmin=false;document.getElementById("adminLogin").classList.remove("hidden");document.getElementById("adminPanel").classList.add("hidden");document.getElementById("adminPass").value=""};
 window.changePassword=function(){var np=prompt("নতুন পাসওয়ার্ড দিন:");if(np&&np.trim().length>=4){setAdminPw(np.trim());showBanner("successBanner","পাসওয়ার্ড পরিবর্তন হয়েছে!");setTimeout(function(){hideBanner("successBanner")},3000)}else if(np)showBanner("errorBanner","পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে।")};
 window.renderAdminTable=function(){
-if(!isAdmin)return;var subs=getFiltered("admin"),tb=document.getElementById("adminTableBody"),nd=document.getElementById("adminNoData");
+if(!isAdmin)return;
+if(!_nationalEntries&&!_nationalEntriesLoading){fetchNationalEntries().then(function(){renderAdminTable()})}
+var subs=getFiltered("admin"),tb=document.getElementById("adminTableBody"),nd=document.getElementById("adminNoData");
+var noteEl=document.getElementById("adminDataSourceNote");
+if(noteEl){
+  if(_nationalEntries){
+    var localCount=subs.filter(function(s){return s._source==="local"}).length;
+    var t=_nationalEntriesAt?_nationalEntriesAt.toLocaleTimeString("bn-BD"):"";
+    noteEl.textContent=_nationalEntries.length.toLocaleString("bn-BD")+" জাতীয় + "+localCount.toLocaleString("bn-BD")+" লোকাল এন্ট্রি"+(t?" (সর্বশেষ: "+t+")":"");
+  } else {
+    noteEl.textContent="জাতীয় App_Entry ডাটা লোড হচ্ছে...";
+  }
+}
 if(!subs.length){tb.innerHTML="";nd.classList.remove("hidden");return}nd.classList.add("hidden");
-tb.innerHTML=subs.map(function(s,i){var c=countSeedlings(s),t=c.fruit+c.forest+c.medicinal;var pD = s.plantingDate ? new Date(s.plantingDate).toLocaleDateString("bn-BD") : (s.submittedAt?new Date(s.submittedAt).toLocaleDateString("bn-BD"):"");var sid=s.id||s.submissionId;var nm=s.farmerName||s.nurseryName||"";var mb=s.farmerMobile||s.mobile||"";var syncBadge=s.synced?'<span style="color:#047857;font-size:9px" title="সিঙ্কড">✓</span>':'<span style="color:#dc2626;font-size:9px" title="অফলাইন">○</span>';return '<tr class="border-b"><td class="px-2 py-2">'+(i+1).toLocaleString("bn-BD")+'</td><td class="px-2 py-2">'+(s.region||s.division||"")+'</td><td class="px-2 py-2">'+s.district+'</td><td class="px-2 py-2">'+s.upazila+'</td><td class="px-2 py-2">'+nm+' '+syncBadge+'</td><td class="px-2 py-2">'+mb+'</td><td class="px-2 py-2 font-semibold">'+t+'</td><td class="px-2 py-2 text-gray-500 text-xs">'+pD+'</td><td class="px-2 py-2 text-center whitespace-nowrap"><button onclick="adminEdit(\''+sid+'\')" style="background:#dbeafe;color:#1d4ed8;font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;border:none;cursor:pointer;margin-right:4px">✏️</button><button onclick="adminDelete(\''+sid+'\')" style="background:#fee2e2;color:#b91c1c;font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;border:none;cursor:pointer">🗑️</button></td></tr>'}).join("");
+tb.innerHTML=subs.map(function(s,i){var c=countSeedlings(s),t=c.fruit+c.forest+c.medicinal;var pD = s.plantingDate ? new Date(s.plantingDate).toLocaleDateString("bn-BD") : (s.submittedAt?new Date(s.submittedAt).toLocaleDateString("bn-BD"):"");var sid=s.id||s.submissionId;var nm=s.farmerName||s.nurseryName||"";var mb=s.farmerMobile||s.mobile||"";var isLocal=s._source==="local";var syncBadge=s.synced?'<span style="color:#047857;font-size:9px" title="সিঙ্কড">✓</span>':'<span style="color:#dc2626;font-size:9px" title="অফলাইন">○</span>';var srcBadge=isLocal?'<span style="background:#eff6ff;color:#1d4ed8;font-size:9px;padding:1px 6px;border-radius:999px;font-weight:600">লোকাল</span>':'<span style="background:#f0fdf4;color:#15803d;font-size:9px;padding:1px 6px;border-radius:999px;font-weight:600">জাতীয়</span>';var actions=isLocal?('<button onclick="adminEdit(\''+sid+'\')" style="background:#dbeafe;color:#1d4ed8;font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;border:none;cursor:pointer;margin-right:4px">✏️</button><button onclick="adminDelete(\''+sid+'\')" style="background:#fee2e2;color:#b91c1c;font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;border:none;cursor:pointer">🗑️</button>'):'<span class="text-gray-400" style="font-size:10px" title="এই এন্ট্রিটি অন্য অফিসারের ডিভাইস থেকে সিঙ্ক হয়েছে — এখান থেকে সম্পাদনা/মুছে ফেলা যাবে না">শুধু দেখা যাবে</span>';return '<tr class="border-b"><td class="px-2 py-2">'+(i+1).toLocaleString("bn-BD")+'</td><td class="px-2 py-2">'+srcBadge+'</td><td class="px-2 py-2">'+(s.region||s.division||"")+'</td><td class="px-2 py-2">'+s.district+'</td><td class="px-2 py-2">'+s.upazila+'</td><td class="px-2 py-2">'+nm+' '+syncBadge+'</td><td class="px-2 py-2">'+mb+'</td><td class="px-2 py-2 font-semibold">'+t+'</td><td class="px-2 py-2 text-gray-500 text-xs">'+pD+'</td><td class="px-2 py-2 text-center whitespace-nowrap">'+actions+'</td></tr>'}).join("");
+};
+window.refreshAdminNationalData=function(){
+  var btn=document.getElementById("adminRefreshBtn");if(btn){btn.disabled=true;btn.textContent="রিফ্রেশ হচ্ছে...";}
+  fetchNationalEntries(true).then(function(){if(btn){btn.disabled=false;btn.textContent="🔄 রিফ্রেশ";}renderAdminTable()});
 };
 window.adminEdit=function(id){
 var s=getSubmissions().find(function(x){return x.id===id||x.submissionId===id});if(!s)return;
