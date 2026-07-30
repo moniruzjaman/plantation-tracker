@@ -14,6 +14,11 @@
  *   doPost(e)  -- entryType="user_profile"    -> User_Profile sheet
  *               -- entryType="growth_reading" -> Growth_Log sheet
  *               -- entryType="custom_upazila" -> Custom_Upazila sheet
+ *               -- entryType="visitor_ping"   -> Visitor_Log sheet (guest/
+ *                                              unprompted Google email
+ *                                              capture, for unique-visitor
+ *                                              counting -- no profile
+ *                                              form required)
  *               -- otherwise                  -> App_Entry sheet (seedling row)
  *   doGet(e)   -- ?mobile=01XXXXXXXXX       -> User_Profile lookup by mobile
  *               -- ?list=1[&district=..]    -> every App_Entry row, grouped
@@ -40,6 +45,13 @@ var SHEET_NAME = 'App_Entry';
 var PROFILE_SHEET_NAME = 'User_Profile';
 var GROWTH_SHEET_NAME = 'Growth_Log';
 var CUSTOM_UPAZILA_SHEET_NAME = 'Custom_Upazila';
+var VISITOR_SHEET_NAME = 'Visitor_Log';
+
+var VISITOR_COLUMNS = [
+  'সময়', 'ইমেইল', 'ধরন', 'ডিভাইস আইডি'
+  // ধরন: "guest" (skipped the profile form entirely) | "unprompted" (Google
+  // One Tap resolved before the person interacted with the profile modal)
+];
 
 var COLUMNS = [
   'জমার সময়', 'অ্যাপ জমা আইডি', 'বিভাগ', 'অঞ্চল', 'জেলা', 'উপজেলা',
@@ -136,6 +148,17 @@ function getCustomUpazilaSheet_() {
   return sheet;
 }
 
+function getVisitorSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(VISITOR_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(VISITOR_SHEET_NAME);
+    sheet.appendRow(VISITOR_COLUMNS);
+    sheet.getRange(1, 1, 1, VISITOR_COLUMNS.length).setFontWeight('bold');
+  }
+  return sheet;
+}
+
 function jsonOut_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
@@ -188,6 +211,17 @@ function doPost(e) {
         raw.district || '',
         raw.upazilaName || '',
         raw.addedBy || '',
+        raw.deviceId || ''
+      ]);
+      return jsonOut_({ ok: true });
+    }
+
+    if (!Array.isArray(raw) && raw.entryType === 'visitor_ping') {
+      var vs = getVisitorSheet_();
+      vs.appendRow([
+        new Date().toISOString(),
+        raw.email || '',
+        raw.mode || '',
         raw.deviceId || ''
       ]);
       return jsonOut_({ ok: true });

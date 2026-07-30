@@ -22,6 +22,7 @@ document.head.appendChild(s);
 </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -112,7 +113,7 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <div class="nav-dot"></div>
 </button>
 <button onclick="switchTab('storedData')" class="nav-btn flex-1 py-3.5 text-sm font-semibold text-gray-500 hover:text-green-700 hover:bg-green-50 flex flex-col items-center gap-1" data-tab="storedData">
-<span class="text-lg">📊</span>ডাটা
+<span class="text-lg">👤</span>প্রোফাইল
 <div class="nav-dot"></div>
 </button>
 </div>
@@ -133,7 +134,7 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <div class="nav-dot mt-0.5"></div>
 </button>
 <button onclick="switchTab('storedData')" class="nav-btn flex-1 py-2.5 flex flex-col items-center gap-0.5 text-gray-400" data-tab="storedData">
-<span class="text-xl">📊</span><span class="text-xs font-semibold" style="font-size:10px">ডাটা</span>
+<span class="text-xl">👤</span><span class="text-xs font-semibold" style="font-size:10px">প্রোফাইল</span>
 <div class="nav-dot mt-0.5"></div>
 </button>
 </nav>
@@ -767,6 +768,8 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <div>
 <label class="block text-xs font-semibold text-gray-700 mb-1">ইমেইল <span class="text-gray-400 font-normal">(ঐচ্ছিক)</span></label>
 <input type="email" id="pEmail" placeholder="name@example.com" autocomplete="email" class="w-full border rounded-md px-3 py-2 text-sm" style="border-color:#d1d5db">
+<div id="googleSignInBox" class="mt-2"></div>
+<p id="pEmailVerifiedNote" class="hidden text-[10px] mt-1" style="color:#15803d">✓ Google দিয়ে যাচাইকৃত ইমেইল স্বয়ংক্রিয়ভাবে যুক্ত হয়েছে</p>
 </div>
 <div>
 <label class="block text-xs font-semibold text-gray-700 mb-1">ডিভাইস আইডি</label>
@@ -804,8 +807,10 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 </div>
 <div class="flex flex-col-reverse sm:flex-row gap-3 mt-5 border-t px-5 py-4">
 <button type="button" onclick="saveProfileFromModal()" class="flex-1 text-white px-4 py-2.5 rounded-lg font-semibold text-sm" style="background:#15803d;min-height:46px">সংরক্ষণ করুন</button>
+<button type="button" id="profileGuestBtn" onclick="continueAsGuest()" class="hidden px-4 py-2.5 rounded-lg font-semibold text-sm" style="background:#eff6ff;color:#1d4ed8;min-height:46px">🔍 অতিথি হিসেবে দেখুন</button>
 <button type="button" id="profileCancelBtn" onclick="closeProfileModal()" class="hidden px-4 py-2.5 rounded-lg font-semibold text-sm" style="background:#f3f4f6;color:#374151;min-height:46px">বাতিল</button>
 </div>
+<p id="profileMandatoryNote" class="hidden text-xs text-center px-5 pb-4" style="color:#b45309">তথ্য জমা দিতে বা সম্পাদনা করতে সম্পূর্ণ প্রোফাইল প্রয়োজন — নাম, মোবাইল ও জেলা পূরণ করুন।</p>
 </div>
 </div>
 </div>
@@ -1065,6 +1070,16 @@ var LS_KEY="nursery_submissions";
 var PW_KEY="nursery_admin_pw";
 var PROFILE_KEY="dae_user_profile";
 var DEVICE_ID_KEY="dae_device_id";
+var GUEST_MODE_KEY="dae_guest_mode";
+var VISITOR_PING_KEY="dae_visitor_ping_sent";
+// Fill this in with a real OAuth 2.0 Web Client ID (Google Cloud Console ->
+// APIs & Services -> Credentials -> Create Credentials -> OAuth client ID ->
+// Web application -> add this site's URL(s) under Authorized JavaScript
+// origins) to enable auto-fetching a verified email via Google Sign-In.
+// Until then, every Google-auth call below quietly no-ops and the app
+// behaves exactly as before (manual, optional email field).
+var GOOGLE_CLIENT_ID="YOUR_GOOGLE_OAUTH_CLIENT_ID.apps.googleusercontent.com";
+var _pendingVerifiedEmail=null;
 
 // ── Device fingerprint ──
 // Generates a stable device identifier. On Android (Capacitor) uses native UUID;
@@ -1208,11 +1223,16 @@ document.addEventListener("DOMContentLoaded",function(){
     });
   });
 });
-window.openProfileModal=function(){
+window.openProfileModal=function(mandatory){
   populatePDistrictDD();
   document.getElementById("profileLookupNote").classList.add("hidden");
   document.getElementById("pDeviceId").value=getDeviceId();
+  document.getElementById("pEmailVerifiedNote").classList.add("hidden");
+  _pendingVerifiedEmail=null;
   var p=getProfile();
+  var guestBtn=document.getElementById("profileGuestBtn"), mandNote=document.getElementById("profileMandatoryNote");
+  if(mandatory){ guestBtn.classList.add("hidden"); mandNote.classList.remove("hidden"); }
+  else { mandNote.classList.add("hidden"); if(!p) guestBtn.classList.remove("hidden"); else guestBtn.classList.add("hidden"); }
   if(p){
     document.getElementById("pShortRole").value=p.shortRole||"SAAO";
     document.getElementById("pRoleLabel").value=p.roleLabel||ROLE_LABELS[p.shortRole]||"";
@@ -1227,6 +1247,7 @@ window.openProfileModal=function(){
     document.getElementById("pBlock").value=p.block?(isStdBlock?p.block:"__other__"):"";
     if(p.block&&!isStdBlock){document.getElementById("pBlockCustom").classList.remove("hidden");document.getElementById("pBlockCustom").value=p.block;}
     document.getElementById("profileCancelBtn").classList.remove("hidden");
+    if(p.email&&p.emailVerified){document.getElementById("pEmailVerifiedNote").classList.remove("hidden");_pendingVerifiedEmail=p.email;}
   }else{
     document.getElementById("pShortRole").value="SAAO";
     document.getElementById("pRoleLabel").value=ROLE_LABELS["SAAO"];
@@ -1235,8 +1256,91 @@ window.openProfileModal=function(){
     document.getElementById("profileCancelBtn").classList.add("hidden");
   }
   document.getElementById("profileModal").classList.remove("hidden");
+  renderGoogleSignInButton();
 };
 window.closeProfileModal=function(){document.getElementById("profileModal").classList.add("hidden")};
+
+// ── Guest mode ──
+// Lets a person browse without filling the profile form. Submitting the
+// plantation form or editing an entry still requires a completed profile --
+// requireProfileOrPrompt() below is the gate used at both of those points.
+window.continueAsGuest=function(){
+  localStorage.setItem(GUEST_MODE_KEY,"1");
+  closeProfileModal();
+  attemptSilentVisitorPing();
+};
+function isGuestMode(){ return !getProfile() && localStorage.getItem(GUEST_MODE_KEY)==="1"; }
+// Returns true if a real profile exists (i.e. it's fine to proceed). If not,
+// opens the profile modal in mandatory mode (no Guest-View escape) and
+// returns false so the caller can abort the submit/edit in progress.
+function requireProfileOrPrompt(){
+  if(getProfile()) return true;
+  openProfileModal(true);
+  return false;
+}
+
+// ── Google Sign-In (optional email auto-fetch) ──
+// No-ops entirely until GOOGLE_CLIENT_ID above is replaced with a real one.
+function _googleAuthConfigured(){ return GOOGLE_CLIENT_ID.indexOf("YOUR_")!==0; }
+function _decodeGoogleJwt(token){
+  try{
+    var payload=token.split(".")[1];
+    payload=payload.replace(/-/g,"+").replace(/_/g,"/");
+    while(payload.length%4)payload+="=";
+    return JSON.parse(decodeURIComponent(escape(atob(payload))));
+  }catch(e){ console.error("Google JWT decode error:",e); return null; }
+}
+function initGoogleAuth(){
+  if(!_googleAuthConfigured() || typeof google==="undefined" || !google.accounts || !google.accounts.id) return;
+  try{
+    google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential, auto_select: false });
+    if(!document.getElementById("profileModal").classList.contains("hidden")) renderGoogleSignInButton();
+  }catch(e){ console.error("Google auth init error:",e); }
+}
+function renderGoogleSignInButton(){
+  if(!_googleAuthConfigured() || typeof google==="undefined" || !google.accounts || !google.accounts.id) return;
+  var box=document.getElementById("googleSignInBox");
+  if(!box) return;
+  box.innerHTML="";
+  try{
+    google.accounts.id.renderButton(box,{ theme:"outline", size:"medium", text:"continue_with", width:260 });
+  }catch(e){ console.error("Google button render error:",e); }
+}
+function handleGoogleCredential(response){
+  var payload=_decodeGoogleJwt(response.credential);
+  if(!payload || !payload.email) return;
+  _pendingVerifiedEmail=payload.email;
+  var emailField=document.getElementById("pEmail");
+  if(emailField && !document.getElementById("profileModal").classList.contains("hidden")){
+    emailField.value=payload.email;
+    document.getElementById("pEmailVerifiedNote").classList.remove("hidden");
+    if(payload.name && !_val("pName")) document.getElementById("pName").value=payload.name;
+  } else {
+    // Fired outside the profile modal -- this is the passive guest-visitor
+    // path: log the ping so we can count unique visitors without requiring
+    // guests to fill in the profile form.
+    logVisitorPing(payload.email, isGuestMode()?"guest":"unprompted");
+  }
+}
+// One Tap, once per browser session, so we can identify guest visitors
+// (who by definition never open/complete the profile form) for analytics.
+function attemptSilentVisitorPing(){
+  if(!_googleAuthConfigured() || typeof google==="undefined" || !google.accounts || !google.accounts.id) return;
+  if(sessionStorage.getItem(VISITOR_PING_KEY)==="1") return;
+  sessionStorage.setItem(VISITOR_PING_KEY,"1");
+  try{
+    google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential, auto_select: true });
+    google.accounts.id.prompt();
+  }catch(e){ console.error("Silent visitor ping error:",e); }
+}
+function logVisitorPing(email, mode){
+  try{
+    fetch(GAS_SYNC_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+      entryType:"visitor_ping", email:email, mode:mode||"unknown", deviceId:getDeviceId()
+    })}).catch(function(e){console.error("Visitor ping failed:",e)});
+  }catch(e){console.error("Visitor ping error:",e)}
+}
+
 window.saveProfileFromModal=function(){
   var shortRole=_val("pShortRole");
   var roleLabel=_val("pRoleLabel")||ROLE_LABELS[shortRole]||shortRole;
@@ -1250,9 +1354,11 @@ window.saveProfileFromModal=function(){
   if(!name||!/^01[3-9]\d{8}$/.test(mobile)||!district){err.classList.remove("hidden");return}
   err.classList.add("hidden");
   var email=_val("pEmail");
+  var emailVerified=!!(email && _pendingVerifiedEmail && email===_pendingVerifiedEmail);
   var deviceId=getDeviceId();
-  var p={shortRole:shortRole,roleLabel:roleLabel,name:name,mobile:mobile,email:email,deviceId:deviceId,district:district,upazila:upazila,union:union,block:block};
+  var p={shortRole:shortRole,roleLabel:roleLabel,name:name,mobile:mobile,email:email,emailVerified:emailVerified,deviceId:deviceId,district:district,upazila:upazila,union:union,block:block};
   saveProfile(p);
+  localStorage.removeItem(GUEST_MODE_KEY); // completing a real profile supersedes guest browsing
   applyProfileToForm();
   closeProfileModal();
   syncProfileToSheet(p);
@@ -1290,8 +1396,12 @@ function applyProfileToForm(){
 }
 function initProfile(){
   var p=getProfile();
-  if(!p){openProfileModal();} else {applyProfileToForm();}
+  if(!p){ if(!isGuestMode()) openProfileModal(false); } else { applyProfileToForm(); }
   upgradeDeviceIdAsync();
+  setTimeout(function(){
+    initGoogleAuth();
+    if(!p) attemptSilentVisitorPing(); // covers both guests and anyone who dismissed the modal
+  }, 300);
 }
 function syncProfileToSheet(p){
   try{
@@ -1895,6 +2005,7 @@ async function sendToGAS(rows){
 
 document.getElementById("nurseryForm").addEventListener("submit",async function(e){
 e.preventDefault();hideBanner("successBanner");hideBanner("errorBanner");
+if(!requireProfileOrPrompt())return;
 if(!validateForm("f"))return;
 var seedlings=collectSeedlings("seedlingRows");
 if(seedlings.length===0){showBanner("errorBanner","অন্তত একটি চারা যোগ করুন (প্রজাতির নাম ও সংখ্যা দিন)।");return}
@@ -2482,7 +2593,9 @@ function renderMyProfileCard(){
       '<div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#15803d,#166534);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:18px;flex-shrink:0">'+initial+'</div>'+
       '<div><p class="font-bold text-gray-800 text-sm sm:text-base">'+p.name+'</p>'+
       '<p class="text-xs text-gray-500">'+p.roleLabel+(loc?" · "+loc:"")+'</p>'+
-      '<p class="text-xs text-gray-400">📱 '+p.mobile+'</p></div>'+
+      '<p class="text-xs text-gray-400">📱 '+p.mobile+'</p>'+
+      (p.email?'<p class="text-xs text-gray-400">✉️ '+p.email+(p.emailVerified?' <span style="color:#15803d">✓ যাচাইকৃত</span>':'')+'</p>':'')+
+      '</div>'+
       '</div>'+
       '<button onclick="openProfileModal()" class="text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer flex-shrink-0" style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0">✏️ প্রোফাইল সম্পাদনা</button>'+
       '</div>';
@@ -2555,6 +2668,7 @@ function findEntryById(id){
 }
 
 window.editMySubmission=function(id){
+if(!requireProfileOrPrompt())return;
 var s=findEntryById(id);
 if(!s){ showBanner("errorBanner","এন্ট্রিটি খুঁজে পাওয়া যায়নি।"); setTimeout(function(){hideBanner("errorBanner")},4000); return; }
 var myProfile=getProfile();
