@@ -145,7 +145,7 @@ function doPost(e) {
   try {
     var raw = JSON.parse(e.postData.contents);
 
-    if (raw.entryType === 'user_profile') {
+    if (!Array.isArray(raw) && raw.entryType === 'user_profile') {
       var ps = getProfileSheet_();
       var now = new Date();
       ps.appendRow([
@@ -165,7 +165,7 @@ function doPost(e) {
       return jsonOut_({ ok: true });
     }
 
-    if (raw.entryType === 'growth_reading') {
+    if (!Array.isArray(raw) && raw.entryType === 'growth_reading') {
       var gs = getGrowthSheet_();
       gs.appendRow([
         new Date().toISOString(),
@@ -181,7 +181,7 @@ function doPost(e) {
       return jsonOut_({ ok: true });
     }
 
-    if (raw.entryType === 'custom_upazila') {
+    if (!Array.isArray(raw) && raw.entryType === 'custom_upazila') {
       var cus = getCustomUpazilaSheet_();
       cus.appendRow([
         new Date().toISOString(),
@@ -193,46 +193,86 @@ function doPost(e) {
       return jsonOut_({ ok: true });
     }
 
+    // App_Entry: the client always posts an array here -- one item per
+    // seedling species in the submission (all sharing one submissionId).
+    // Wrap a bare object too, for any integration that posts a single row.
+    var items = Array.isArray(raw) ? raw : [raw];
+    if (!items.length) return jsonOut_({ ok: true });
+
     var sheet = getSheet_();
-    var now = new Date();
-    var lat = normalizeCoord_(raw.latitude);
-    var lng = normalizeCoord_(raw.longitude);
-    var row = [
-      now.toISOString(),
-      raw.submissionId || '',
-      raw.division || '',
-      raw.region || '',
-      raw.district || '',
-      raw.upazila || '',
-      raw.union || '',
-      raw.village || '',
-      raw.locationType || '',
-      raw.sourceType || '',
-      raw.address || '',
-      lat.value,
-      lng.value,
-      raw.plantingDate || '',
-      raw.speciesName || '',
-      raw.category || '',
-      raw.quantity || 0,
-      raw.ndvi || '',
-      '',
-      raw.photoSha256 || '',
-      raw.farmerName || '',
-      raw.farmerMobile || '',
-      raw.saaoName || '',
-      raw.saaoMobile || '',
-      raw.officerName || '',
-      raw.officerMobile || '',
-      raw.remarks ? (raw.remarks + (lat.ok && lng.ok ? '' : ' ⚠️ স্থানাঙ্ক যাচাই প্রয়োজন')) : (lat.ok && lng.ok ? '' : '⚠️ স্থানাঙ্ক যাচাই প্রয়োজন'),
-      raw.authHash || '',
-      now.toISOString(),
-      raw.block || ''
-    ];
-    sheet.appendRow(row);
-    return jsonOut_({ ok: true, coordWarning: (!lat.ok || !lng.ok) });
+    var lock = LockService.getScriptLock();
+    lock.waitLock(30000);
+    try {
+      // Upsert by submissionId: if this submission (new OR edited) already
+      // has rows in the sheet, remove them first, then append the current
+      // set. For a brand-new submissionId this delete is simply a no-op,
+      // so create and edit both flow through the exact same safe path --
+      // editing an already-synced entry no longer creates duplicate rows.
+      var submissionId = items[0] && items[0].submissionId;
+      var coordWarning = false;
+      if (submissionId) deleteAppEntryRowsBySubmissionId_(sheet, submissionId);
+      var now = new Date();
+      items.forEach(function(item) {
+        if (appendAppEntryRow_(sheet, item, now)) coordWarning = true;
+      });
+    } finally {
+      lock.releaseLock();
+    }
+    return jsonOut_({ ok: true, coordWarning: coordWarning });
   } catch (err) {
     return jsonOut_({ ok: false, error: String(err) });
+  }
+}
+
+/** Builds and appends one App_Entry row. Returns true if the coordinates looked malformed. */
+function appendAppEntryRow_(sheet, raw, now) {
+  var lat = normalizeCoord_(raw.latitude);
+  var lng = normalizeCoord_(raw.longitude);
+  var row = [
+    now.toISOString(),
+    raw.submissionId || '',
+    raw.division || '',
+    raw.region || '',
+    raw.district || '',
+    raw.upazila || '',
+    raw.union || '',
+    raw.village || '',
+    raw.locationType || '',
+    raw.sourceType || '',
+    raw.address || '',
+    lat.value,
+    lng.value,
+    raw.plantingDate || '',
+    raw.speciesName || '',
+    raw.category || '',
+    raw.quantity || 0,
+    raw.ndvi || '',
+    '',
+    raw.photoSha256 || '',
+    raw.farmerName || '',
+    raw.farmerMobile || '',
+    raw.saaoName || '',
+    raw.saaoMobile || '',
+    raw.officerName || '',
+    raw.officerMobile || '',
+    raw.remarks ? (raw.remarks + (lat.ok && lng.ok ? '' : ' ⚠️ স্থানাঙ্ক যাচাই প্রয়োজন')) : (lat.ok && lng.ok ? '' : '⚠️ স্থানাঙ্ক যাচাই প্রয়োজন'),
+    raw.authHash || '',
+    now.toISOString(),
+    raw.block || ''
+  ];
+  sheet.appendRow(row);
+  return !lat.ok || !lng.ok;
+}
+
+/** Deletes every existing App_Entry row for a given submissionId (column B), bottom-up so row indices don't shift mid-loop. Called under a script lock. */
+function deleteAppEntryRowsBySubmissionId_(sheet, submissionId) {
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return;
+  var ids = sheet.getRange(2, 2, lastRow - 1, 1).getValues(); // column B, 'অ্যাপ জমা আইডি'
+  for (var i = ids.length - 1; i >= 0; i--) {
+    if (String(ids[i][0]) === String(submissionId)) {
+      sheet.deleteRow(i + 2); // +2: 1-indexed sheet rows, offset past the header
+    }
   }
 }
 
