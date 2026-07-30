@@ -112,11 +112,7 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <div class="nav-dot"></div>
 </button>
 <button onclick="switchTab('storedData')" class="nav-btn flex-1 py-3.5 text-sm font-semibold text-gray-500 hover:text-green-700 hover:bg-green-50 flex flex-col items-center gap-1" data-tab="storedData">
-<span class="text-lg">📂</span>আমার তথ্য
-<div class="nav-dot"></div>
-</button>
-<button onclick="switchTab('storedData');switchMyDataSubTab('admin')" class="nav-btn flex-1 py-3.5 text-sm font-semibold text-gray-500 hover:text-green-700 hover:bg-green-50 flex flex-col items-center gap-1" data-tab="storedData">
-<span class="text-lg">🔐</span>এডমিন
+<span class="text-lg">📊</span>ডাটা
 <div class="nav-dot"></div>
 </button>
 </div>
@@ -137,11 +133,7 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <div class="nav-dot mt-0.5"></div>
 </button>
 <button onclick="switchTab('storedData')" class="nav-btn flex-1 py-2.5 flex flex-col items-center gap-0.5 text-gray-400" data-tab="storedData">
-<span class="text-xl">📂</span><span class="text-xs font-semibold" style="font-size:10px">আমার তথ্য</span>
-<div class="nav-dot mt-0.5"></div>
-</button>
-<button onclick="switchTab('storedData');switchMyDataSubTab('admin')" class="nav-btn flex-1 py-2.5 flex flex-col items-center gap-0.5 text-gray-400" data-tab="storedData">
-<span class="text-xl">🔐</span><span class="text-xs font-semibold" style="font-size:10px">এডমিন</span>
+<span class="text-xl">📊</span><span class="text-xs font-semibold" style="font-size:10px">ডাটা</span>
 <div class="nav-dot mt-0.5"></div>
 </button>
 </nav>
@@ -460,10 +452,17 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <!-- ── Filters ── -->
 <div class="bg-white rounded-xl shadow p-4 mb-6">
   <p class="font-semibold text-gray-700 mb-3 text-sm">🔍 ফিল্টার করুন</p>
-  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+  <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
     <select id="dashRegion" onchange="onDashFilterChange()" class="border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব অঞ্চল</option></select>
     <select id="dashDistrict" onchange="onDashDistrictChange()" class="border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব জেলা</option></select>
     <select id="dashUpazila" onchange="renderDashboard()" class="border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব উপজেলা</option></select>
+    <select id="dashSourceType" onchange="renderDashboard()" class="border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+<option value="">সব উৎস (চারার উৎস)</option>
+<option value="প্রদর্শনী">প্রদর্শনী</option>
+<option value="প্রণোদনা">প্রণোদনা</option>
+<option value="নিজস্ব">নিজস্ব</option>
+<option value="অন্যান্য">অন্যান্য</option>
+</select>
   </div>
 </div>
 
@@ -1902,22 +1901,40 @@ if(seedlings.length===0){showBanner("errorBanner","অন্তত একটি 
 var btn=document.getElementById("submitBtn");btn.disabled=true;btn.textContent="জমা হচ্ছে...";
 try{
   var base = buildBaseSubmission("f");
-  var rows = toGASRows(base, seedlings);
   var editId = document.getElementById("editId").value;
   var subs = getSubmissions();
 
   if(editId){
     var idx = subs.findIndex(function(s){return s.id===editId || s.submissionId===editId;});
-    if(idx > -1){
-      base.submissionId = subs[idx].submissionId || subs[idx].id || base.submissionId;
-      base.id = subs[idx].id;
-      subs[idx] = Object.assign({}, subs[idx], base, { seedlings: seedlings, synced: false, syncedAt: null });
-      saveSubmissions(subs);
+    var existing = idx > -1 ? subs[idx] : findEntryById(editId);
+    base.submissionId = (existing && (existing.submissionId||existing.id)) || base.submissionId;
+    base.id = (existing && existing.id) || base.submissionId;
+    var rows = toGASRows(base, seedlings);
+    // Was previously mine-but-national-only (no local record) -- this
+    // creates the local shadow record now so it can sync/re-sync normally.
+    var updatedRecord = Object.assign({}, existing||{}, base, { seedlings: seedlings, synced: false, syncedAt: null, _source: "local" });
+    if(idx > -1){ subs[idx] = updatedRecord; } else { subs.push(updatedRecord); }
+    saveSubmissions(subs);
+
+    var editResult = await sendToGAS(rows);
+    if(editResult && editResult.ok){
+      var updatedSubs = getSubmissions();
+      var newIdx = updatedSubs.findIndex(function(s){return s.id===updatedRecord.id || s.submissionId===updatedRecord.submissionId;});
+      if(newIdx > -1){
+        updatedSubs[newIdx].synced = true;
+        updatedSubs[newIdx].syncedAt = new Date().toISOString();
+        saveSubmissions(updatedSubs);
+      }
+      showBanner("successBanner");
+    } else {
+      console.warn("GAS sync failed (edit):", editResult && editResult.error);
+      showBanner("errorBanner","সিঙ্ক ব্যর্থ — তথ্য অফলাইনে সংরক্ষিত আছে। ড্যাশবোর্ড থেকে পরে আবার সিঙ্ক করুন।");
+      setTimeout(function(){hideBanner("errorBanner");},5000);
     }
     document.getElementById("editId").value="";
-    showBanner("successBanner");
     resetForm();
   } else {
+    var rows = toGASRows(base, seedlings);
     base.id = base.submissionId;
     base.seedlings = seedlings;
     base.synced = false;
@@ -2527,8 +2544,26 @@ window.exportMyReport=function(format){
   }
 };
 
+// Looks an entry up across BOTH national (App_Entry sheet) and local-only
+// data -- editMySubmission and the map popup need this since an entry a
+// user is allowed to edit might only exist in the national dataset (synced
+// from this same device on a prior session, or matched by mobile number).
+function findEntryById(id){
+  var local = getSubmissions().find(function(x){return x.id===id||x.submissionId===id});
+  if(local){ local._source = local._source || "local"; return local; }
+  return (_nationalEntries||[]).find(function(x){return x.id===id||x.submissionId===id});
+}
+
 window.editMySubmission=function(id){
-var s=getSubmissions().find(function(x){return x.id===id||x.submissionId===id});if(!s)return;
+var s=findEntryById(id);
+if(!s){ showBanner("errorBanner","এন্ট্রিটি খুঁজে পাওয়া যায়নি।"); setTimeout(function(){hideBanner("errorBanner")},4000); return; }
+var myProfile=getProfile();
+var isMine = s._source==="local" || s._isMine || (myProfile && myProfile.mobile && (s.saaoMobile===myProfile.mobile || s.officerMobile===myProfile.mobile));
+if(!isMine){
+  showBanner("errorBanner","শুধুমাত্র নিজের জমা দেওয়া এন্ট্রি সম্পাদনা করা যায় — এটি অন্য কর্মকর্তার এন্ট্রি।");
+  setTimeout(function(){hideBanner("errorBanner")},5000);
+  return;
+}
 switchTab("form");document.getElementById("editId").value=id;
 document.getElementById("formTitle").textContent="✏️ তথ্য সম্পাদনা করুন";
 document.getElementById("cancelBtn").classList.remove("hidden");document.getElementById("submitBtn").textContent="আপডেট করুন";
@@ -2575,18 +2610,39 @@ function getDashEntries(){
   var r=document.getElementById("dashRegion")&&document.getElementById("dashRegion").value;
   var d=document.getElementById("dashDistrict")&&document.getElementById("dashDistrict").value;
   var u=document.getElementById("dashUpazila")&&document.getElementById("dashUpazila").value;
+  var st=document.getElementById("dashSourceType")&&document.getElementById("dashSourceType").value;
   var byId={},merged=[];
   (_nationalEntries||[]).forEach(function(s){var key=s.submissionId||s.id;if(key)byId[key]=true;merged.push(s)});
   getSubmissions().forEach(function(s){var key=s.submissionId||s.id;if(key&&byId[key])return;s._source=s._source||"local";merged.push(s)});
-  return merged.filter(function(s){if(r&&s.region!==r)return false;if(d&&s.district!==d)return false;if(u&&s.upazila!==u)return false;return true});
+  return merged.filter(function(s){
+    if(r&&s.region!==r)return false;
+    if(d&&s.district!==d)return false;
+    if(u&&s.upazila!==u)return false;
+    if(st){
+      // "অন্যান্য" (other) is a free-text bucket on the form — anything that
+      // isn't one of the three fixed options counts as "other" here.
+      if(st==="অন্যান্য"){ if(["প্রদর্শনী","প্রণোদনা","নিজস্ব"].indexOf(s.sourceType)!==-1)return false; }
+      else if(s.sourceType!==st)return false;
+    }
+    return true;
+  });
 }
 function getFiltered(prefix){
 var r=document.getElementById(prefix+"Region")&&document.getElementById(prefix+"Region").value;
 var d=document.getElementById(prefix+"District")&&document.getElementById(prefix+"District").value;
+var st=document.getElementById(prefix+"SourceType")&&document.getElementById(prefix+"SourceType").value;
 var byId={},merged=[];
 (_nationalEntries||[]).forEach(function(s){var key=s.submissionId||s.id;if(key)byId[key]=true;merged.push(s)});
 getSubmissions().forEach(function(s){var key=s.submissionId||s.id;if(key&&byId[key])return;s._source=s._source||"local";merged.push(s)});
-return merged.filter(function(s){if(r&&s.region!==r)return false;if(d&&s.district!==d)return false;return true});
+return merged.filter(function(s){
+  if(r&&s.region!==r)return false;
+  if(d&&s.district!==d)return false;
+  if(st){
+    if(st==="অন্যান্য"){ if(["প্রদর্শনী","প্রণোদনা","নিজস্ব"].indexOf(s.sourceType)!==-1)return false; }
+    else if(s.sourceType!==st)return false;
+  }
+  return true;
+});
 }
 window.currentDashboardViewMode = "gov";
 window.onDashFilterChange=function(){populateDistrictDD(document.getElementById("dashDistrict"),document.getElementById("dashRegion").value);populateDashUpazilaDD();renderDashboard()};
@@ -3767,7 +3823,18 @@ window.renderMap = function() {
       detailsHtml += '<div style="background:#ecfdf5; border-radius:4px; padding:3px;"><span style="color:#047857; font-weight:bold;">' + t.forest + '</span><br><span style="color:#6b7280;">বনজ</span></div>';
       detailsHtml += '<div style="background:#eff6ff; border-radius:4px; padding:3px;"><span style="color:#1d4ed8; font-weight:bold;">' + t.medicinal + '</span><br><span style="color:#6b7280;">ঔষধি</span></div>';
       detailsHtml += '</div>';
-      detailsHtml += '<button onclick="parent.window.editMySubmission ? parent.window.editMySubmission(\''+_sid+'\') : editMySubmission(\''+_sid+'\')" style="width:100%; margin-top:8px; background:#dbeafe; color:#1d4ed8; border:none; padding:5px; border-radius:6px; font-weight:700; cursor:pointer; font-size:11px;">✏️ তথ্য সম্পাদনা</button>';
+      // Ownership check moved up so the popup's edit button can be gated on it.
+      var myProfile = getProfile();
+      if (!s._isMine) {
+        var pm = myProfile && myProfile.mobile;
+        if (pm && (s.saaoMobile === pm || s.officerMobile === pm)) s._isMine = true;
+      }
+      var _canEdit = s._source === "local" || s._isMine;
+      if (_canEdit) {
+        detailsHtml += '<button onclick="parent.window.editMySubmission ? parent.window.editMySubmission(\''+_sid+'\') : editMySubmission(\''+_sid+'\')" style="width:100%; margin-top:8px; background:#dbeafe; color:#1d4ed8; border:none; padding:5px; border-radius:6px; font-weight:700; cursor:pointer; font-size:11px;">✏️ তথ্য সম্পাদনা</button>';
+      } else {
+        detailsHtml += '<p style="width:100%; margin-top:8px; text-align:center; color:#9ca3af; font-size:10px;">শুধু দেখা যাবে — অন্য কর্মকর্তার এন্ট্রি</p>';
+      }
       detailsHtml += '</div>';
       
       // Marker color logic: each upazila gets a distinct color from the
@@ -3775,11 +3842,6 @@ window.renderMap = function() {
       // Special overrides: local-unsynced = gray, current user's own entry = purple.
       var markerBg = upazilaColor(s.upazila);
       if (s._source === "local") markerBg = '#9ca3af'; // Gray — not yet synced
-      var myProfile = getProfile();
-      if (!s._isMine) {
-        var pm = myProfile && myProfile.mobile;
-        if (pm && (s.saaoMobile === pm || s.officerMobile === pm)) s._isMine = true;
-      }
       if (s._source === "local" || s._isMine) markerBg = '#a855f7'; // Purple — my entry
       
       // Track upazila→color for the dynamic legend
