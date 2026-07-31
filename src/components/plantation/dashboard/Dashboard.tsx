@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, type ReactNode } from 'react';
-import {    Database,    Leaf,    TreePine,    Users,    Sprout,    Globe,    MapPin,    BarChart3,    TrendingUp,    Filter,    RotateCcw,    FileSpreadsheet,    FileText,    Printer,    ChevronDown,    Building2,} from 'lucide-react';
+import {    Database,    Leaf,    TreePine,    Users,    Sprout,    Globe,    MapPin,    BarChart3,    TrendingUp,    Filter,    RotateCcw,    FileSpreadsheet,    FileText,    Printer,    ChevronDown,    Building2,    RefreshCw,    Award,} from 'lucide-react';
 import type { Submission } from '../../OfflinePlantationDashboard';
 import { countSeedlings } from '../../../types/plantation';
 import { BD, BD_UPAZILA } from '../../../data/adminData';
@@ -24,6 +24,7 @@ interface DashboardProps {
   submissions: Submission[];
   nationalEntries?: any[];
   language?: 'bn' | 'en';
+  onRefreshNational?: () => void;
 }
 
 /** Normalised row used internally for stats & table rendering. */
@@ -177,7 +178,7 @@ function csvCell(v: string): string {
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
-export default function Dashboard({ submissions, nationalEntries = [], language = 'bn' }: DashboardProps) {
+export default function Dashboard({ submissions, nationalEntries = [], language = 'bn', onRefreshNational }: DashboardProps) {
   /* ---- Filter State ---- */
   const [filterDivision, setFilterDivision] = useState('');
   const [filterDistrict, setFilterDistrict] = useState('');
@@ -294,6 +295,27 @@ export default function Dashboard({ submissions, nationalEntries = [], language 
     const avgSeedlings = filteredCount > 0 ? Math.round(totalSeedlings / filteredCount) : 0;
     const coverage = `${districtSet.size}/${upazilaSet.size}`;
 
+    // #22: Top species name
+    const speciesCountMap: Record<string, number> = {};
+    filtered.forEach((e) => {
+      if (e.species) {
+        e.species.split(',').forEach((s) => {
+          const t = s.trim();
+          if (t) speciesCountMap[t] = (speciesCountMap[t] || 0) + e.total;
+        });
+      }
+    });
+    const topSpeciesName = Object.entries(speciesCountMap)
+      .sort((a, b) => b[1] - a[1])[0]?.[0] || '—';
+
+    // #24: Max entry planter name
+    let maxEntryName = '';
+    filtered.forEach((e) => {
+      if (e.total === maxEntry && !maxEntryName) {
+        maxEntryName = e.farmerName;
+      }
+    });
+
     return {
       totalCount,
       localCount,
@@ -306,6 +328,8 @@ export default function Dashboard({ submissions, nationalEntries = [], language 
       coverage,
       avgSeedlings,
       maxEntry,
+      topSpeciesName,
+      maxEntryName,
     };
   }, [allEntries, filtered]);
 
@@ -486,6 +510,18 @@ export default function Dashboard({ submissions, nationalEntries = [], language 
     <div className="w-full max-w-7xl mx-auto space-y-4 p-2 sm:p-4 print:p-0">
       {/* ==================== DATA SOURCE NOTE ==================== */}
       <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+        {/* #23: Refresh national data button */}
+        {onRefreshNational && (
+          <button
+            onClick={onRefreshNational}
+            className="inline-flex items-center gap-1 text-[11px] bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-blue-50 hover:border-blue-300 transition-colors cursor-pointer"
+            title="Refresh National Data"
+          >
+            <RefreshCw className="w-3.5 h-3.5 text-blue-600" />
+            <span className="hidden sm:inline">🔄 {bn ? 'রিফ্রেশ' : 'Refresh'}</span>
+          </button>
+        )}
         <div className="text-xs text-gray-500 bg-green-50 border border-green-100 rounded-lg px-3 py-1.5">
           <Database className="w-3.5 h-3.5 inline mr-1 text-green-600" />
           {toBnNum(stats.nationalCount)} {bn ? 'জাতীয়' : 'national'} + {toBnNum(stats.localCount)} {bn ? 'লোকাল' : 'local'} {bn ? 'এন্ট্রি' : 'entries'}
@@ -494,6 +530,7 @@ export default function Dashboard({ submissions, nationalEntries = [], language 
               — {toBnNum(stats.filteredCount)} {bn ? 'ফিল্টারড' : 'filtered'}
             </span>
           ) : null}
+        </div>
         </div>
         <div className="flex items-center gap-1.5">
           <button onClick={exportExcel} className="inline-flex items-center gap-1 text-[11px] bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-green-50 hover:border-green-300 transition-colors cursor-pointer" title="Excel Export">
@@ -521,7 +558,9 @@ export default function Dashboard({ submissions, nationalEntries = [], language 
         <StatCard icon={<Leaf className="w-4 h-4" />} label={bn ? 'প্রজাতি' : 'Species'} value={toBnNum(stats.species)} color="text-lime-600" />
         <StatCard icon={<MapPin className="w-4 h-4" />} label={bn ? 'জেলা/উপজেলা' : 'District/Upazila'} value={stats.coverage} color="text-orange-600" />
         <StatCard icon={<BarChart3 className="w-4 h-4" />} label={bn ? 'গড় চারা' : 'Avg Seedlings'} value={toBnNum(stats.avgSeedlings)} color="text-indigo-600" />
-        <StatCard icon={<TrendingUp className="w-4 h-4" />} label={bn ? 'সর্বোচ্চ এন্ট্রি' : 'Max Entry'} value={toBnNum(stats.maxEntry)} color="text-rose-600" />
+        <StatCard icon={<TrendingUp className="w-4 h-4" />} label={bn ? 'সর্বোচ্চ এন্ট্রি' : 'Max Entry'} value={`${toBnNum(stats.maxEntry)} (${stats.maxEntryName || '—'})`} color="text-rose-600" />
+        <StatCard icon={<Award className="w-4 h-4" />} label={bn ? 'শীর্ষ প্রজাতি' : 'Top Species'} value={stats.topSpeciesName} color="text-teal-600" />
+        <StatCard icon={<Users className="w-4 h-4" />} label={bn ? 'সক্রিয় কর্মকর্তা' : 'Active Officers'} value={`${toBnNum(stats.officers)} অফিসার সক্রিয়`} color="text-pink-600" />
       </div>
 
       {/* ==================== FILTER CONTROLS ==================== */}

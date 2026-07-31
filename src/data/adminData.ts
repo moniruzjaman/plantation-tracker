@@ -715,6 +715,7 @@ export const SEEDLING_CATEGORIES = [
   { value: "অন্যান্য", label: "অন্যান্য" },
 ];
 export const SOURCE_TYPES = ["নিজস্ব", "প্রদর্শনী", "প্রণোদনা", "অন্যান্য"];
+export const LOCATION_TYPES = ["সড়কপার্শ্ব", "ক্ষেত্র", "বাড়ি", "প্রাতিষ্ঠানিক", "অন্যান্য"];
 export const GAS_SYNC_ENDPOINT = "/api/gas-sync";
 export const LS_KEY = "nursery_submissions";
 export const PROFILE_KEY = "plantation_profile";

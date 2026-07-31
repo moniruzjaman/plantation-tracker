@@ -18,11 +18,12 @@ export interface Profile {
   district?: string;
   upazila?: string;
   block?: string;
+  union?: string;
+  googleEmail?: string;
   saaoName?: string;
   saaoMobile?: string;
   officerName?: string;
   officerMobile?: string;
-  googleEmail?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -91,6 +92,10 @@ export function saveProfile(profile: Profile): void {
 // ---------------------------------------------------------------------------
 // Admin password
 // ---------------------------------------------------------------------------
+
+const NATIONAL_ENTRIES_CACHE_KEY = 'national_entries_cache';
+
+export { NATIONAL_ENTRIES_CACHE_KEY };
 
 const ADMIN_PW_KEY = 'admin_password';
 

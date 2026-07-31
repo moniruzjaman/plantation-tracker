@@ -11,10 +11,27 @@ import {
   Camera,
   BookOpen,
   Shield,
+  Search,
+  Mail,
+  Loader2,
 } from 'lucide-react';
 import type { ComponentType } from 'react';
 import type { Profile } from '../../../hooks/useProfile';
 import { BD, BD_UPAZILA, BD_DIVISIONS } from '../../../data/adminData';
+import { lookupExistingUser, syncProfileToSheet } from '../../../services/api';
+
+// #32: Role labels mapping
+const ROLE_LABELS: Record<string, string> = {
+  'SAAO': 'উপ-সহকারী কৃষি কর্মকর্তা (SAAO)',
+  'AEO2': 'সহকারী উপজেলা কৃষি কর্মকর্তা (AEO2)',
+  'AAO': 'সহকারী কৃষি কর্মকর্তা (AAO)',
+  'UAO': 'উপজেলা কৃষি কর্মকর্তা (UAO)',
+  'DDA': 'উপপরিচালক (কৃষি) (DDA)',
+  'AD': 'সহকারী পরিচালক (কৃষি) (AD)',
+  'DD': 'উপপরিচালক (DD)',
+};
+
+const BLOCK_OPTIONS = ['ব্লক-১', 'ব্লক-২', 'ব্লক-৩', 'ব্লক-৪', 'কাস্টম'];
 
 interface ProfilePanelProps {
   profile: Profile | null;
@@ -68,6 +85,14 @@ export default function ProfilePanel({ profile, onSave }: ProfilePanelProps) {
   const [photo, setPhoto] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // #34: Lookup state
+  const [lookupMobile, setLookupMobile] = useState('');
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [lookupMsg, setLookupMsg] = useState('');
+
+  // #35: Sync status
+  const [syncStatus, setSyncStatus] = useState('');
+
   useEffect(() => {
     try {
       const stored = localStorage.getItem('plantation_profile_photo');
@@ -103,8 +128,56 @@ export default function ProfilePanel({ profile, onSave }: ProfilePanelProps) {
     [],
   );
 
-  const handleSave = useCallback(() => {
+  // #34: Lookup user by mobile
+  const handleLookup = useCallback(async () => {
+    if (!lookupMobile.trim()) return;
+    setLookupLoading(true);
+    setLookupMsg('');
+    try {
+      const result = await lookupExistingUser(lookupMobile.trim());
+      if (result && (result.name || result.mobile)) {
+        const updated: Profile = {
+          ...form,
+          name: result.name || form.name,
+          mobile: result.mobile || form.mobile,
+          designation: result.designation || form.designation,
+          region: result.region || form.region,
+          district: result.district || form.district,
+          upazila: result.upazila || form.upazila,
+          block: result.block || form.block,
+          saaoName: result.saaoName || form.saaoName,
+          saaoMobile: result.saaoMobile || form.saaoMobile,
+          officerName: result.officerName || form.officerName,
+          officerMobile: result.officerMobile || form.officerMobile,
+          googleEmail: result.googleEmail || form.googleEmail,
+        };
+        setForm(updated);
+        setLookupMsg('✅ প্রোফাইল পাওয়া গেছে!');
+      } else {
+        setLookupMsg('কোনো প্রোফাইল পাওয়া যায়নি');
+      }
+    } catch {
+      setLookupMsg('খুঁজতে সমস্যা হয়েছে');
+    }
+    setLookupLoading(false);
+  }, [lookupMobile, form]);
+
+  const handleSave = useCallback(async () => {
     onSave(form);
+
+    // #35: Sync to GAS
+    setSyncStatus('সিঙ্ক হচ্ছে...');
+    try {
+      const result = await syncProfileToSheet(form);
+      if (result.ok) {
+        setSyncStatus('✅ সিঙ্ক সফল!');
+      } else {
+        setSyncStatus(`⚠️ সিঙ্ক ব্যর্থ: ${result.error || 'অজানা ত্রুটি'}`);
+      }
+    } catch {
+      setSyncStatus('⚠️ সিঙ্ক ব্যর্থ');
+    }
+    setTimeout(() => setSyncStatus(''), 5000);
   }, [form, onSave]);
 
   const handlePhotoChange = useCallback(
@@ -143,6 +216,37 @@ export default function ProfilePanel({ profile, onSave }: ProfilePanelProps) {
         </button>
       </div>
 
+      {/* #34: Profile lookup by mobile */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+        <p className="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-1">
+          <Search className="w-3.5 h-3.5 text-[#15803d]" />
+          মোবাইল দিয়ে প্রোফাইল খুঁজুন
+        </p>
+        <div className="flex gap-2">
+          <input
+            type="tel"
+            inputMode="numeric"
+            value={lookupMobile}
+            onChange={(e) => setLookupMobile(e.target.value.replace(/[^0-9]/g, ''))}
+            onKeyDown={(e) => e.key === 'Enter' && handleLookup()}
+            placeholder="০১XXXXXXXXX"
+            className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#15803d]/30 focus:border-[#15803d]"
+          />
+          <button
+            type="button"
+            onClick={handleLookup}
+            disabled={lookupLoading}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-[#15803d] text-white hover:bg-green-800 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+          >
+            {lookupLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+            খুঁজুন
+          </button>
+        </div>
+        {lookupMsg && (
+          <p className={`text-xs mt-2 ${lookupMsg.startsWith('✅') ? 'text-green-600' : 'text-gray-500'}`}>{lookupMsg}</p>
+        )}
+      </div>
+
       <div className="flex flex-col items-center gap-2">
         <div className="relative group">
           <div className="w-20 h-20 rounded-full bg-[#15803d]/10 border-2 border-dashed border-[#15803d]/30 flex items-center justify-center overflow-hidden">
@@ -176,12 +280,37 @@ export default function ProfilePanel({ profile, onSave }: ProfilePanelProps) {
             <input type="text" value={form.name ?? ''} onChange={(e) => set('name', e.target.value)} placeholder="আপনার নাম" className={inputCls} />
           </Field>
           <Field label="পদবি" icon={Briefcase}>
-            <input type="text" value={form.designation ?? ''} onChange={(e) => set('designation', e.target.value)} placeholder="যেমন: উপ-সহকারী কৃষি কর্মকর্তা" className={inputCls} />
+            {/* #32: Role labels dropdown + custom input */}
+            <select
+              value={ROLE_LABELS[form.designation ?? ''] ? form.designation : ''}
+              onChange={(e) => set('designation', e.target.value)}
+              className={selectCls + ' mb-1'}
+            >
+              <option value="">-- পদবি নির্বাচন --</option>
+              {Object.entries(ROLE_LABELS).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+              <option value="__custom__">কাস্টম...</option>
+            </select>
+            {(form.designation === '__custom__' || !ROLE_LABELS[form.designation ?? '']) && (
+              <input
+                type="text"
+                value={form.designation === '__custom__' ? '' : form.designation ?? ''}
+                onChange={(e) => set('designation', e.target.value)}
+                placeholder="পদবি লিখুন"
+                className={inputCls}
+              />
+            )}
           </Field>
         </div>
 
         <Field label="মোবাইল" icon={Phone}>
           <input type="tel" inputMode="numeric" value={form.mobile ?? ''} onChange={(e) => set('mobile', e.target.value)} placeholder="০১XXXXXXXXX" className={inputCls} />
+        </Field>
+
+        {/* #37: Email field */}
+        <Field label="ইমেইল" icon={Mail}>
+          <input type="email" value={form.googleEmail ?? ''} onChange={(e) => set('googleEmail', e.target.value)} placeholder="email@example.com" className={inputCls} />
         </Field>
 
         <Field label="অঞ্চল" icon={MapPin}>
@@ -215,8 +344,28 @@ export default function ProfilePanel({ profile, onSave }: ProfilePanelProps) {
           </Field>
         )}
 
+        {/* #36: Block dropdown with custom option */}
         <Field label="ব্লক" icon={MapPin}>
-          <input type="text" value={form.block ?? ''} onChange={(e) => set('block', e.target.value)} placeholder="ব্লক নম্বর / নাম" className={inputCls} />
+          <select
+            value={BLOCK_OPTIONS.includes(form.block ?? '') ? form.block : ''}
+            onChange={(e) => set('block', e.target.value)}
+            className={selectCls + ' mb-1'}
+          >
+            <option value="">-- ব্লক নির্বাচন --</option>
+            {BLOCK_OPTIONS.filter((b) => b !== 'কাস্টম').map((b) => (
+              <option key={b} value={b}>{b}</option>
+            ))}
+            <option value="কাস্টম">কাস্টম...</option>
+          </select>
+          {form.block === 'কাস্টম' && (
+            <input
+              type="text"
+              value=""
+              onChange={(e) => set('block', e.target.value)}
+              placeholder="কাস্টম ব্লকের নাম"
+              className={inputCls}
+            />
+          )}
         </Field>
 
         <div className="border-t border-gray-100 pt-4">
@@ -248,6 +397,11 @@ export default function ProfilePanel({ profile, onSave }: ProfilePanelProps) {
             </Field>
           </div>
         </div>
+
+        {/* #35: Sync status message */}
+        {syncStatus && (
+          <p className={`text-xs ${syncStatus.startsWith('✅') ? 'text-green-600' : 'text-amber-600'} flex items-center gap-1`}>{syncStatus}</p>
+        )}
 
         <button
           type="button"

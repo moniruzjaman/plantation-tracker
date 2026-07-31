@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, LayersControl, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Filter, TreePine, Edit } from 'lucide-react';
+import { Filter, TreePine, Edit, RefreshCw, Crosshair } from 'lucide-react';
 import { countSeedlings } from '../../../types/plantation';
 import { toBnNum, isValidBdCoord, upazilaColor } from '../../../utils/geoUtils';
 import { BD, BD_UPAZILA } from '../../../data/adminData';
@@ -27,6 +27,7 @@ interface LegacyMapProps {
   submissions: Submission[];
   nationalEntries?: any[];
   onEdit?: (id: string) => void;
+  onRefreshNational?: () => void;
   userMobile?: string;
 }
 
@@ -35,6 +36,9 @@ interface ParsedEntry {
   lat: number;
   lng: number;
   farmerName?: string;
+  farmerMobile?: string;
+  officerName?: string;
+  officerMobile?: string;
   district?: string;
   upazila?: string;
   village?: string;
@@ -43,6 +47,8 @@ interface ParsedEntry {
   seedlingCounts: { fruit: number; forest: number; medicinal: number };
   totalSeedlings: number;
   isOwn?: boolean;
+  isLocal?: boolean;
+  synced?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -68,6 +74,16 @@ function makeDivIcon(color: string): L.DivIcon {
   });
 }
 
+function makePulseIcon(): L.DivIcon {
+  return L.divIcon({
+    html: `<div style="position:relative;width:24px;height:24px"><div style="position:absolute;inset:0;background:#15803d;border-radius:50%;opacity:0.3;animation:pulse-ring 1.5s ease-out infinite"></div><div style="position:absolute;inset:6px;background:#15803d;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)"></div></div><style>@keyframes pulse-ring{0%{transform:scale(0.8);opacity:0.5}100%{transform:scale(2.2);opacity:0}}</style>`,
+    className: '',
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+    popupAnchor: [0, -14],
+  });
+}
+
 const DISTRICTS = Object.keys(BD_UPAZILA);
 
 // ---------------------------------------------------------------------------
@@ -85,10 +101,58 @@ function FitBounds({ entries }: { entries: ParsedEntry[] }) {
 }
 
 // ---------------------------------------------------------------------------
+// Sub-component: zoom to my location
+// ---------------------------------------------------------------------------
+
+function ZoomToMe({ userMobile }: { userMobile?: string }) {
+  const map = useMap();
+  const [myPos, setMyPos] = useState<L.LatLngTuple | null>(null);
+  const [locating, setLocating] = useState(false);
+
+  const handleZoom = () => {
+    setLocating(true);
+    navigator.geolocation?.getCurrentPosition(
+      (pos) => {
+        const coord: L.LatLngTuple = [pos.coords.latitude, pos.coords.longitude];
+        setMyPos(coord);
+        map.flyTo(coord, 16, { duration: 1.5 });
+        setLocating(false);
+      },
+      () => setLocating(false),
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  };
+
+  return (
+    <>
+      <button
+        onClick={handleZoom}
+        disabled={locating}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium shadow-lg bg-white/95 backdrop-blur text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer disabled:opacity-50"
+        title="আমার লোকেশনে যান"
+      >
+        <Crosshair size={14} className={locating ? 'animate-pulse' : ''} />
+        আমার অবস্থান
+      </button>
+      {myPos && (
+        <Marker position={myPos} icon={makePulseIcon()}>
+          <Popup>
+            <div className="text-xs text-center">
+              <p className="font-semibold text-green-700">📍 আপনার অবস্থান</p>
+              <p className="text-[10px] text-gray-500 mt-1">{myPos[0].toFixed(5)}, {myPos[1].toFixed(5)}</p>
+            </div>
+          </Popup>
+        </Marker>
+      )}
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export default function LegacyMap({ submissions, nationalEntries = [], onEdit, userMobile }: LegacyMapProps) {
+export default function LegacyMap({ submissions, nationalEntries = [], onEdit, onRefreshNational, userMobile }: LegacyMapProps) {
   // --- Filter state ---
   const [region, setRegion] = useState('');
   const [district, setDistrict] = useState('');
@@ -116,6 +180,9 @@ export default function LegacyMap({ submissions, nationalEntries = [], onEdit, u
           lat: coords[0],
           lng: coords[1],
           farmerName: s.farmerName || s.nurseryName || undefined,
+          farmerMobile: s.farmerMobile || s.mobile || undefined,
+          officerName: s.officerName || s.caretakerName || undefined,
+          officerMobile: s.officerMobile || s.caretakerMobile || undefined,
           district: s.district,
           upazila: s.upazila,
           village: s.village,
@@ -124,14 +191,23 @@ export default function LegacyMap({ submissions, nationalEntries = [], onEdit, u
           seedlingCounts: counts,
           totalSeedlings: total,
           isOwn: userMobile ? (s.farmerMobile === userMobile || s.mobile === userMobile) : false,
+          isLocal: true,
+          synced: !!s.synced,
         };
       })
       .filter((e) => e !== null) as ParsedEntry[];
   }, [submissions, userMobile]);
 
-  // --- Parse national entries ---
+  // --- Parse national entries (dedup by id/submissionId) ---
   const natEntries: ParsedEntry[] = useMemo(() => {
-    return nationalEntries
+    const seenIds = new Set<string>();
+    return (nationalEntries || [])
+      .filter((s) => {
+        const rid = s.id || s.submissionId || '';
+        if (!rid || seenIds.has(rid)) return false;
+        seenIds.add(rid);
+        return true;
+      })
       .map((s) => {
         const coords = parseCoords(s.geoLocation || s.coordinates);
         if (!coords) return null;
@@ -140,6 +216,9 @@ export default function LegacyMap({ submissions, nationalEntries = [], onEdit, u
           lat: coords[0],
           lng: coords[1],
           farmerName: s.farmerName || s.nurseryName || undefined,
+          farmerMobile: s.farmerMobile || s.mobile || undefined,
+          officerName: s.officerName || s.saaoName || undefined,
+          officerMobile: s.officerMobile || s.saaoMobile || undefined,
           district: s.district,
           upazila: s.upazila,
           village: s.village,
@@ -148,6 +227,8 @@ export default function LegacyMap({ submissions, nationalEntries = [], onEdit, u
           seedlingCounts: { fruit: 0, forest: 0, medicinal: 0 },
           totalSeedlings: 0,
           isOwn: false,
+          isLocal: false,
+          synced: true, // national entries are assumed synced
         };
       })
       .filter((e) => e !== null) as ParsedEntry[];
@@ -195,11 +276,31 @@ export default function LegacyMap({ submissions, nationalEntries = [], onEdit, u
     return iconCache.current.get(name)!;
   };
 
+  const grayIcon = useMemo(() => makeDivIcon('#9ca3af'), []);
+  const ownIcon = useMemo(() => makeDivIcon('#a855f7'), []);
+
+  // #13: EVI tile URL (NASA GIBS MODIS EVI)
+  const eviTiles = useMemo(() => ({
+    url: 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Combined_EVI_8Day/default/{time}/{TileMatrixSet}/{z}/{y}/{x}.jpg',
+    attribution: 'NASA GIBS MODIS EVI',
+    maxZoom: 9,
+  }), []);
+
+  // Compute EVI time string (most recent 8-day period)
+  const eviTime = useMemo(() => {
+    const now = new Date();
+    const dayOfYear = Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / 86400000);
+    const period = Math.floor(dayOfYear / 8) * 8;
+    const jan1 = new Date(now.getFullYear(), 0, 0);
+    const eviDate = new Date(jan1.getTime() + period * 86400000);
+    return eviDate.toISOString().slice(0, 10).replace(/-/g, '');
+  }, []);
+
   return (
     <div className="relative w-full h-full">
       {/* ---------- Filter bar ---------- */}
       <div className="absolute top-2 left-2 right-2 sm:left-3 sm:right-3 z-[1000]">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setShowFilters((v) => !v)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium shadow-lg transition-colors cursor-pointer ${showFilters ? 'bg-emerald-700 text-white' : 'bg-white/95 backdrop-blur text-gray-700 hover:bg-gray-100'}`}
@@ -207,6 +308,17 @@ export default function LegacyMap({ submissions, nationalEntries = [], onEdit, u
             <Filter size={14} />
             ফিল্টার
           </button>
+
+          {/* #14: Refresh national data button */}
+          {onRefreshNational && (
+            <button
+              onClick={onRefreshNational}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium shadow-lg bg-white/95 backdrop-blur text-gray-700 hover:bg-blue-50 transition-colors cursor-pointer"
+            >
+              <RefreshCw size={14} />
+              জাতীয় ডাটা রিফ্রেশ
+            </button>
+          )}
 
           <div className="bg-white/95 backdrop-blur rounded-lg shadow-lg px-3 py-1.5 text-xs text-gray-700">
             <TreePine size={14} className="inline-block mr-1 text-emerald-700" />
@@ -251,7 +363,6 @@ export default function LegacyMap({ submissions, nationalEntries = [], onEdit, u
                 className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
                 <option value="">সকল অঞ্চল</option>
-                {/* Unique regions from BD_UPAZILA keys or submissions */}
                 {Array.from(new Set(localEntries.map((e) => e.region).filter(Boolean))).map((r) => (
                   <option key={r} value={r}>{r}</option>
                 ))}
@@ -316,59 +427,118 @@ export default function LegacyMap({ submissions, nationalEntries = [], onEdit, u
           <LayersControl.BaseLayer name="🛰️ স্যাটেলাইট">
             <TileLayer url={satTiles.url} attribution={satTiles.attribution} maxZoom={satTiles.maxZoom} />
           </LayersControl.BaseLayer>
+          {/* #21: EVI tile layer */}
+          <LayersControl.BaseLayer name="🌿 EVI (NASA)">
+            <TileLayer
+              url={eviTiles.url.replace('{time}', eviTime)}
+              attribution={eviTiles.attribution}
+              maxZoom={eviTiles.maxZoom}
+            />
+          </LayersControl.BaseLayer>
         </LayersControl>
 
-        {filtered.map((entry) => (
-          <Marker
-            key={entry.id}
-            position={[entry.lat, entry.lng]}
-            icon={getIcon(entry.upazila || 'unknown')}
-          >
-            <Popup>
-              <div className="text-xs min-w-[180px] space-y-1.5">
-                <div className="font-bold text-emerald-800 flex items-center gap-1">
-                  <TreePine size={13} />
-                  {entry.farmerName || entry.village || entry.upazila || 'অজানা'}
-                </div>
+        {/* #13: Zoom to my location */}
+        <ZoomToMe userMobile={userMobile} />
 
-                {entry.isOwn && (
-                  <span className="inline-block bg-blue-100 text-blue-700 text-[9px] font-medium px-1.5 py-0.5 rounded-full">আমার</span>
-                )}
+        {filtered.map((entry) => {
+          // #15: Gray marker for local/unsynced
+          // #16: Purple marker for own entries
+          let icon: L.DivIcon;
+          if (entry.isOwn) {
+            icon = ownIcon;
+          } else if (entry.isLocal && !entry.synced) {
+            icon = grayIcon;
+          } else {
+            icon = getIcon(entry.upazila || 'unknown');
+          }
 
-                <div className="text-[11px] text-gray-600 space-y-0.5">
-                  {entry.district && <div><b>জেলা:</b> {entry.district}</div>}
-                  {entry.upazila && <div><b>উপজেলা:</b> {entry.upazila}</div>}
-                  {entry.village && <div><b>গ্রাম:</b> {entry.village}</div>}
-                </div>
+          // #20: Sync status text
+          const syncStatusText = entry.isLocal
+            ? (entry.synced ? '✅ App_Entry' : '📡 App_Entry')
+            : null;
 
-                {entry.totalSeedlings > 0 && (
-                  <div className="text-[11px] text-gray-700">
-                    <b>ফলদ:</b> {toBnNum(entry.seedlingCounts.fruit)} ·
-                    <b className="ml-1">বনজ:</b> {toBnNum(entry.seedlingCounts.forest)} ·
-                    <b className="ml-1">ঔষধি:</b> {toBnNum(entry.seedlingCounts.medicinal)}
-                    <div className="mt-0.5 text-gray-500">মোট: {toBnNum(entry.totalSeedlings)} চারা</div>
+          return (
+            <Marker
+              key={entry.id}
+              position={[entry.lat, entry.lng]}
+              icon={icon}
+            >
+              <Popup>
+                <div className="text-xs min-w-[200px] space-y-1.5">
+                  <div className="font-bold text-emerald-800 flex items-center gap-1">
+                    <TreePine size={13} />
+                    {entry.farmerName || entry.village || entry.upazila || 'অজানা'}
                   </div>
-                )}
 
-                {entry.submittedAt && (
-                  <div className="text-[10px] text-gray-400">
-                    📅 {new Date(entry.submittedAt).toLocaleDateString('bn-BD')}
+                  {entry.isOwn && (
+                    <span className="inline-block bg-blue-100 text-blue-700 text-[9px] font-medium px-1.5 py-0.5 rounded-full">আমার</span>
+                  )}
+
+                  <div className="text-[11px] text-gray-600 space-y-0.5">
+                    {entry.district && <div><b>জেলা:</b> {entry.district}</div>}
+                    {entry.upazila && <div><b>উপজেলা:</b> {entry.upazila}</div>}
+                    {entry.village && <div><b>গ্রাম:</b> {entry.village}</div>}
                   </div>
-                )}
 
-                {onEdit && (
-                  <button
-                    onClick={() => onEdit(entry.id)}
-                    className="mt-1.5 w-full flex items-center justify-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-semibold py-1.5 rounded-lg transition-colors cursor-pointer"
-                  >
-                    <Edit size={12} />
-                    সম্পাদনা করুন
-                  </button>
-                )}
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+                  {entry.totalSeedlings > 0 && (
+                    <div className="text-[11px] text-gray-700">
+                      <b>ফলদ:</b> {toBnNum(entry.seedlingCounts.fruit)} ·
+                      <b className="ml-1">বনজ:</b> {toBnNum(entry.seedlingCounts.forest)} ·
+                      <b className="ml-1">ঔষধি:</b> {toBnNum(entry.seedlingCounts.medicinal)}
+                      <div className="mt-0.5 text-gray-500">মোট: {toBnNum(entry.totalSeedlings)} চারা</div>
+                    </div>
+                  )}
+
+                  {/* #18: Monitoring officer info */}
+                  {(entry.officerName || entry.officerMobile) && (
+                    <div className="text-[11px] text-gray-600 border-t border-gray-100 pt-1 mt-1">
+                      <div><b>মনিটরিং অফিসার:</b> {entry.officerName || '—'}</div>
+                      {entry.officerMobile && (
+                        <div>
+                          <b>মোবাইল:</b>{' '}
+                          <a href={`tel:${entry.officerMobile}`} className="text-blue-600 underline hover:text-blue-800">
+                            {entry.officerMobile}
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* #17: Clickable tel: links for mobile numbers */}
+                  {entry.farmerMobile && (
+                    <div className="text-[11px] text-gray-600">
+                      <b>কৃষক:</b>{' '}
+                      <a href={`tel:${entry.farmerMobile}`} className="text-blue-600 underline hover:text-blue-800">
+                        {entry.farmerMobile}
+                      </a>
+                    </div>
+                  )}
+
+                  {/* #20: Sync status text */}
+                  {syncStatusText && (
+                    <div className="text-[10px] text-gray-400 mt-1">{syncStatusText}</div>
+                  )}
+
+                  {entry.submittedAt && (
+                    <div className="text-[10px] text-gray-400">
+                      📅 {new Date(entry.submittedAt).toLocaleDateString('bn-BD')}
+                    </div>
+                  )}
+
+                  {onEdit && entry.isLocal && (
+                    <button
+                      onClick={() => onEdit(entry.id)}
+                      className="mt-1.5 w-full flex items-center justify-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-semibold py-1.5 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <Edit size={12} />
+                      সম্পাদনা করুন
+                    </button>
+                  )}
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
 
         <FitBounds entries={filtered} />
       </MapContainer>

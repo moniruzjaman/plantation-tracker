@@ -32,6 +32,21 @@ import type { FlatSeedling } from './components/OfflinePlantationDashboard';
 const MapTab = lazy(() => import('./components/plantation/MapTab'));
 
 export default function App() {
+  // ── Iframe detection (migrated from legacy checkIframeAndPrompt) ──
+  useEffect(() => {
+    try {
+      if (window.self !== window.top) {
+        const banner = document.createElement('div');
+        banner.id = 'pwaIframeBanner';
+        banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#dc2626;color:#fff;text-align:center;padding:8px 12px;font-size:13px;font-family:sans-serif;cursor:pointer;';
+        banner.textContent = '⚠️ পূর্ণ অভিজ্ঞতার জন্য নতুন ট্যাবে খুলুন (Open in new tab for full experience)';
+        banner.onclick = () => { window.open(window.location.href, '_blank'); };
+        document.body.prepend(banner);
+        return () => { banner.remove(); };
+      }
+    } catch { /* cross-origin, ignore */ }
+  }, []);
+
   // ── Background services state (fed to MobileControlCenter) ──────────
   const [networkState, setNetworkState] = useState<NetworkStatusData | null>(null);
   const [geoState, setGeoState] = useState<GeoState | null>(null);
@@ -75,6 +90,9 @@ export default function App() {
     loadNationalEntries();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Derived: unsynced count for tab badge ────────────────────────────
+  const unsyncedCount = submissions.filter((s) => !s.synced).length;
+
   // ── Derived: geo status label for AppHeader ─────────────────────────
   const geoStatusLabel = (() => {
     if (!geoState) return 'searching';
@@ -87,8 +105,16 @@ export default function App() {
   // ── Derived: isOnline for AppHeader ──────────────────────────────────
   const isOnline = networkState?.isOnline ?? true;
 
-  // ── Derived: unsynced count for tab badge ────────────────────────────
-  const unsyncedCount = submissions.filter((s) => !s.synced).length;
+  // #45: Auto-sync on reconnect
+  useEffect(() => {
+    const handleNetworkOnline = () => {
+      if (unsyncedCount > 0) {
+        syncAll();
+      }
+    };
+    window.addEventListener('network-online', handleNetworkOnline);
+    return () => window.removeEventListener('network-online', handleNetworkOnline);
+  }, [unsyncedCount, syncAll]);
 
   // ── Tab change handler ──────────────────────────────────────────────
   const handleTabChange = useCallback((tab: string) => {
@@ -244,6 +270,7 @@ export default function App() {
             geoFenceAreaSqm={fence.areaSqm}
             isGeoFenceWalking={fence.isWalking}
             ndviValue={undefined}
+            profile={profile}
             onSubmit={handleFormSubmit}
             onFetchGPS={() => geo.fetchGPS()}
             onToggleMap={() => setShowGeoManualPanel((v) => !v)}
@@ -259,6 +286,7 @@ export default function App() {
           <Dashboard
             submissions={submissions}
             nationalEntries={nationalEntries}
+            onRefreshNational={loadNationalEntries}
           />
         );
 
@@ -268,6 +296,7 @@ export default function App() {
             submissions={submissions}
             nationalEntries={nationalEntries}
             onEdit={(id) => handleEdit(id)}
+            onRefreshNational={loadNationalEntries}
             userMobile={profile.mobile}
           />
         );
@@ -280,6 +309,7 @@ export default function App() {
             onDelete={handleDelete}
             onSync={handleSyncOne}
             onSyncAll={handleSyncAll}
+            profile={profile}
           />
         );
 

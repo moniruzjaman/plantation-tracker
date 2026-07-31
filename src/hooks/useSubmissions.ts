@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import type { Submission, FlatSeedling } from '../components/OfflinePlantationDashboard';
 import { getSubmissions, saveSubmissions } from '../services/storage';
 import { sendToGAS, fetchNationalEntries } from '../services/api';
+import { NATIONAL_ENTRIES_CACHE_KEY } from '../services/storage';
 
 /** Generate a unique submission ID: PT-<timestamp><4-digit-random> */
 function generateId(): string {
@@ -47,9 +48,29 @@ export function useSubmissions() {
         category: s.category || '',
         quantity: s.quantity || 0,
       }));
-      await sendToGAS(rows.length > 0 ? rows : [newSubmission]);
+      const result = await sendToGAS(rows.length > 0 ? rows : [newSubmission]);
+      if (result.ok) {
+        const now = new Date().toISOString();
+        setSubmissions((prev) =>
+          prev.map((s) =>
+            s.id === newSubmission.id
+              ? { ...s, synced: true, syncedAt: now }
+              : s,
+          ),
+        );
+      } else {
+        // Sync failed — show error but keep synced: false
+        console.warn('[useSubmissions] addSubmission sync failed:', result.error);
+        // Dispatch a custom event so the UI can show the error
+        window.dispatchEvent(new CustomEvent('sync-error', {
+          detail: 'সিঙ্ক ব্যর্থ — তথ্য অফলাইনে সংরক্ষিত আছে',
+        }));
+      }
     } catch {
       // Submission is safely stored locally; sync can be retried later
+      window.dispatchEvent(new CustomEvent('sync-error', {
+        detail: 'সিঙ্ক ব্যর্থ — তথ্য অফলাইনে সংরক্ষিত আছে',
+      }));
     }
 
     return newSubmission;
@@ -77,7 +98,19 @@ export function useSubmissions() {
             category: s.category || '',
             quantity: s.quantity || 0,
           }));
-          await sendToGAS(rows.length > 0 ? rows : [updated]);
+          const result = await sendToGAS(rows.length > 0 ? rows : [updated]);
+          if (result.ok) {
+            const now = new Date().toISOString();
+            setSubmissions((prev) =>
+              prev.map((s) =>
+                s.id === id
+                  ? { ...s, synced: true, syncedAt: now }
+                  : s,
+              ),
+            );
+          } else {
+            console.warn('[useSubmissions] updateSubmission sync failed:', result.error);
+          }
         } catch {
           // ignore – local state is already persisted
         }
@@ -93,20 +126,55 @@ export function useSubmissions() {
 
   // ── Sync every local submission to GAS ──────────────────────────────────
   const syncAll = useCallback(async () => {
-    const current = getSubmissions(); // read latest from storage
+    // Read latest from React state (not storage) for accurate sync flags
+    let current: Submission[] = [];
+    setSubmissions((prev) => {
+      current = prev;
+      return prev;
+    });
+
+    const unsynced = current.filter((s) => !s.synced);
+    let successCount = 0;
+    let failedCount = 0;
+
+    const updateFlags: { id: string; synced: boolean; syncedAt: string }[] = [];
+
     const results = await Promise.allSettled(
-      current.map((s) => {
+      unsynced.map((s) => {
         const rows = (s.seedlings || []).map((sl: any) => ({
           ...s,
           speciesName: sl.speciesName || '',
           category: sl.category || '',
           quantity: sl.quantity || 0,
         }));
-        return sendToGAS(rows.length > 0 ? rows : [s]);
+        return sendToGAS(rows.length > 0 ? rows : [s]).then((result) => {
+          if (result.ok) {
+            successCount++;
+            updateFlags.push({ id: s.id, synced: true, syncedAt: new Date().toISOString() });
+          } else {
+            failedCount++;
+          }
+        });
       }),
     );
-    const failedCount = results.filter((r) => r.status === 'rejected').length;
-    return { total: current.length, failedCount };
+
+    // Also count any Promise.rejected results
+    results.forEach((r) => {
+      if (r.status === 'rejected') failedCount++;
+    });
+
+    // Update React state with synced flags
+    if (updateFlags.length > 0) {
+      setSubmissions((prev) =>
+        prev.map((s) => {
+          const flag = updateFlags.find((f) => f.id === s.id);
+          if (flag) return { ...s, synced: true, syncedAt: flag.syncedAt };
+          return s;
+        }),
+      );
+    }
+
+    return { total: unsynced.length, failedCount, successCount };
   }, []);
 
   // ── Fetch national entries and merge (dedup by submissionId) ────────────
@@ -116,10 +184,19 @@ export function useSubmissions() {
       const local = getSubmissions();
       const localIds = new Set(local.map((s) => s.id));
 
+      // Dedup national entries by id/submissionId
+      const seenRemoteIds = new Set<string>();
+      const dedupedRemote = remote.filter((r) => {
+        const rid = r.id || r.submissionId || '';
+        if (!rid || seenRemoteIds.has(rid)) return false;
+        seenRemoteIds.add(rid);
+        return true;
+      });
+
       // Merge: keep all local + remote entries not already present locally
       const merged = [
         ...local,
-        ...remote.filter((r) => !localIds.has(r.id)),
+        ...dedupedRemote.filter((r) => !localIds.has(r.id || r.submissionId || '')),
       ];
 
       setNationalEntries(merged);
