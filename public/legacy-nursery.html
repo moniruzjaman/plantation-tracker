@@ -1078,7 +1078,7 @@ var VISITOR_PING_KEY="dae_visitor_ping_sent";
 // origins) to enable auto-fetching a verified email via Google Sign-In.
 // Until then, every Google-auth call below quietly no-ops and the app
 // behaves exactly as before (manual, optional email field).
-var GOOGLE_CLIENT_ID="YOUR_GOOGLE_OAUTH_CLIENT_ID.apps.googleusercontent.com";
+var GOOGLE_CLIENT_ID="946498250876-okv2fbfob3gd2ghjnq9v1t4vlc1g3giq.apps.googleusercontent.com";
 var _pendingVerifiedEmail=null;
 
 // ── Device fingerprint ──
@@ -1281,7 +1281,7 @@ function requireProfileOrPrompt(){
 
 // ── Google Sign-In (optional email auto-fetch) ──
 // No-ops entirely until GOOGLE_CLIENT_ID above is replaced with a real one.
-function _googleAuthConfigured(){ return GOOGLE_CLIENT_ID.indexOf("946498250876-okv2fbfob3gd2ghjnq9v1t4vlc1g3giq.apps.googleusercontent.com")!==0; }
+function _googleAuthConfigured(){ return GOOGLE_CLIENT_ID.indexOf("YOUR_")!==0; }
 function _decodeGoogleJwt(token){
   try{
     var payload=token.split(".")[1];
