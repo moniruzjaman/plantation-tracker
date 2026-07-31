@@ -7,15 +7,20 @@ export interface Profile {
   name?: string;
   mobile?: string;
   designation?: string;
+  shortRole?: string;
+  roleLabel?: string;
   region?: string;
   district?: string;
   upazila?: string;
   block?: string;
+  union?: string;
+  googleEmail?: string;
+  email?: string;
   saaoName?: string;
   saaoMobile?: string;
   officerName?: string;
   officerMobile?: string;
-  googleEmail?: string;
+  deviceId?: string;
 }
 
 /** Key fields that constitute a "complete" profile for gating submissions. */

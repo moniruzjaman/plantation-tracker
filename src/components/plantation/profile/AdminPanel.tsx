@@ -12,7 +12,10 @@ import {
   ChevronDown,
   ChevronUp,
   X,
+  Printer,
+  FileText,
 } from 'lucide-react';
+import { normaliseEntries, exportMinistry9ColExcel, exportMinistry9ColPrint, export17ColExcel, export17ColPrint, exportGeneralCSV, exportGeneralPrint } from '../../../utils/reports';
 import type { ComponentType } from 'react';
 import type { Submission } from '../../OfflinePlantationDashboard';
 import { countSeedlings } from '../../../types/plantation';
@@ -53,6 +56,10 @@ export default function AdminPanel({ submissions, nationalEntries = [] }: AdminP
   const [filterDistrict, setFilterDistrict] = useState('');
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordMsg, setPasswordMsg] = useState('');
 
   const allEntries = useMemo(() => {
     const local = submissions.map((s) => ({
@@ -141,22 +148,46 @@ export default function AdminPanel({ submissions, nationalEntries = [] }: AdminP
     setConfirmDeleteAll(false);
   }, []);
 
-  const handleExportCSV = useCallback(() => {
-    const headers = ['ক্রমিক', 'উৎস', 'কৃষকের নাম', 'মোবাইল', 'অঞ্চল', 'জেলা', 'উপজেলা', 'ফলদ চারা', 'বনজ চারা', 'ঔষধি চারা', 'মোট', 'তারিখ'];
-    const rows = filtered.map((e, i) => {
-      const c = e._source === 'local' ? countSeedlings(e._raw as any) : { fruit: 0, forest: 0, medicinal: 0 };
-      return [i + 1, e._source === 'local' ? 'স্থানীয়' : 'জাতীয়', e.farmerName, e.farmerMobile, e.region, e.district, e.upazila, c.fruit, c.forest, c.medicinal, c.fruit + c.forest + c.medicinal, e.submittedAt ? new Date(e.submittedAt).toLocaleDateString('bn-BD') : ''].join(',');
-    });
+  // #38-43: Report exports
+  const getReportRows = useCallback(() => {
+    return normaliseEntries(submissions, nationalEntries);
+  }, [submissions, nationalEntries]);
+
+  const handleMinistryExcel = useCallback(() => {
+    exportMinistry9ColExcel(getReportRows());
+  }, [getReportRows]);
+
+  const handleMinistryPrint = useCallback(() => {
+    exportMinistry9ColPrint(getReportRows());
+  }, [getReportRows]);
+
+  const handle17ColExcel = useCallback(() => {
+    export17ColExcel(getReportRows());
+  }, [getReportRows]);
+
+  const handle17ColPrint = useCallback(() => {
+    export17ColPrint(getReportRows());
+  }, [getReportRows]);
+
+  const handleGeneralExcel = useCallback(() => {
+    const rows = getReportRows();
+    const header = ['ক্রম', 'অঞ্চল', 'জেলা', 'উপজেলা', 'রোপণকারী', 'মোবাইল', 'ফলদ', 'বনজ', 'ঔষধি', 'মোট', 'তারিখ'];
+    const tsvRows = rows.map((e, i) => [i + 1, e.region, e.district, e.upazila, e.farmerName, e.farmerMobile, e.fruit, e.forest, e.medicinal, e.total, e.date].join('\t'));
+    const tsv = [header.join('\t'), ...tsvRows].join('\n');
     const bom = '\uFEFF';
-    const csv = bom + [headers.join(','), ...rows].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([bom + tsv], { type: 'application/vnd.ms-excel;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = `plantation_data_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [filtered]);
+    a.href = url; a.download = `admin_data_${new Date().toISOString().slice(0, 10)}.xls`; a.click(); URL.revokeObjectURL(url);
+  }, [getReportRows]);
+
+  const handleExportCSV = useCallback(() => {
+    exportGeneralCSV(getReportRows());
+  }, [getReportRows]);
+
+  const handlePrint = useCallback(() => {
+    exportGeneralPrint(getReportRows());
+  }, [getReportRows]);
 
   const handleDeleteAll = useCallback(() => {
     if (!confirmDeleteAll) { setConfirmDeleteAll(true); return; }
@@ -164,6 +195,31 @@ export default function AdminPanel({ submissions, nationalEntries = [] }: AdminP
     setConfirmDeleteAll(false);
     window.location.reload();
   }, [confirmDeleteAll]);
+
+  const handleChangePassword = useCallback(() => {
+    setPasswordMsg('');
+    if (!newPassword.trim()) {
+      setPasswordMsg('পাসওয়ার্ড দিন');
+      return;
+    }
+    if (newPassword.length < 4) {
+      setPasswordMsg('পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordMsg('পাসওয়ার্ড মিলছে না');
+      return;
+    }
+    try {
+      localStorage.setItem(ADMIN_LS_KEY, newPassword);
+      setPasswordMsg('পাসওয়ার্ড সফলভাবে পরিবর্তন হয়েছে!');
+      setNewPassword('');
+      setConfirmPassword('');
+      setShowChangePassword(false);
+    } catch {
+      setPasswordMsg('পাসওয়ার্ড সংরক্ষণ করতে সমস্যা হয়েছে');
+    }
+  }, [newPassword, confirmPassword]);
 
   if (!authenticated) {
     return (
@@ -216,6 +272,55 @@ export default function AdminPanel({ submissions, nationalEntries = [] }: AdminP
         </button>
       </div>
 
+      {/* ── Change Password Section ──────────────────── */}
+      {showChangePassword ? (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 flex flex-col gap-2">
+          <p className="text-xs font-semibold text-gray-600 flex items-center gap-1">
+            <Lock className="w-3.5 h-3.5 text-[#15803d]" />
+            পাসওয়ার্ড পরিবর্তন
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[10px] text-gray-500 block mb-0.5">নতুন পাসওয়ার্ড</label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="নতুন পাসওয়ার্ড"
+                className="w-full px-2.5 py-2 rounded-lg border border-gray-200 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-[#15803d]/30 focus:border-[#15803d] transition"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-500 block mb-0.5">নিশ্চিত করুন</label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="আবার লিখুন"
+                className="w-full px-2.5 py-2 rounded-lg border border-gray-200 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-[#15803d]/30 focus:border-[#15803d] transition"
+              />
+            </div>
+          </div>
+          {passwordMsg && (
+            <p className={`text-[10px] ${passwordMsg.includes('সফল') ? 'text-green-600' : 'text-red-500'}`}>
+              {passwordMsg}
+            </p>
+          )}
+          <div className="flex gap-2">
+            <button type="button" onClick={handleChangePassword} className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#15803d] text-white hover:bg-green-800 active:scale-95 transition-all shadow-sm cursor-pointer">
+              ✓ পরিবর্তন করুন
+            </button>
+            <button type="button" onClick={() => { setShowChangePassword(false); setPasswordMsg(''); setNewPassword(''); setConfirmPassword(''); }} className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 active:scale-95 transition-all cursor-pointer">
+              বাতিল
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button type="button" onClick={() => setShowChangePassword(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-50 text-gray-500 hover:bg-gray-100 border border-gray-200 active:scale-95 transition-all cursor-pointer self-start">
+          🔑 পাসওয়ার্ড পরিবর্তন
+        </button>
+      )}
+
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <StatBox label="মোট এন্ট্রি" value={toBnNum(stats.totalEntries)} color="green" icon={Database} />
         <StatBox label="স্থানীয়" value={toBnNum(stats.localEntries)} color="orange" icon={Leaf} />
@@ -255,12 +360,27 @@ export default function AdminPanel({ submissions, nationalEntries = [] }: AdminP
             {filterDistricts.map((d) => (<option key={d} value={d}>{d}</option>))}
           </select>
         </div>
-        <div className="flex gap-2">
-          <button type="button" onClick={handleExportCSV} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-[#15803d] text-white hover:bg-green-800 active:scale-95 transition-all shadow-sm cursor-pointer">
-            <Download className="w-3.5 h-3.5" />
-            📊 Excel এক্সপোর্ট
+        {/* #43: Export buttons */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <button type="button" onClick={handleMinistryExcel} className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-[11px] font-semibold bg-[#15803d] text-white hover:bg-green-800 active:scale-95 transition-all shadow-sm cursor-pointer">
+            <Download className="w-3 h-3" /> মন্ত্রণালয় Excel
           </button>
-          <button type="button" onClick={handleDeleteAll} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all shadow-sm cursor-pointer ${confirmDeleteAll ? 'bg-red-600 text-white hover:bg-red-700 animate-pulse' : 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'}`}>
+          <button type="button" onClick={handle17ColExcel} className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-[11px] font-semibold bg-blue-600 text-white hover:bg-blue-700 active:scale-95 transition-all shadow-sm cursor-pointer">
+            <Download className="w-3 h-3" /> ১৭-কলাম Excel
+          </button>
+          <button type="button" onClick={handleGeneralExcel} className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-[11px] font-semibold bg-gray-700 text-white hover:bg-gray-800 active:scale-95 transition-all shadow-sm cursor-pointer">
+            <Download className="w-3 h-3" /> সাধারণ Excel
+          </button>
+          <button type="button" onClick={handleMinistryPrint} className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-[11px] font-semibold bg-orange-500 text-white hover:bg-orange-600 active:scale-95 transition-all shadow-sm cursor-pointer">
+            <Printer className="w-3 h-3" /> মন্ত্রণালয় প্রিন্ট
+          </button>
+          <button type="button" onClick={handle17ColPrint} className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-[11px] font-semibold bg-purple-500 text-white hover:bg-purple-600 active:scale-95 transition-all shadow-sm cursor-pointer">
+            <Printer className="w-3 h-3" /> ১৭-কলাম প্রিন্ট
+          </button>
+          <button type="button" onClick={handleExportCSV} className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-[11px] font-semibold bg-white text-gray-700 hover:bg-gray-100 active:scale-95 transition-all shadow-sm cursor-pointer border border-gray-200">
+            <FileText className="w-3 h-3" /> CSV
+          </button>
+          <button type="button" onClick={handleDeleteAll} className={`col-span-2 sm:col-span-3 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all shadow-sm cursor-pointer ${confirmDeleteAll ? 'bg-red-600 text-white hover:bg-red-700 animate-pulse' : 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'}`}>
             <Trash2 className="w-3.5 h-3.5" />
             {confirmDeleteAll ? 'আবার ক্লিক করুন!' : '🗑️ সব ডাটা মুছুন'}
           </button>

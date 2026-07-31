@@ -174,3 +174,152 @@ export async function lookupMobile(mobile: string): Promise<any> {
     return null;
   }
 }
+
+// ------------------------------------------------------------------
+// fetchDirectory
+// ------------------------------------------------------------------
+
+const DIRECTORY_CACHE_KEY = 'plantation_directory_cache';
+const DIRECTORY_CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
+
+/**
+ * Fetch directory data (SAAO/officer names for autocomplete) with 6hr localStorage cache.
+ */
+export async function fetchDirectory(): Promise<any[]> {
+  try {
+    // Check cache first
+    const cachedRaw = localStorage.getItem(DIRECTORY_CACHE_KEY);
+    if (cachedRaw) {
+      const cached = JSON.parse(cachedRaw) as { data: any[]; ts: number };
+      if (Date.now() - cached.ts < DIRECTORY_CACHE_TTL) {
+        return cached.data;
+      }
+    }
+
+    const params = new URLSearchParams({ directory: '1' });
+    const url = `${GAS_SYNC_ENDPOINT}?${params.toString()}`;
+    const res = await safeFetch(url);
+
+    if (res.status === 0 || !res.ok) {
+      // Return stale cache on network error
+      if (cachedRaw) {
+        return JSON.parse(cachedRaw).data;
+      }
+      return [];
+    }
+
+    const data = await res.json();
+    const result = Array.isArray(data) ? data : [];
+
+    // Save to cache
+    try {
+      localStorage.setItem(DIRECTORY_CACHE_KEY, JSON.stringify({ data: result, ts: Date.now() }));
+    } catch { /* storage full */ }
+
+    return result;
+  } catch (err) {
+    console.warn('[api] fetchDirectory failed:', err);
+    return [];
+  }
+}
+
+// ------------------------------------------------------------------
+// syncProfileToSheet
+// ------------------------------------------------------------------
+
+/**
+ * POST a profile object to the GAS proxy for the User_Profile sheet.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function syncProfileToSheet(profile: any): Promise<GASSendResponse> {
+  try {
+    const payload = [{ ...profile, _sheet: 'User_Profile' }];
+    const res = await safeFetch(GAS_SYNC_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.status === 0) {
+      return (await res.json()) as GASSendResponse;
+    }
+
+    if (!res.ok) {
+      return { ok: false, error: `HTTP ${res.status}` };
+    }
+
+    return (await res.json()) as GASSendResponse;
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : 'Unknown error',
+    };
+  }
+}
+
+// ------------------------------------------------------------------
+// fetchCustomUpazilas
+// ------------------------------------------------------------------
+
+/**
+ * Fetch custom upazilas from the GAS proxy.
+ */
+export async function fetchCustomUpazilas(): Promise<any[]> {
+  try {
+    const params = new URLSearchParams({ customUpazila: '1' });
+    const url = `${GAS_SYNC_ENDPOINT}?${params.toString()}`;
+    const res = await safeFetch(url);
+
+    if (res.status === 0 || !res.ok) return [];
+
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+// ------------------------------------------------------------------
+// addCustomUpazila
+// ------------------------------------------------------------------
+
+/**
+ * POST a custom upazila to the GAS proxy.
+ */
+export async function addCustomUpazila(district: string, name: string): Promise<GASSendResponse> {
+  try {
+    const payload = [{ _action: 'addCustomUpazila', district, name }];
+    const res = await safeFetch(GAS_SYNC_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.status === 0) {
+      return (await res.json()) as GASSendResponse;
+    }
+
+    if (!res.ok) {
+      return { ok: false, error: `HTTP ${res.status}` };
+    }
+
+    return (await res.json()) as GASSendResponse;
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : 'Unknown error',
+    };
+  }
+}
+
+// ------------------------------------------------------------------
+// lookupExistingUser
+// ------------------------------------------------------------------
+
+/**
+ * Look up an existing user by mobile from the User_Profile sheet.
+ * Reuses the existing lookupMobile endpoint.
+ */
+export async function lookupExistingUser(mobile: string): Promise<any> {
+  return lookupMobile(mobile);
+}

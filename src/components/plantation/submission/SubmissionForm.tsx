@@ -15,8 +15,10 @@ import {
   ImageIcon,
   Footprints,
   Eraser,
+  User,
 } from 'lucide-react';
 import type { Submission, FlatSeedling } from '../../OfflinePlantationDashboard';
+import type { Profile } from '../../../hooks/useProfile';
 import {
   BD_DIVISIONS,
   BD,
@@ -24,7 +26,10 @@ import {
   SPECIES_SUGGESTIONS,
   SEEDLING_CATEGORIES,
   SOURCE_TYPES,
+  LOCATION_TYPES,
 } from '../../../data/adminData';
+import { fetchDirectory, addCustomUpazila, fetchCustomUpazilas } from '../../../services/api';
+import { reverseGeocode, autoSelectAdminFromGeo } from '../../../services/geocoding';
 
 /* ------------------------------------------------------------------ */
 /*  Props                                                              */
@@ -46,6 +51,7 @@ interface SubmissionFormProps {
   geoFenceAreaSqm?: number;
   isGeoFenceWalking?: boolean;
   ndviValue?: string;
+  profile?: Profile | null;
   onSubmit: (data: Record<string, unknown>) => Promise<void>;
   onFetchGPS: () => void;
   onToggleMap: () => void;
@@ -68,6 +74,36 @@ const emptySeedlingRow = (): FlatSeedling => ({
   category: 'ফলদ',
   quantity: 0,
 });
+
+/** Downscale an image dataURL to max 1024px at JPEG 0.7 quality */
+function downscaleImage(dataUrl: string, maxDim = 1024, quality = 0.7): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      if (width <= maxDim && height <= maxDim) {
+        resolve(dataUrl);
+        return;
+      }
+      if (width > height) {
+        height = (height / width) * maxDim;
+        width = maxDim;
+      } else {
+        width = (width / height) * maxDim;
+        height = maxDim;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { resolve(dataUrl); return; }
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
 
 /* ------------------------------------------------------------------ */
 /*  Section Card (extracted to avoid tsc 5.8 JSX parse issue)         */
@@ -108,6 +144,7 @@ export default function SubmissionForm({
   geoFenceAreaSqm,
   isGeoFenceWalking = false,
   ndviValue,
+  profile,
   onSubmit,
   onFetchGPS,
   onToggleMap,
@@ -129,6 +166,7 @@ export default function SubmissionForm({
   const [block, setBlock] = useState('');
   const [locationType, setLocationType] = useState('');
   const [sourceType, setSourceType] = useState('');
+  const [customSource, setCustomSource] = useState('');
   const [plantingDate, setPlantingDate] = useState(todayISO());
   const [addressText, setAddressText] = useState('');
   const [lat, setLat] = useState('');
@@ -154,8 +192,11 @@ export default function SubmissionForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [directoryData, setDirectoryData] = useState<any[]>([]);
+  const [customUpazilas, setCustomUpazilas] = useState<string[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const reverseGeoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* ---------------------------------------------------------------- */
   /*  Derived: cascading dropdowns                                      */
@@ -208,6 +249,30 @@ export default function SubmissionForm({
     if (ndviValue) setNdvi(ndviValue);
   }, [ndviValue]);
 
+  // Profile auto-fill: pre-fill empty fields from profile
+  useEffect(() => {
+    if (!profile) return;
+    if (profile.name && !saaoName) setSaaoName(profile.name);
+    if (profile.mobile && !saaoMobile) setSaaoMobile(profile.mobile);
+    if (profile.officerName && !officerName) setOfficerName(profile.officerName);
+    if (profile.officerMobile && !officerMobile) setOfficerMobile(profile.officerMobile);
+    if (profile.district && !district) setDistrict(profile.district);
+    if (profile.upazila && !upazila) setUpazila(profile.upazila);
+    if (profile.region && !region) setRegion(profile.region);
+    if (profile.block && !block) setBlock(profile.block);
+  }, [profile]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch directory data for autocomplete
+  useEffect(() => {
+    fetchDirectory().then(setDirectoryData).catch(() => {});
+    // Fetch custom upazilas for the dropdown
+    fetchCustomUpazilas().then((list) => {
+      if (Array.isArray(list)) {
+        setCustomUpazilas(list.map((u: any) => u.name || u.upazila || String(u)).filter(Boolean));
+      }
+    }).catch(() => {});
+  }, []);
+
   // Edit mode: populate all fields
   useEffect(() => {
     if (!editData) return;
@@ -240,13 +305,80 @@ export default function SubmissionForm({
     }
 
     // Source type & block stored as top-level fields if present
-    const d = editData as unknown as Record<string, unknown>;
-    setSourceType((d.sourceType as string) ?? '');
-    setBlock((d.block as string) ?? '');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const raw = editData as any;
+    setSourceType(raw.sourceType ?? '');
+    setCustomSource(raw.customSource ?? '');
+    setBlock(raw.block ?? '');
   }, [editData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ---------------------------------------------------------------- */
-  /*  Handlers                                                          */
+  /*  Directory-based mobile auto-fill                                  */
+  /* ---------------------------------------------------------------- */
+
+  const handleSaaoNameChange = useCallback((val: string) => {
+    setSaaoName(val);
+    const match = directoryData.find((d: any) => {
+      const name = (d.name || d.saaoName || '').trim();
+      return name === val.trim();
+    });
+    if (match) {
+      const mob = match.mobile || match.saaoMobile || '';
+      if (mob && !saaoMobile) setSaaoMobile(mob);
+    }
+  }, [directoryData, saaoMobile]);
+
+  const handleOfficerNameChange = useCallback((val: string) => {
+    setOfficerName(val);
+    const match = directoryData.find((d: any) => {
+      const name = (d.name || d.officerName || '').trim();
+      return name === val.trim();
+    });
+    if (match) {
+      const mob = match.mobile || match.officerMobile || '';
+      if (mob && !officerMobile) setOfficerMobile(mob);
+    }
+  }, [directoryData, officerMobile]);
+
+  /* ---------------------------------------------------------------- */
+  /*  Manual coordinate change → reverse geocode (debounced)          */
+  /* ---------------------------------------------------------------- */
+
+  const handleManualCoordChange = useCallback((field: 'lat' | 'lng', value: string) => {
+    if (field === 'lat') setLat(value);
+    else setLng(value);
+
+    // Debounced reverse geocode
+    if (reverseGeoTimerRef.current) clearTimeout(reverseGeoTimerRef.current);
+    reverseGeoTimerRef.current = setTimeout(async () => {
+      const newLat = field === 'lat' ? value : lat;
+      const newLng = field === 'lng' ? value : lng;
+      if (!newLat || !newLng) return;
+      const latNum = parseFloat(newLat);
+      const lngNum = parseFloat(newLng);
+      if (isNaN(latNum) || isNaN(lngNum)) return;
+      if (latNum < 20 || latNum > 27 || lngNum < 88 || lngNum > 93) return; // not BD
+
+      try {
+        const result = await reverseGeocode(latNum, lngNum);
+        if (result) {
+          if (!addressText && result.display_name) {
+            setAddressText(result.display_name);
+          }
+          const admin = autoSelectAdminFromGeo(result.address);
+          if (admin.division && !division) setDivision(admin.division);
+          if (admin.region && !region) setRegion(admin.region);
+          if (admin.district && !district) setDistrict(admin.district);
+          if (admin.upazila && !upazila) setUpazila(admin.upazila);
+        }
+      } catch {
+        // silent
+      }
+    }, 800);
+  }, [lat, lng, addressText, division, region, district, upazila]);
+
+  /* ---------------------------------------------------------------- */
+  /*  Seedling helpers                                                 */
   /* ---------------------------------------------------------------- */
 
   const clearMessages = useCallback(() => {
@@ -254,7 +386,6 @@ export default function SubmissionForm({
     setErrorMsg('');
   }, []);
 
-  // Seedling helpers
   const addSeedlingRow = () => {
     clearMessages();
     setSeedlings((prev) => [...prev, emptySeedlingRow()]);
@@ -272,19 +403,25 @@ export default function SubmissionForm({
     );
   };
 
-  // Photo handler
+  // Photo handler with downscale
   const handlePhotoCapture = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-      setErrors((p) => ({ ...p, photo: 'ছবির আকার ১০ এমবি-এর বেশি হতে পারবে না' }));
+    if (file.size > 15 * 1024 * 1024) {
+      setErrors((p) => ({ ...p, photo: 'ছবির আকার ১৫ এমবি-এর বেশি হতে পারবে না' }));
       return;
     }
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       const b64 = reader.result as string;
-      setPhotoBase64(b64);
-      onPhotoChange(b64);
+      try {
+        const downscaled = await downscaleImage(b64);
+        setPhotoBase64(downscaled);
+        onPhotoChange(downscaled);
+      } catch {
+        setPhotoBase64(b64);
+        onPhotoChange(b64);
+      }
       setErrors((p) => {
         const n = { ...p };
         delete n.photo;
@@ -350,7 +487,8 @@ export default function SubmissionForm({
       village: village || undefined,
       block: block || undefined,
       locationType: locationType || undefined,
-      sourceType: sourceType || undefined,
+      sourceType: (sourceType === 'অন্যান্য' ? `অন্যান্য: ${customSource}` : sourceType) || undefined,
+      customSource: sourceType === 'অন্যান্য' ? customSource : undefined,
       plantingDate,
       address: addressText || undefined,
       latitude: lat || undefined,
@@ -398,6 +536,7 @@ export default function SubmissionForm({
     setBlock('');
     setLocationType('');
     setSourceType('');
+    setCustomSource('');
     setPlantingDate(todayISO());
     setAddressText('');
     setLat('');
@@ -426,6 +565,14 @@ export default function SubmissionForm({
   const fenceSotok = geoFenceAreaSqm ? (geoFenceAreaSqm / 672).toFixed(2) : null;
 
   /* ---------------------------------------------------------------- */
+  /*  Directory datalist options                                       */
+  /* ---------------------------------------------------------------- */
+
+  const directoryNames = directoryData
+    .map((d: any) => (d.name || d.saaoName || d.officerName || '').trim())
+    .filter(Boolean);
+
+  /* ---------------------------------------------------------------- */
   /*  Render helpers                                                    */
   /* ---------------------------------------------------------------- */
 
@@ -439,8 +586,8 @@ export default function SubmissionForm({
   const labelCls = 'text-xs font-semibold text-gray-600 block mb-1';
 
   /* ================================================================= */
-  /*  JSX                                                               */
-  /* ================================================================= */
+/*  JSX                                                               */
+/* ================================================================= */
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
@@ -450,6 +597,21 @@ export default function SubmissionForm({
           {isEditMode ? '✏️ তথ্য সম্পাদনা' : '📄 নতুন তথ্য জমা দিন'}
         </h2>
       </div>
+
+      {/* ====== Profile bar (#12) ====== */}
+      {profile && profile.name && (
+        <div className="bg-[#15803d]/5 border border-[#15803d]/20 rounded-xl px-4 py-2.5 flex items-center gap-3 text-xs">
+          <div className="w-8 h-8 rounded-full bg-[#15803d]/10 flex items-center justify-center shrink-0">
+            <User className="w-4 h-4 text-[#15803d]" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-gray-800 truncate">{profile.name}</p>
+            <p className="text-gray-500 truncate">
+              {[profile.designation, profile.district, profile.upazila].filter(Boolean).join(' · ') || 'প্রোফাইল তথ্য সম্পূর্ণ করুন'}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Success / Error banners */}
       {successMsg && (
@@ -518,7 +680,7 @@ export default function SubmissionForm({
             </div>
           )}
 
-          {/* Manual lat/lng */}
+          {/* Manual lat/lng (#8: triggers reverse geocode) */}
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className={labelCls}>অক্ষাংশ (Latitude)</label>
@@ -527,7 +689,7 @@ export default function SubmissionForm({
                 inputMode="decimal"
                 placeholder="২৩.৮১০৩"
                 value={lat}
-                onChange={(e) => setLat(e.target.value)}
+                onChange={(e) => handleManualCoordChange('lat', e.target.value)}
                 className={inputCls()}
               />
             </div>
@@ -538,7 +700,7 @@ export default function SubmissionForm({
                 inputMode="decimal"
                 placeholder="৯০.৪১২৫"
                 value={lng}
-                onChange={(e) => setLng(e.target.value)}
+                onChange={(e) => handleManualCoordChange('lng', e.target.value)}
                 className={inputCls()}
               />
             </div>
@@ -637,6 +799,20 @@ export default function SubmissionForm({
             value={upazila}
             onChange={(e) => {
               clearMessages();
+              if (e.target.value === '__add_new__') {
+                const name = window.prompt('নতুন উপজেলার নাম লিখুন:');
+                if (name && name.trim() && district) {
+                  addCustomUpazila(district, name.trim()).then((res) => {
+                    if (res.ok) {
+                      setCustomUpazilas((prev) => [...prev, name.trim()]);
+                      setUpazila(name.trim());
+                    } else {
+                      window.alert('উপজেলা যোগ করতে সমস্যা হয়েছে: ' + (res.error || ''));
+                    }
+                  });
+                }
+                return;
+              }
               setUpazila(e.target.value);
             }}
             className={inputCls(!!fieldError('upazila'))}
@@ -647,6 +823,18 @@ export default function SubmissionForm({
                 {u}
               </option>
             ))}
+            {customUpazilas
+              .filter((u) => !upazilasForDistrict.includes(u))
+              .map((u) => (
+                <option key={`custom-${u}`} value={u}>
+                  {u} (কাস্টম)
+                </option>
+              ))}
+            {district && (
+              <option value="__add_new__" className="text-[#15803d] font-semibold">
+                ➕ তালিকায় নেই — যোগ করুন
+              </option>
+            )}
           </select>
           {fieldError('upazila') && (
             <p className="text-xs text-red-600 mt-1">{fieldError('upazila')}</p>
@@ -676,7 +864,7 @@ export default function SubmissionForm({
             />
           </div>
           <div>
-            <label className={labelCls}>ব্লক</label>
+            <label className={labelCls}>ব্লক <span className="text-[10px] font-normal text-gray-400">সরকারি প্রতিবেদনের জন্য</span></label>
             <input
               type="text"
               placeholder="ব্লক"
@@ -697,11 +885,11 @@ export default function SubmissionForm({
               className={inputCls()}
             >
               <option value="">-- নির্বাচন --</option>
-              <option value="নার্সারি">নার্সারি</option>
-              <option value="বীজতলা">বীজতলা</option>
-              <option value="ক্ষেত্র">ক্ষেত্র</option>
-              <option value="রাস্তার পাশ">রাস্তার পাশ</option>
-              <option value="অন্যান্য">অন্যান্য</option>
+              {(LOCATION_TYPES || []).map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
             </select>
           </div>
           <div>
@@ -729,11 +917,25 @@ export default function SubmissionForm({
             />
           </div>
         </div>
+
+        {/* #9: Custom source text when sourceType is "অন্যান্য" */}
+        {sourceType === 'অন্যান্য' && (
+          <div>
+            <label className={labelCls}>উৎসের বিবরণ</label>
+            <input
+              type="text"
+              placeholder="উৎসের ধরন লিখুন"
+              value={customSource}
+              onChange={(e) => setCustomSource(e.target.value)}
+              className={inputCls()}
+            />
+          </div>
+        )}
       </SectionCard>
 
-      {/* ============================================================ */}
+      {/* ============================================================*/}
       {/*  2. PEOPLE SECTION                                           */}
-      {/* ============================================================ */}
+      {/* ============================================================*/}
       <SectionCard
         title="👤 ব্যক্তিগত তথ্য"
         icon={<Navigation className="w-4 h-4 text-[#15803d]" />}
@@ -780,15 +982,16 @@ export default function SubmissionForm({
           )}
         </div>
 
-        {/* SAAO Name & Mobile */}
+        {/* SAAO Name & Mobile (#5: datalist autocomplete) */}
         <div className="grid grid-cols-2 gap-2">
           <div>
             <label className={labelCls}>এসএএও এর নাম</label>
             <input
               type="text"
               placeholder="এসএএও নাম"
+              list="saao-directory-list"
               value={saaoName}
-              onChange={(e) => setSaaoName(e.target.value)}
+              onChange={(e) => handleSaaoNameChange(e.target.value)}
               className={inputCls()}
             />
           </div>
@@ -813,17 +1016,27 @@ export default function SubmissionForm({
           </div>
         </div>
 
-        {/* Monitoring Officer Name & Mobile */}
+        {/* Datalist for SAAO directory autocomplete */}
+        <datalist id="saao-directory-list">
+          {directoryNames.map((name, i) => (
+            <option key={`saao-${i}`} value={name} />
+          ))}
+        </datalist>
+
+        {/* Monitoring Officer Name & Mobile (#5: datalist, #6: hint text) */}
         <div className="grid grid-cols-2 gap-2">
           <div>
             <label className={labelCls}>মনিটরিং অফিসারের নাম</label>
             <input
               type="text"
               placeholder="অফিসারের নাম"
+              list="officer-directory-list"
               value={officerName}
-              onChange={(e) => setOfficerName(e.target.value)}
+              onChange={(e) => handleOfficerNameChange(e.target.value)}
               className={inputCls()}
             />
+            {/* #6: Officer role hint */}
+            <p className="text-[10px] text-amber-600 mt-1">শুধুমাত্র উপজেলা কর্মকর্তা (AEO2/AAO/UAO) — জেলা/অঞ্চল পর্যায়ের কর্মকর্তা নয়</p>
           </div>
           <div>
             <label className={labelCls}>অফিসারের মোবাইল</label>
@@ -845,11 +1058,18 @@ export default function SubmissionForm({
             )}
           </div>
         </div>
+
+        {/* Datalist for officer directory autocomplete */}
+        <datalist id="officer-directory-list">
+          {directoryNames.map((name, i) => (
+            <option key={`officer-${i}`} value={name} />
+          ))}
+        </datalist>
       </SectionCard>
 
-      {/* ============================================================ */}
+      {/* ============================================================*/}
       {/*  3. SEEDLINGS SECTION                                        */}
-      {/* ============================================================ */}
+      {/* ============================================================*/}
       <SectionCard
         title="🌱 চারার তথ্য"
         icon={<Plus className="w-4 h-4 text-[#15803d]" />}
@@ -958,11 +1178,11 @@ export default function SubmissionForm({
         </div>
       </SectionCard>
 
-      {/* ============================================================ */}
+      {/* ============================================================*/}
       {/*  4. OTHER SECTION                                            */}
-      {/* ============================================================ */}
+      {/* ============================================================*/}
 
-      {/* Photo */}
+      {/* Photo (#7: downscale) */}
       <SectionCard
         title="📷 ছবি"
         icon={<Camera className="w-4 h-4 text-[#15803d]" />}
@@ -1092,9 +1312,9 @@ export default function SubmissionForm({
         />
       </SectionCard>
 
-      {/* ============================================================ */}
+      {/* ============================================================*/}
       {/*  5. SUBMIT SECTION                                           */}
-      {/* ============================================================ */}
+      {/* ============================================================*/}
       <div className="flex items-center gap-2 pt-2">
         <button
           type="submit"
