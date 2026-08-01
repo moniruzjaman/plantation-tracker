@@ -241,6 +241,11 @@ export default function SubmissionForm({
       if (adminMatch.region && !region) setRegion(adminMatch.region);
       if (adminMatch.district && !district) setDistrict(adminMatch.district);
       if (adminMatch.upazila && !upazila) setUpazila(adminMatch.upazila);
+      // Best-effort — Nominatim passthrough, not matched against a fixed
+      // list (BD's Union Parishad structure isn't consistently in OSM),
+      // so double-check these against the map/address before submitting.
+      if (adminMatch.union && !union) setUnion(adminMatch.union);
+      if (adminMatch.village && !village) setVillage(adminMatch.village);
     }
   }, [adminMatch]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -345,17 +350,38 @@ export default function SubmissionForm({
   /* ---------------------------------------------------------------- */
 
   const handleManualCoordChange = useCallback((field: 'lat' | 'lng', value: string) => {
-    if (field === 'lat') setLat(value);
-    else setLng(value);
+    // Support pasting a combined "23.8103, 90.4125" string (e.g. copied
+    // straight from Google Maps) into either box, matching legacy's
+    // single-field paste behavior. Only auto-splits if both halves look
+    // like plausible BD coordinates.
+    const combinedMatch = value.match(/^\s*(-?\d+(?:\.\d+)?)\s*[,\s]\s*(-?\d+(?:\.\d+)?)\s*$/);
+
+    let resolvedLat = field === 'lat' ? value : lat;
+    let resolvedLng = field === 'lng' ? value : lng;
+
+    if (combinedMatch) {
+      const a = parseFloat(combinedMatch[1]);
+      const b = parseFloat(combinedMatch[2]);
+      // BD latitude ~20-27, longitude ~88-93 — use that to decide order
+      // rather than assuming "lat, lng" was pasted in the box order.
+      if (a >= 20 && a <= 27 && b >= 88 && b <= 93) {
+        resolvedLat = String(a);
+        resolvedLng = String(b);
+      } else if (b >= 20 && b <= 27 && a >= 88 && a <= 93) {
+        resolvedLat = String(b);
+        resolvedLng = String(a);
+      }
+    }
+
+    setLat(resolvedLat);
+    setLng(resolvedLng);
 
     // Debounced reverse geocode
     if (reverseGeoTimerRef.current) clearTimeout(reverseGeoTimerRef.current);
     reverseGeoTimerRef.current = setTimeout(async () => {
-      const newLat = field === 'lat' ? value : lat;
-      const newLng = field === 'lng' ? value : lng;
-      if (!newLat || !newLng) return;
-      const latNum = parseFloat(newLat);
-      const lngNum = parseFloat(newLng);
+      if (!resolvedLat || !resolvedLng) return;
+      const latNum = parseFloat(resolvedLat);
+      const lngNum = parseFloat(resolvedLng);
       if (isNaN(latNum) || isNaN(lngNum)) return;
       if (latNum < 20 || latNum > 27 || lngNum < 88 || lngNum > 93) return; // not BD
 
@@ -370,12 +396,14 @@ export default function SubmissionForm({
           if (admin.region && !region) setRegion(admin.region);
           if (admin.district && !district) setDistrict(admin.district);
           if (admin.upazila && !upazila) setUpazila(admin.upazila);
+          if (admin.union && !union) setUnion(admin.union);
+          if (admin.village && !village) setVillage(admin.village);
         }
       } catch {
         // silent
       }
     }, 800);
-  }, [lat, lng, addressText, division, region, district, upazila]);
+  }, [lat, lng, addressText, division, region, district, upazila, union, village]);
 
   /* ---------------------------------------------------------------- */
   /*  Seedling helpers                                                 */
