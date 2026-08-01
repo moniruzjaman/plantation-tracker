@@ -26,11 +26,8 @@ export default function AppHeader({ isOnline = true, geoStatus = 'searching' }: 
           {/* Logo + Title */}
           <div className="flex items-center gap-3 min-w-0">
             <img
-              src="/dae-logo.webp"
-              alt="DAE"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = '/dae-logo.png';
-              }}
+              src="/logo.png"
+              alt="Plantation Tracker"
               className="w-11 h-11 rounded-full bg-white/10 object-contain flex-shrink-0"
             />
             <div className="min-w-0">
