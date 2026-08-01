@@ -149,7 +149,7 @@ export default function App() {
       const geoLocation = lat && lng ? `${lat}, ${lng}` : geo.geoString || undefined;
 
       const base: Omit<Submission, 'id'> = {
-        region: (data.region as string) || profile.region || '',
+        region: (data.region as string) || profile?.region || '',
         district: (data.district as string) || '',
         upazila: (data.upazila as string) || '',
         division: (data.division as string) || undefined,
@@ -166,8 +166,8 @@ export default function App() {
         farmerMobile: (data.farmerMobile as string) || '',
         saaoName: (data.saaoName as string) || undefined,
         saaoMobile: (data.saaoMobile as string) || undefined,
-        officerName: (data.officerName as string) || profile.officerName || undefined,
-        officerMobile: (data.officerMobile as string) || profile.officerMobile || undefined,
+        officerName: (data.officerName as string) || profile?.officerName || undefined,
+        officerMobile: (data.officerMobile as string) || profile?.officerMobile || undefined,
         seedlings: seedlings.filter((s) => s.speciesName.trim() !== ''),
         ndvi: (data.ndvi as string) || undefined,
         photoBase64: (data.photoBase64 as string) || undefined,
@@ -297,23 +297,14 @@ export default function App() {
             nationalEntries={nationalEntries}
             onEdit={(id) => handleEdit(id)}
             onRefreshNational={loadNationalEntries}
-            userMobile={profile.mobile}
-          />
-        );
-
-      case 'myData':
-        return (
-          <MyData
-            submissions={submissions}
-            onEdit={(s) => handleEdit(s)}
-            onDelete={handleDelete}
-            onSync={handleSyncOne}
-            onSyncAll={handleSyncAll}
-            profile={profile}
+            userMobile={profile?.mobile}
           />
         );
 
       case 'profile':
+        // Legacy's "প্রোফাইল" tab (storedData) holds both the profile card
+        // and "আমার তথ্য" (My Data / stats) stacked together — kept as one
+        // tab here too, instead of splitting My Data into its own nav item.
         return showAdmin ? (
           <AdminPanel
             submissions={submissions}
@@ -331,6 +322,14 @@ export default function App() {
               </button>
             </div>
             <ProfilePanel profile={profile} onSave={handleProfileSave} />
+            <MyData
+              submissions={submissions}
+              onEdit={(s) => handleEdit(s)}
+              onDelete={handleDelete}
+              onSync={handleSyncOne}
+              onSyncAll={handleSyncAll}
+              profile={profile}
+            />
           </div>
         );
 

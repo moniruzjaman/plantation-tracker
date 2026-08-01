@@ -1,4 +1,4 @@
-import { FileText, BarChart3, Map, ClipboardCheck, User } from "lucide-react";
+import { FileText, BarChart3, Map, User } from "lucide-react";
 import type { ComponentType } from "react";
 
 interface AppTabsProps {
@@ -7,12 +7,14 @@ interface AppTabsProps {
   unsyncedCount?: number;
 }
 
+// Matches legacy's 4-tab nav (ফর্ম / ড্যাশবোর্ড / ম্যাপ / প্রোফাইল).
+// "আমার তথ্য" (My Data) lives inside the Profile tab, same as legacy's
+// storedData tab, rather than as its own top-level nav item.
 const tabs: Array<{ id: string; label: string; icon: ComponentType<any>; hasBadge?: boolean }> = [
   { id: "form", label: "নতুন তথ্য", icon: FileText },
   { id: "dashboard", label: "ড্যাশবোর্ড", icon: BarChart3 },
   { id: "map", label: "মানচিত্র", icon: Map },
-  { id: "myData", label: "আমার তথ্য", icon: ClipboardCheck, hasBadge: true },
-  { id: "profile", label: "প্রোফাইল", icon: User },
+  { id: "profile", label: "প্রোফাইল", icon: User, hasBadge: true },
 ];
 
 export default function AppTabs({ activeTab, onTabChange, unsyncedCount = 0 }: AppTabsProps) {

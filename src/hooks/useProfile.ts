@@ -36,7 +36,7 @@ export function useProfile() {
   useEffect(() => {
     if (hydratedRef.current) return;
     hydratedRef.current = true;
-    setProfile(getProfile());
+    setProfile(getProfile() ?? {});
   }, []);
 
   // ── Persist to localStorage ─────────────────────────────────────────────
@@ -49,7 +49,7 @@ export function useProfile() {
   //    Returns false when the caller should prompt the user to fill in
   //    missing fields before allowing a submission. ─────────────────────────
   const requireProfileOrPrompt = useCallback((): boolean => {
-    const p = getProfile(); // always check latest from storage
+    const p = getProfile() ?? ({} as Profile); // always check latest from storage; null when nothing saved yet
     const isComplete = REQUIRED_PROFILE_FIELDS.every(
       (key) => p[key] && String(p[key]).trim().length > 0,
     );
