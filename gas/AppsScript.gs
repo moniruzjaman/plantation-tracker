@@ -14,6 +14,11 @@
  *   doPost(e)  -- entryType="user_profile"    -> User_Profile sheet
  *               -- entryType="growth_reading" -> Growth_Log sheet
  *               -- entryType="custom_upazila" -> Custom_Upazila sheet
+ *               -- entryType="visitor_ping"   -> Visitor_Log sheet (guest/
+ *                                              unprompted Google email
+ *                                              capture, for unique-visitor
+ *                                              counting -- no profile
+ *                                              form required)
  *               -- otherwise                  -> App_Entry sheet (seedling row)
  *   doGet(e)   -- ?mobile=01XXXXXXXXX       -> User_Profile lookup by mobile
  *               -- ?list=1[&district=..]    -> every App_Entry row, grouped
@@ -29,23 +34,44 @@
  *                                              addition is visible to all
  *
  * IMPORTANT — one-time manual steps after deploying this version:
- *   1. Add a 'ব্লক' header in the App_Entry sheet's LAST column (after
- *      'সিঙ্কের সময়'), if not already done from a previous update.
- *   2. Growth_Log and Custom_Upazila sheets are created automatically on
- *      first write (same pattern as User_Profile) -- no manual sheet setup
- *      needed for those two.
+ *   1. App_Entry is now one row per SUBMISSION, not one row per seedling
+ *      species (a 5-species submission used to write 5 rows with every
+ *      other field duplicated across them; now it's 1 row, with the
+ *      species combined into 'চারার বিবরণ' / 'চারার বিবরণ (JSON)' plus
+ *      'মোট প্রজাতি' / 'মোট চারার সংখ্যা' totals). If App_Entry already has
+ *      real data in the old format, run migrateAppEntryToOneRowPerSubmission()
+ *      once from the Apps Script editor FIRST (see its doc-comment above
+ *      the function for the full safe procedure -- it builds a new
+ *      App_Entry_Migrated tab and never touches your existing data).
+ *   2. Growth_Log, Custom_Upazila, and Visitor_Log sheets are created
+ *      automatically on first write (same pattern as User_Profile) -- no
+ *      manual sheet setup needed for those.
  */
 
 var SHEET_NAME = 'App_Entry';
 var PROFILE_SHEET_NAME = 'User_Profile';
 var GROWTH_SHEET_NAME = 'Growth_Log';
 var CUSTOM_UPAZILA_SHEET_NAME = 'Custom_Upazila';
+var VISITOR_SHEET_NAME = 'Visitor_Log';
+
+var VISITOR_COLUMNS = [
+  'সময়', 'ইমেইল', 'ধরন', 'ডিভাইস আইডি'
+  // ধরন: "guest" (skipped the profile form entirely) | "unprompted" (Google
+  // One Tap resolved before the person interacted with the profile modal)
+];
 
 var COLUMNS = [
   'জমার সময়', 'অ্যাপ জমা আইডি', 'বিভাগ', 'অঞ্চল', 'জেলা', 'উপজেলা',
   'ইউনিয়ন', 'গ্রাম', 'অবস্থানের ধরন', 'চারার উৎস', 'সুনির্দিষ্ট ঠিকানা',
-  'অক্ষাংশ', 'দ্রাঘিমাংশ', 'রোপণের তারিখ', 'বৃক্ষের প্রজাতি/জাত',
-  'বৃক্ষের শ্রেণী', 'সংখ্যা', 'প্রাথমিক NDVI', 'ছবি (ইনলাইন)',
+  'অক্ষাংশ', 'দ্রাঘিমাংশ', 'রোপণের তারিখ',
+  // One row = one whole submission now (was: one row per seedling species,
+  // duplicating every other field N times for an N-species submission).
+  // চারার বিবরণ is a human-readable summary for anyone opening the sheet
+  // directly; চারার বিবরণ (JSON) is what the app parses back into its
+  // seedlings[] array. মোট প্রজাতি/মোট চারার সংখ্যা are plain numbers so
+  // SUM()/pivot tables in the sheet keep working without parsing JSON.
+  'চারার বিবরণ', 'মোট প্রজাতি', 'মোট চারার সংখ্যা', 'চারার বিবরণ (JSON)',
+  'প্রাথমিক NDVI', 'ছবি (ইনলাইন)',
   'ছবি SHA-256', 'কৃষকের নাম', 'কৃষকের মোবাইল', 'SAAO-এর নাম',
   'SAAO-এর মোবাইল', 'মনিটরিং অফিসারের নাম', 'মনিটরিং অফিসারের মোবাইল',
   'মন্তব্য', 'সত্যায়ন হ্যাশ', 'সিঙ্কের সময়',
@@ -136,6 +162,17 @@ function getCustomUpazilaSheet_() {
   return sheet;
 }
 
+function getVisitorSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(VISITOR_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(VISITOR_SHEET_NAME);
+    sheet.appendRow(VISITOR_COLUMNS);
+    sheet.getRange(1, 1, 1, VISITOR_COLUMNS.length).setFontWeight('bold');
+  }
+  return sheet;
+}
+
 function jsonOut_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
@@ -145,7 +182,7 @@ function doPost(e) {
   try {
     var raw = JSON.parse(e.postData.contents);
 
-    if (raw.entryType === 'user_profile') {
+    if (!Array.isArray(raw) && raw.entryType === 'user_profile') {
       var ps = getProfileSheet_();
       var now = new Date();
       ps.appendRow([
@@ -165,7 +202,7 @@ function doPost(e) {
       return jsonOut_({ ok: true });
     }
 
-    if (raw.entryType === 'growth_reading') {
+    if (!Array.isArray(raw) && raw.entryType === 'growth_reading') {
       var gs = getGrowthSheet_();
       gs.appendRow([
         new Date().toISOString(),
@@ -181,7 +218,7 @@ function doPost(e) {
       return jsonOut_({ ok: true });
     }
 
-    if (raw.entryType === 'custom_upazila') {
+    if (!Array.isArray(raw) && raw.entryType === 'custom_upazila') {
       var cus = getCustomUpazilaSheet_();
       cus.appendRow([
         new Date().toISOString(),
@@ -193,47 +230,237 @@ function doPost(e) {
       return jsonOut_({ ok: true });
     }
 
+    if (!Array.isArray(raw) && raw.entryType === 'visitor_ping') {
+      var vs = getVisitorSheet_();
+      vs.appendRow([
+        new Date().toISOString(),
+        raw.email || '',
+        raw.mode || '',
+        raw.deviceId || ''
+      ]);
+      return jsonOut_({ ok: true });
+    }
+
+    // App_Entry: the client always posts an array here -- one item per
+    // seedling species in the submission (all sharing one submissionId).
+    // Wrap a bare object too, for any integration that posts a single row.
+    var items = Array.isArray(raw) ? raw : [raw];
+    if (!items.length) return jsonOut_({ ok: true });
+
     var sheet = getSheet_();
-    var now = new Date();
-    var lat = normalizeCoord_(raw.latitude);
-    var lng = normalizeCoord_(raw.longitude);
-    var row = [
-      now.toISOString(),
-      raw.submissionId || '',
-      raw.division || '',
-      raw.region || '',
-      raw.district || '',
-      raw.upazila || '',
-      raw.union || '',
-      raw.village || '',
-      raw.locationType || '',
-      raw.sourceType || '',
-      raw.address || '',
-      lat.value,
-      lng.value,
-      raw.plantingDate || '',
-      raw.speciesName || '',
-      raw.category || '',
-      raw.quantity || 0,
-      raw.ndvi || '',
-      '',
-      raw.photoSha256 || '',
-      raw.farmerName || '',
-      raw.farmerMobile || '',
-      raw.saaoName || '',
-      raw.saaoMobile || '',
-      raw.officerName || '',
-      raw.officerMobile || '',
-      raw.remarks ? (raw.remarks + (lat.ok && lng.ok ? '' : ' ⚠️ স্থানাঙ্ক যাচাই প্রয়োজন')) : (lat.ok && lng.ok ? '' : '⚠️ স্থানাঙ্ক যাচাই প্রয়োজন'),
-      raw.authHash || '',
-      now.toISOString(),
-      raw.block || ''
-    ];
-    sheet.appendRow(row);
-    return jsonOut_({ ok: true, coordWarning: (!lat.ok || !lng.ok) });
+    var lock = LockService.getScriptLock();
+    lock.waitLock(30000);
+    try {
+      // Upsert by submissionId: if this submission (new OR edited) already
+      // has a row in the sheet, remove it first, then append the current
+      // one. For a brand-new submissionId this delete is simply a no-op,
+      // so create and edit both flow through the exact same safe path --
+      // editing an already-synced entry no longer creates a duplicate row.
+      var submissionId = items[0] && items[0].submissionId;
+      if (submissionId) deleteAppEntryRowsBySubmissionId_(sheet, submissionId);
+      var coordWarning = appendAppEntrySubmission_(sheet, items, new Date());
+    } finally {
+      lock.releaseLock();
+    }
+    return jsonOut_({ ok: true, coordWarning: coordWarning });
   } catch (err) {
     return jsonOut_({ ok: false, error: String(err) });
   }
+}
+
+/**
+ * Builds and appends ONE row for an entire submission -- all of `items`
+ * (one item per seedling species, sharing the same submission-level
+ * fields) are combined into a single App_Entry row, rather than one row
+ * per species. Returns true if the coordinates looked malformed.
+ */
+function appendAppEntrySubmission_(sheet, items, now) {
+  var base = items[0] || {};
+  var lat = normalizeCoord_(base.latitude);
+  var lng = normalizeCoord_(base.longitude);
+
+  var seedlings = items
+    .filter(function(it) { return it && it.speciesName; })
+    .map(function(it) {
+      return { speciesName: it.speciesName || '', category: it.category || '', quantity: Number(it.quantity) || 0 };
+    });
+  var totalQty = seedlings.reduce(function(sum, s) { return sum + (s.quantity || 0); }, 0);
+  var summaryText = seedlings.map(function(s) {
+    return s.speciesName + (s.category ? ' (' + s.category + ')' : '') + ' \u00d7 ' + s.quantity;
+  }).join(', ');
+
+  var row = [
+    now.toISOString(),
+    base.submissionId || '',
+    base.division || '',
+    base.region || '',
+    base.district || '',
+    base.upazila || '',
+    base.union || '',
+    base.village || '',
+    base.locationType || '',
+    base.sourceType || '',
+    base.address || '',
+    lat.value,
+    lng.value,
+    base.plantingDate || '',
+    summaryText,
+    seedlings.length,
+    totalQty,
+    JSON.stringify(seedlings),
+    base.ndvi || '',
+    '',
+    base.photoSha256 || '',
+    base.farmerName || '',
+    base.farmerMobile || '',
+    base.saaoName || '',
+    base.saaoMobile || '',
+    base.officerName || '',
+    base.officerMobile || '',
+    base.remarks ? (base.remarks + (lat.ok && lng.ok ? '' : ' ⚠️ স্থানাঙ্ক যাচাই প্রয়োজন')) : (lat.ok && lng.ok ? '' : '⚠️ স্থানাঙ্ক যাচাই প্রয়োজন'),
+    base.authHash || '',
+    now.toISOString(),
+    base.block || ''
+  ];
+  sheet.appendRow(row);
+  return !lat.ok || !lng.ok;
+}
+
+/** Deletes the existing App_Entry row for a given submissionId (column B), if any. Bottom-up so row indices don't shift mid-loop (also tolerates legacy data that still has multiple rows per submissionId). Called under a script lock. */
+function deleteAppEntryRowsBySubmissionId_(sheet, submissionId) {
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return;
+  var ids = sheet.getRange(2, 2, lastRow - 1, 1).getValues(); // column B, 'অ্যাপ জমা আইডি'
+  for (var i = ids.length - 1; i >= 0; i--) {
+    if (String(ids[i][0]) === String(submissionId)) {
+      sheet.deleteRow(i + 2); // +2: 1-indexed sheet rows, offset past the header
+    }
+  }
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * ONE-TIME MIGRATION — run this once, manually, from the Apps Script
+ * editor (function dropdown at the top -> select
+ * "migrateAppEntryToOneRowPerSubmission" -> Run button) right after
+ * deploying this version, before any new submissions arrive.
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * Reads the CURRENT App_Entry sheet (old format: one row per seedling
+ * species, several rows sharing one submissionId), groups rows by
+ * submissionId, and writes the combined one-row-per-submission result
+ * into a NEW sheet tab called "App_Entry_Migrated".
+ *
+ * SAFE: does not modify or delete the original App_Entry sheet at all.
+ * Safe to re-run too -- it deletes and rebuilds only App_Entry_Migrated
+ * each time.
+ *
+ * After running:
+ *   1. Check the log output (View -> Logs, or Ctrl/Cmd+Enter) -- it
+ *      reports how many old rows were read and how many submissions
+ *      they combined into. Sanity-check that against what you'd expect.
+ *   2. Open the App_Entry_Migrated tab and spot-check a few rows,
+ *      especially any submission that had several seedling species --
+ *      confirm 'চারার বিবরণ' lists all of them and 'মোট চারার সংখ্যা'
+ *      matches the sum you'd expect.
+ *   3. Only once you're satisfied: right-click App_Entry -> rename to
+ *      "App_Entry_OldBackup", then right-click App_Entry_Migrated ->
+ *      rename to "App_Entry". Keep the OldBackup tab around for a
+ *      while as a safety net -- it costs nothing to leave it there.
+ *
+ * If your sheet's actual header row uses different column text than
+ * what's hard-coded below (COLUMNS / this function's get() lookups),
+ * this will simply find nothing for that field (get() returns '')
+ * rather than erroring -- check the migrated tab's column contents
+ * against the original before renaming anything.
+ */
+function migrateAppEntryToOneRowPerSubmission() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var oldSheet = ss.getSheetByName('App_Entry');
+  if (!oldSheet) throw new Error('App_Entry sheet not found');
+
+  var values = oldSheet.getDataRange().getValues();
+  if (values.length < 2) { Logger.log('No data rows to migrate.'); return; }
+  var header = values[0];
+  var idx = {};
+  header.forEach(function(h, i) { idx[String(h).trim()] = i; });
+  function get(v, col) { return idx.hasOwnProperty(col) ? v[idx[col]] : ''; }
+
+  var bySubmission = {};
+  var order = [];
+  var oldRowCount = 0;
+  for (var r = 1; r < values.length; r++) {
+    var v = values[r];
+    if (!v.join('')) continue;
+    oldRowCount++;
+    var submissionId = String(get(v, 'অ্যাপ জমা আইডি') || '');
+    var key = submissionId || ('__row' + r); // rows with no submissionId each become their own submission
+    if (!bySubmission[key]) {
+      bySubmission[key] = {
+        submittedAt:  get(v, 'জমার সময়'),
+        submissionId: submissionId,
+        division:     get(v, 'বিভাগ'),
+        region:       get(v, 'অঞ্চল'),
+        district:     get(v, 'জেলা'),
+        upazila:      get(v, 'উপজেলা'),
+        union:        get(v, 'ইউনিয়ন'),
+        village:      get(v, 'গ্রাম'),
+        locationType: get(v, 'অবস্থানের ধরন'),
+        sourceType:   get(v, 'চারার উৎস'),
+        address:      get(v, 'সুনির্দিষ্ট ঠিকানা'),
+        latitude:     get(v, 'অক্ষাংশ'),
+        longitude:    get(v, 'দ্রাঘিমাংশ'),
+        plantingDate: get(v, 'রোপণের তারিখ'),
+        ndvi:         get(v, 'প্রাথমিক NDVI'),
+        photoSha256:  get(v, 'ছবি SHA-256'),
+        farmerName:   get(v, 'কৃষকের নাম'),
+        farmerMobile: get(v, 'কৃষকের মোবাইল'),
+        saaoName:     get(v, 'SAAO-এর নাম'),
+        saaoMobile:   get(v, 'SAAO-এর মোবাইল'),
+        officerName:  get(v, 'মনিটরিং অফিসারের নাম'),
+        officerMobile:get(v, 'মনিটরিং অফিসারের মোবাইল'),
+        remarks:      get(v, 'মন্তব্য'),
+        authHash:     get(v, 'সত্যায়ন হ্যাশ'),
+        syncedAt:     get(v, 'সিঙ্কের সময়'),
+        block:        get(v, 'ব্লক'),
+        seedlings: []
+      };
+      order.push(key);
+    }
+    var species = String(get(v, 'বৃক্ষের প্রজাতি/জাত') || '');
+    if (species) {
+      bySubmission[key].seedlings.push({
+        speciesName: species,
+        category: String(get(v, 'বৃক্ষের শ্রেণী') || ''),
+        quantity: Number(get(v, 'সংখ্যা')) || 0
+      });
+    }
+  }
+
+  var newSheet = ss.getSheetByName('App_Entry_Migrated');
+  if (newSheet) ss.deleteSheet(newSheet); // idempotent: re-running rebuilds cleanly
+  newSheet = ss.insertSheet('App_Entry_Migrated');
+  newSheet.appendRow(COLUMNS);
+  newSheet.getRange(1, 1, 1, COLUMNS.length).setFontWeight('bold');
+
+  order.forEach(function(key) {
+    var s = bySubmission[key];
+    var totalQty = s.seedlings.reduce(function(sum, sd) { return sum + (sd.quantity || 0); }, 0);
+    var summaryText = s.seedlings.map(function(sd) {
+      return sd.speciesName + (sd.category ? ' (' + sd.category + ')' : '') + ' \u00d7 ' + sd.quantity;
+    }).join(', ');
+    newSheet.appendRow([
+      s.submittedAt, s.submissionId, s.division, s.region, s.district, s.upazila,
+      s.union, s.village, s.locationType, s.sourceType, s.address,
+      s.latitude, s.longitude, s.plantingDate,
+      summaryText, s.seedlings.length, totalQty, JSON.stringify(s.seedlings),
+      s.ndvi, '', s.photoSha256, s.farmerName, s.farmerMobile,
+      s.saaoName, s.saaoMobile, s.officerName, s.officerMobile,
+      s.remarks, s.authHash, s.syncedAt, s.block
+    ]);
+  });
+
+  Logger.log('Read ' + oldRowCount + ' old rows -> combined into ' + order.length + ' submissions in App_Entry_Migrated.');
 }
 
 function doGet(e) {
@@ -333,6 +560,31 @@ function readAllRows_() {
     var v = values[r];
     if (!v.join('')) continue;
     var get = function(col) { return idx.hasOwnProperty(col) ? v[idx[col]] : ''; };
+
+    // New schema: one row = one submission, seedlings packed into a JSON
+    // column. Old schema (pre-migration legacy rows, if any survive):
+    // one row = one seedling species, with speciesName/category/quantity
+    // as plain columns -- still read those as a single-item fallback so
+    // nothing gets silently dropped if a stray old-format row remains.
+    var seedlings = [];
+    var seedlingsRaw = get('চারার বিবরণ (JSON)');
+    if (seedlingsRaw) {
+      try {
+        var parsed = JSON.parse(seedlingsRaw);
+        if (Array.isArray(parsed)) seedlings = parsed;
+      } catch (e) { /* fall through to legacy-column fallback below */ }
+    }
+    if (!seedlings.length) {
+      var legacySpecies = String(get('বৃক্ষের প্রজাতি/জাত') || '');
+      if (legacySpecies) {
+        seedlings = [{
+          speciesName: legacySpecies,
+          category: String(get('বৃক্ষের শ্রেণী') || ''),
+          quantity: Number(get('সংখ্যা')) || 0
+        }];
+      }
+    }
+
     rows.push({
       submissionId: String(get('অ্যাপ জমা আইডি') || ''),
       division:     String(get('বিভাগ') || ''),
@@ -347,9 +599,7 @@ function readAllRows_() {
       latitude:     get('অক্ষাংশ'),
       longitude:    get('দ্রাঘিমাংশ'),
       plantingDate: String(get('রোপণের তারিখ') || ''),
-      speciesName:  String(get('বৃক্ষের প্রজাতি/জাত') || ''),
-      category:     String(get('বৃক্ষের শ্রেণী') || ''),
-      quantity:     Number(get('সংখ্যা')) || 0,
+      seedlings:    seedlings,
       ndvi:         String(get('প্রাথমিক NDVI') || ''),
       farmerName:   String(get('কৃষকের নাম') || ''),
       farmerMobile: String(get('কৃষকের মোবাইল') || ''),
@@ -370,6 +620,10 @@ function listEntries_(district, region) {
   if (district) rows = rows.filter(function(r) { return r.district === district; });
   if (region) rows = rows.filter(function(r) { return r.region === region; });
 
+  // Rows are one-per-submission now, but this still groups by submissionId
+  // as a safety net -- e.g. if a legacy multi-row-per-species submission
+  // slipped through ungrouped, its seedlings still get merged into one entry
+  // instead of showing up as several near-duplicate map markers.
   var bySubmission = {};
   var order = [];
   rows.forEach(function(r) {
@@ -391,11 +645,9 @@ function listEntries_(district, region) {
       };
       order.push(key);
     }
-    if (r.speciesName) {
-      bySubmission[key].seedlings.push({
-        speciesName: r.speciesName, category: r.category, quantity: r.quantity
-      });
-    }
+    (r.seedlings || []).forEach(function(sd) {
+      bySubmission[key].seedlings.push(sd);
+    });
   });
 
   var entries = order.map(function(k) { return bySubmission[k]; });
