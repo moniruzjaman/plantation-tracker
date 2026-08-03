@@ -14,6 +14,7 @@ export default defineConfig(({mode}) => {
         registerType: 'autoUpdate',
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest,txt}'],
+          globIgnores: ['**/og-image-large.png', '**/og-share-large.png'],
           runtimeCaching: [
             {
               urlPattern: /^https:\/\/unpkg\.com\/leaflet@[\d\.]+\/dist\/leaflet\.(js|css)/,
