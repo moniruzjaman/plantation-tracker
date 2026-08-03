@@ -100,7 +100,7 @@ jobs:
             cat >> android/gradle.properties << SIGNING_EOF
           MYAPP_RELEASE_STORE_FILE=release.jks
           MYAPP_RELEASE_STORE_PASSWORD=$PASS
-          MYAPP_RELEASE_KEY_ALIAS=plantation-tracker
+          MYAPP_RELEASE_KEY_ALIAS=plantation-tracker-tracker
           MYAPP_RELEASE_KEY_PASSWORD=$PASS
           SIGNING_EOF
             echo "keystore=generated" >> "$GITHUB_OUTPUT"

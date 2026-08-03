@@ -33,7 +33,7 @@ android {
             }
             storeFile   storePath
             storePassword propOrEnv('MYAPP_RELEASE_STORE_PASSWORD', 'plantation2026')
-            keyAlias     propOrEnv('MYAPP_RELEASE_KEY_ALIAS', 'plantation')
+            keyAlias     propOrEnv('MYAPP_RELEASE_KEY_ALIAS', 'plantation-tracker')
             keyPassword  propOrEnv('MYAPP_RELEASE_KEY_PASSWORD', 'plantation2026')
         }
     }
