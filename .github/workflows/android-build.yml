@@ -2,9 +2,9 @@ name: Plantation Tracker Android Build
 
 on:
   push:
-    branches: [main]
+    branches: ["**"]
   pull_request:
-    branches: [main]
+    branches: ["**"]
 
 jobs:
   build:
@@ -100,7 +100,7 @@ jobs:
             cat >> android/gradle.properties << SIGNING_EOF
           MYAPP_RELEASE_STORE_FILE=release.jks
           MYAPP_RELEASE_STORE_PASSWORD=$PASS
-          MYAPP_RELEASE_KEY_ALIAS=plantation-tracker
+          MYAPP_RELEASE_KEY_ALIAS=plantation-tracker-tracker
           MYAPP_RELEASE_KEY_PASSWORD=$PASS
           SIGNING_EOF
             echo "keystore=generated" >> "$GITHUB_OUTPUT"
@@ -111,12 +111,19 @@ jobs:
       - name: Build Release APK
         run: cd android && ./gradlew assembleRelease --no-daemon
 
-      # 12. Upload APK
+      # 12. Upload Artifacts
       - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
-          name: plantation-tracker-signed-apk
+          name: plantation-tracker-android-apk
           path: android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 30
+
+      - name: Upload PWA Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: plantation-tracker-pwa
+          path: build/
           retention-days: 30
 
       # 13. Cleanup
