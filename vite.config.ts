@@ -14,6 +14,14 @@ export default defineConfig(({mode}) => {
         registerType: 'autoUpdate',
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest,txt}'],
+          // og-*.png are social-share preview/download images (fetched
+          // directly by Facebook/WhatsApp/Messenger link-crawlers, or by
+          // the in-app "download share image" button) -- never rendered
+          // by the app UI itself, so they don't need offline
+          // service-worker caching. og-image-large.png in particular is
+          // ~2.4MB, over workbox's default 2MiB precache limit, which
+          // otherwise hard-fails the entire production build.
+          globIgnores: ['og-*.png'],
           runtimeCaching: [
             {
               urlPattern: /^https:\/\/unpkg\.com\/leaflet@[\d\.]+\/dist\/leaflet\.(js|css)/,
