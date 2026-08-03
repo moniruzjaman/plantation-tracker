@@ -12,6 +12,7 @@ import PWAInstaller from './components/PWAInstaller';
 import SyncToast from './components/SyncToast';
 import OfflinePlantationDashboard, { Submission } from './components/OfflinePlantationDashboard';
 import MobileControlCenter from './components/MobileControlCenter';
+import CertificatePortal from './components/plantation/CertificatePortal';
 
 const MapTab = lazy(() => import('./components/plantation/MapTab'));
 
@@ -45,6 +46,7 @@ export default function App() {
       <WelcomeModal />
       <PWAInstaller />
       <SyncToast />
+      <CertificatePortal />
       <iframe 
         src="legacy-nursery.html" 
         style={{ display: 'block', width: '100%', height: '100%', border: 'none' }}

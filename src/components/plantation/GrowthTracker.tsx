@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { X, Plus, Trash2, TrendingUp, Loader2 } from 'lucide-react';
+import ImpactStats from './ImpactStats';
 import {
   type GrowthReading,
   type HealthStatus,
@@ -162,6 +163,11 @@ export default function GrowthTracker({ entryId, entryLabel, officerName, onClos
                 </div>
               )}
               <Sparkline readings={readings} />
+              
+              <div className="border-t pt-3 mt-3">
+                <h4 className="text-[10px] font-bold text-emerald-800 uppercase mb-2">পরিবেশগত প্রভাব</h4>
+                <ImpactStats quantity={1} />
+              </div>
 
               <div className="space-y-1.5 max-h-40 overflow-y-auto">
                 {[...readings].reverse().map((r) => (

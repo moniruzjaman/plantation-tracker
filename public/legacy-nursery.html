@@ -53,9 +53,10 @@ details[open]>summary:before{transform:rotate(90deg)}
 #myProbableOutput{border-left:3px solid #dc2626}
 @media print{.no-print{display:none!important}body{padding-bottom:0}}
 @media(min-width:768px){body{padding-bottom:0}.mobile-nav{display:none!important}}
-fieldset{border:2px solid;padding:1rem;border-radius:0.75rem}
-legend{padding:0.25rem 0.75rem;border-radius:0.5rem;font-weight:700;font-size:0.875rem;color:#fff}
-select,input,textarea{font-family:inherit;font-size:0.875rem}
+fieldset{border:1px solid #e0e0e0;padding:1.25rem;border-radius:1rem;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,0.02);margin-bottom:1.5rem}
+legend{padding:0.4rem 1rem;border-radius:99px;font-weight:800;font-size:0.75rem;color:#fff;text-transform:uppercase;letter-spacing:0.05em;box-shadow:0 2px 4px rgba(0,0,0,0.1)}
+select,input,textarea{font-family:inherit;font-size:0.875rem;border:1.5px solid #eee;border-radius:0.75rem;padding:0.6rem 0.8rem;transition:all 0.2s}
+	select:focus,input:focus,textarea:focus{border-color:#00695C;box-shadow:0 0 0 3px rgba(0,105,92,0.1);outline:none}
 button{font-family:inherit;cursor:pointer}
 table{border-collapse:collapse;width:100%}
 th,td{padding:0.5rem;text-align:left}
@@ -70,7 +71,7 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <body class="bg-gray-50 min-h-screen flex flex-col">
 
 <!-- ==================== HEADER ==================== -->
-<header class="text-white py-3 px-4 shadow-lg no-print" style="background:linear-gradient(135deg,#0f5132 0%,#166534 45%,#052e16 100%);position:relative;overflow:hidden">
+<header class="text-white py-3 px-4 shadow-lg no-print" style="background:linear-gradient(135deg,#004D40 0%,#00695C 45%,#004D40 100%);position:relative;overflow:hidden">
 <div style="position:absolute;inset:0;background:radial-gradient(circle at 88% -20%,rgba(220,38,38,.38) 0%,rgba(220,38,38,0) 55%);pointer-events:none"></div>
 <div class="max-w-6xl mx-auto flex items-center gap-3" style="position:relative;z-index:1">
 <img src="/logo.svg" alt="বাংলাদেশ সরকার" class="w-11 h-11 sm:w-14 sm:h-14 bg-white rounded-full p-1 shadow flex-shrink-0">
@@ -959,6 +960,8 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <button onclick="shareAppIcon()" class="share-tile flex flex-col items-center gap-1 p-2 rounded-xl cursor-pointer" style="background:#fffbeb;border:none">
 <span style="font-size:22px">🖼️</span><span class="text-[10px] font-semibold" style="color:#a16207">আইকন/QR</span>
 </button>
+</div>
+<div id="certificate-portal-slot"></div>
 <button onclick="downloadShareImage()" class="share-tile flex flex-col items-center gap-1 p-2 rounded-xl cursor-pointer" style="background:#f0fdf4;border:none">
 <span style="font-size:22px">📷</span><span class="text-[10px] font-semibold" style="color:#166534">স্ক্রিনশট</span>
 </button>

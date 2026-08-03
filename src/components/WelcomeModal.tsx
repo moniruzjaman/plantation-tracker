@@ -10,7 +10,9 @@ import {
   Globe, 
   Check, 
   Flame,
-  X
+  X,
+  TrendingUp,
+  Leaf
 } from 'lucide-react';
 
 export default function WelcomeModal() {
@@ -115,6 +117,32 @@ export default function WelcomeModal() {
                   <p className="text-sm text-gray-700 font-medium leading-relaxed bg-primary-50/40 p-3.5 rounded-lg border border-primary-400/5 shadow-inner">
                     কর্মসূচির আওতাভুক্ত হওয়ার লক্ষ্যে কৃষি সম্প্রসারণ অধিদপ্তরের মাঠ পর্যায়ে রোপিত বৃক্ষের তথ্য সংগ্রহ সহায়ক।
                   </p>
+                </div>
+
+                {/* Infographic Lifecycle Steps */}
+                <div className="w-full py-4 bg-emerald-50/50 rounded-2xl border border-emerald-100/50 mb-2">
+                  <div className="flex justify-between items-start px-4 md:px-8 relative">
+                    {/* Connecting Line */}
+                    <div className="absolute top-5 left-12 right-12 h-0.5 bg-emerald-200 hidden md:block" />
+                    
+                    {[
+                      { id: 1, label: 'রোপণ', icon: Sprout },
+                      { id: 2, label: 'জিপিএস', icon: MapPin },
+                      { id: 3, label: 'পর্যবেক্ষণ', icon: TrendingUp },
+                      { id: 4, label: 'বৃদ্ধি', icon: Leaf },
+                      { id: 5, label: 'প্রতিবেদন', icon: FileSpreadsheet }
+                    ].map((step, i) => (
+                      <div key={step.id} className="flex flex-col items-center gap-2 relative z-10">
+                        <div className="w-10 h-10 rounded-full bg-white border-2 border-emerald-500 flex items-center justify-center shadow-sm">
+                          <step.icon className="w-5 h-5 text-emerald-600" />
+                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-600 text-white text-[8px] font-bold rounded-full flex items-center justify-center">
+                            {step.id}
+                          </div>
+                        </div>
+                        <span className="text-[9px] font-bold text-emerald-800">{step.label}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Features Grid */}
