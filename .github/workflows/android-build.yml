@@ -78,18 +78,19 @@ jobs:
       - name: Setup Signing Keystore
         id: keystore
         run: |
+          mkdir -p android/app
+          # If a persistent keystore secret is provided, decode it and write properties
           if [ -n "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" ]; then
-            echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > android/app/release.jks
-            # Write signing config directly into gradle.properties (most reliable)
-            cat >> android/gradle.properties << 'SIGNING_EOF'
-          MYAPP_RELEASE_STORE_FILE=release.jks
-          MYAPP_RELEASE_STORE_PASSWORD=${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
-          MYAPP_RELEASE_KEY_ALIAS=${{ secrets.RELEASE_KEY_ALIAS }}
-          MYAPP_RELEASE_KEY_PASSWORD=${{ secrets.RELEASE_KEY_PASSWORD }}
-          SIGNING_EOF
+            printf '%s' "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.jks
+            chmod 600 android/app/release.jks
+            echo "MYAPP_RELEASE_STORE_FILE=release.jks" >> android/gradle.properties
+            echo "MYAPP_RELEASE_STORE_PASSWORD=${{ secrets.RELEASE_KEYSTORE_PASSWORD }}" >> android/gradle.properties
+            echo "MYAPP_RELEASE_KEY_ALIAS=${{ secrets.RELEASE_KEY_ALIAS }}" >> android/gradle.properties
+            echo "MYAPP_RELEASE_KEY_PASSWORD=${{ secrets.RELEASE_KEY_PASSWORD }}" >> android/gradle.properties
             echo "keystore=secret" >> "$GITHUB_OUTPUT"
-            echo "✅ Signed with the persistent \`RELEASE_KEYSTORE_BASE64\` secret — this APK can be installed as an update over previous builds." >> "$GITHUB_STEP_SUMMARY"
+            echo "✅ Signed with the persistent RELEASE_KEYSTORE_BASE64 secret — this APK can be installed as an update over previous builds." >> "$GITHUB_STEP_SUMMARY"
           else
+            # No persistent keystore: generate a throwaway keystore for this run
             PASS=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9' | head -c 20)
             keytool -genkeypair -v \
               -keystore android/app/release.jks \
@@ -97,15 +98,29 @@ jobs:
               -keyalg RSA -keysize 2048 -validity 10000 \
               -storepass "$PASS" -keypass "$PASS" \
               -dname "CN=Plantation Tracker, OU=DAE, O=DAE, L=Dhaka, ST=Dhaka, C=BD"
-            cat >> android/gradle.properties << SIGNING_EOF
-          MYAPP_RELEASE_STORE_FILE=release.jks
-          MYAPP_RELEASE_STORE_PASSWORD=$PASS
-          MYAPP_RELEASE_KEY_ALIAS=plantation-tracker
-          MYAPP_RELEASE_KEY_PASSWORD=$PASS
-          SIGNING_EOF
+            chmod 600 android/app/release.jks
+            echo "MYAPP_RELEASE_STORE_FILE=release.jks" >> android/gradle.properties
+            echo "MYAPP_RELEASE_STORE_PASSWORD=$PASS" >> android/gradle.properties
+            echo "MYAPP_RELEASE_KEY_ALIAS=plantation-tracker" >> android/gradle.properties
+            echo "MYAPP_RELEASE_KEY_PASSWORD=$PASS" >> android/gradle.properties
             echo "keystore=generated" >> "$GITHUB_OUTPUT"
-            echo "⚠️ **No \`RELEASE_KEYSTORE_BASE64\` secret set — signed with a throwaway key generated just for this run.** This APK CANNOT be installed as an update over any other build (including this repo's own previous CI artifacts); testers must uninstall the old app first. Add the secret to fix this for good." >> "$GITHUB_STEP_SUMMARY"
+            echo "⚠️ **No RELEASE_KEYSTORE_BASE64 secret set — signed with a throwaway key generated just for this run.** This APK CANNOT be installed as an update over any other build." >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      # 10b. Validate Keystore (fail fast with clear diagnostics)
+      - name: Validate Keystore
+        run: |
+          FILE=android/app/release.jks
+          if [ ! -f "$FILE" ]; then
+            echo "::error::Keystore not found at $FILE"
+            exit 1
+          fi
+          # read credentials from gradle.properties (don't print secrets)
+          STORE_PASS=$(grep '^MYAPP_RELEASE_STORE_PASSWORD=' android/gradle.properties | cut -d= -f2-)
+          KEY_ALIAS=$(grep '^MYAPP_RELEASE_KEY_ALIAS=' android/gradle.properties | cut -d= -f2-)
+          echo "Keystore present. Expected key alias: $KEY_ALIAS"
+          # list aliases in the keystore (this will error if STORE_PASS is wrong)
+          keytool -list -keystore "$FILE" -storepass "$STORE_PASS" -v | sed -n '1,200p'
 
       # 11. Build Release APK
       - name: Build Release APK
