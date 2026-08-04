@@ -3,6 +3,7 @@
 ## What changed
 
 ### Dashboard tab
+^%
 - **Filter panel moved to the top** (above the KPI cards), so users see filter
   state before any data summary. Previously the filter sat in the middle of the
   page between KPIs and charts.
@@ -78,9 +79,14 @@ Console output (relevant excerpt):
   ✅ Leaflet map container has dimensions — 1096x550
 
 === Profile tab ===
+
+
+
+git push -u origin fix/keystore-credentials
   ✅ Profile card shows injected user name
   ✅ Profile list shows farmer-mobile match (রফিক)
-  ✅ Profile list also shows officer-mobile match (করিম) — multi-mobile-field fix verified
+  ✅ Profile list also shows officer-mobile
+ match (করিম) — multi-mobile-field fix verified
   ✅ Local entry has লোকাল source badge
 
 === Page errors ===
@@ -94,3 +100,11 @@ isn't reachable (the app's documented graceful-fallback path).
 ## Files changed
 
 - `public/legacy-nursery.html` — 241 insertions, 29 deletions (+211 net)
+
+X
+git push -u origin fix/keystore-credentials
+
+^X
+
+git push -u origin fix/keystore-credentials
+
