@@ -19,6 +19,14 @@ interface ErrorBoundaryState {
  * screen scoped to the failure, rather than silently killing the app.
  */
 export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  // This project has no @types/react installed, so `Component<P, S>` has
+  // no type information to infer `.props`/`.state` from. Declaring them
+  // explicitly (ambient — no extra JS emitted) gives TS the shape it
+  // needs without changing runtime behavior.
+  declare props: ErrorBoundaryProps;
+  declare state: ErrorBoundaryState;
+  declare setState: (state: Partial<ErrorBoundaryState>) => void;
+
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false, error: null };

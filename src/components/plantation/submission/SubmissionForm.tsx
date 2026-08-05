@@ -45,6 +45,8 @@ interface SubmissionFormProps {
     region?: string;
     district?: string;
     upazila?: string;
+    union?: string;
+    village?: string;
   };
   loading?: boolean;
   geoFencePoints?: { lat: number; lng: number }[];
