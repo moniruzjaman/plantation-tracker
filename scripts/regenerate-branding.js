@@ -131,7 +131,7 @@ async function main() {
     }
   }
 
-  // ---- icons/*.webp (used by legacy-nursery.html's "share app icon" button) ----
+  // ---- icons/*.webp (used by plantation.html's "share app icon" button) ----
   if (fs.existsSync(ICONS_DIR)) {
     for (const size of [48, 72, 96, 128, 192, 256, 512]) {
       const buf = await circularMask(size);
