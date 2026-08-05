@@ -23,7 +23,7 @@ L.Icon.Default.mergeOptions({
 const appscriptIcon = L.divIcon({
   html: '<div style="background:#2563eb;width:22px;height:22px;border-radius:50%;border:2px solid #fff;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;box-shadow:0 2px 6px rgba(0,0,0,.3)">🌳</div>',
   className: 'appscript-tree-icon',
-  iconSize: [22, 22],
+  iconSize: [8, 8],
   iconAnchor: [11, 11],
 });
 

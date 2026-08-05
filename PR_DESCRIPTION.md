@@ -99,7 +99,7 @@ isn't reachable (the app's documented graceful-fallback path).
 
 ## Files changed
 
-- `public/legacy-nursery.html` — 241 insertions, 29 deletions (+211 net)
+- `public/plantation.html` — 241 insertions, 29 deletions (+211 net)
 
 X
 git push -u origin fix/keystore-credentials

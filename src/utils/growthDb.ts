@@ -113,7 +113,7 @@ const GAS_SYNC_ENDPOINT = '/api/gas-sync';
 /**
  * Best-effort sync of a growth reading to the Growth_Log sheet. Reads the
  * same 'dae_device_id' / 'dae_user_profile' localStorage keys
- * legacy-nursery.html already writes -- both surfaces share the same
+ * plantation.html already writes -- both surfaces share the same
  * origin, so no separate device-identity scheme is needed here. A failed
  * sync never blocks the local save; the reading already exists in
  * IndexedDB regardless (matches this app's offline-first pattern

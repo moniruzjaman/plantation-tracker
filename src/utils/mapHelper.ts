@@ -2,7 +2,7 @@
  * Shared GIS / map layer configuration for the native MapTab.
  * Adapted from plantation-tracker-app's src/utils/mapHelper.ts, with a
  * Bangladesh bounding-box validator added — the same fix applied to
- * legacy-nursery.html's map (PR #26) to stop a single bad/placeholder GPS
+ * plantation.html's map (PR #26) to stop a single bad/placeholder GPS
  * coordinate (e.g. null-island 0,0) from forcing fitBounds() to zoom out
  * to a "world map" view.
  */
@@ -16,7 +16,7 @@ export function gibsDate(): string {
   return new Date(Date.now() - 6 * 24 * 3600 * 1000).toISOString().split('T')[0];
 }
 
-/** Bangladesh-wide default view — consistent with the fix applied to legacy-nursery.html. */
+/** Bangladesh-wide default view — consistent with the fix applied to plantation.html. */
 export const BD_CENTER: [number, number] = [23.8103, 90.4125];
 export const BD_ZOOM = 7;
 
