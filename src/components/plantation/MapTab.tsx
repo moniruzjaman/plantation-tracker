@@ -21,10 +21,12 @@ L.Icon.Default.mergeOptions({
 });
 
 const appscriptIcon = L.divIcon({
-  html: '<div style="background:#2563eb;width:22px;height:22px;border-radius:50%;border:2px solid #fff;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;box-shadow:0 2px 6px rgba(0,0,0,.3)">🌳</div>',
+  // Square, not round, so national AppScript entries stay visually distinct
+  // from this device's local (round) submissions even without color vision.
+  html: '<div style="background:#2563eb;width:8px;height:8px;border-radius:2px;border:1px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3)"></div>',
   className: 'appscript-tree-icon',
   iconSize: [8, 8],
-  iconAnchor: [11, 11],
+  iconAnchor: [4, 4],
 });
 
 const LAYER_LABELS: Record<LayerId, string> = {
