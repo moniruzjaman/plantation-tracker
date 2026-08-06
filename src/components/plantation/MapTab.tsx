@@ -7,6 +7,7 @@ import { Plus, Minus, Loader2, AlertTriangle, BarChart3, RefreshCw, Trees, Cloud
 import type { JSX } from 'react';
 import type { GeoState } from '../GeolocationIndicator';
 import { type LayerId, getLayerTiles, NDVI_BANDS, isValidBdCoord, BD_CENTER, BD_ZOOM, toBnNum } from '../../utils/mapHelper';
+import { isWithinUpazilaPolygon, findContainingUpazila } from '../../data/kurigramUpazilaPolygons';
 import { useMapData } from '../../utils/useMapData';
 import { countSeedlings } from '../../types/plantation';
 import NdviController from './NdviController';
@@ -27,6 +28,17 @@ const appscriptIcon = L.divIcon({
   className: 'appscript-tree-icon',
   iconSize: [8, 8],
   iconAnchor: [4, 4],
+});
+
+// Same square shape, but red — flags a national entry whose GPS point
+// doesn't fall inside its own declared upazila. Kept visible (not
+// dropped) so a reviewer can see and investigate it, rather than the
+// mismatch only surfacing in a backend report nobody opens.
+const appscriptMismatchIcon = L.divIcon({
+  html: '<div style="background:#dc2626;width:9px;height:9px;border-radius:2px;border:1.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>',
+  className: 'appscript-tree-icon-mismatch',
+  iconSize: [9, 9],
+  iconAnchor: [4.5, 4.5],
 });
 
 const LAYER_LABELS: Record<LayerId, string> = {
@@ -293,22 +305,30 @@ export default function MapTab({ geoState, onMapReady }: MapTabProps) {
   // vars later (no code change needed) switches it to live satellite data.
 
   // Build the validated marker point list once per data change.
-  const localPoints: { pos: LatLngTuple; sub: (typeof localSubmissions)[number] }[] = [];
+  const localPoints: { pos: LatLngTuple; sub: (typeof localSubmissions)[number]; mismatched: boolean }[] = [];
   localSubmissions.forEach((s) => {
     const raw = (s.coordinates || s.geoLocation || '').toString();
     if (!raw.includes(',')) return;
     const [lat, lng] = raw.split(',').map((v) => parseFloat(v));
     if (!isValidBdCoord(lat, lng)) return;
-    localPoints.push({ pos: [lat, lng], sub: s });
+    // Flag (don't drop) entries whose GPS point doesn't fall inside their
+    // own declared upazila's real boundary — a mismatch here means the
+    // dropdown/text field and the actual device location disagree, which
+    // a name-only check can never catch. Unrecognized upazila names are
+    // left unflagged here (isWithinUpazilaPolygon returns true) since
+    // that's a separate data-quality issue, not a geofence one.
+    const mismatched = !!s.upazila && !isWithinUpazilaPolygon(lat, lng, s.upazila);
+    localPoints.push({ pos: [lat, lng], sub: s, mismatched });
   });
 
-  const nationalPoints: { pos: LatLngTuple; entry: (typeof nationalEntries)[number] }[] = [];
+  const nationalPoints: { pos: LatLngTuple; entry: (typeof nationalEntries)[number]; mismatched: boolean }[] = [];
   nationalEntries.forEach((s) => {
     const raw = (s.geoLocation || s.coordinates || '').toString().trim();
     if (!raw.includes(',')) return;
     const [lat, lng] = raw.split(',').map((v) => parseFloat(v));
     if (!isValidBdCoord(lat, lng)) return;
-    nationalPoints.push({ pos: [lat, lng], entry: s });
+    const mismatched = !!s.upazila && !isWithinUpazilaPolygon(lat, lng, s.upazila);
+    nationalPoints.push({ pos: [lat, lng], entry: s, mismatched });
   });
 
   const allPoints: LatLngTuple[] = [...localPoints.map((p) => p.pos), ...nationalPoints.map((p) => p.pos)];
@@ -392,20 +412,26 @@ export default function MapTab({ geoState, onMapReady }: MapTabProps) {
         <TileLayer key={activeLayer} url={tiles.url} attribution={tiles.attribution} maxZoom={tiles.maxZoom} />
 
         {/* This device's local submissions */}
-        {localPoints.map(({ pos, sub }, i) => {
+        {localPoints.map(({ pos, sub, mismatched }, i) => {
           const counts = countSeedlings(sub);
           const total = counts.fruit + counts.forest + counts.medicinal;
+          const actualUpazila = mismatched ? findContainingUpazila(pos[0], pos[1]) : null;
           return (
             <CircleMarker
               key={`local-${sub.id || sub.submissionId || i}`}
               center={pos}
-              radius={6}
-              pathOptions={{ color: '#047857', fillColor: '#10b981', fillOpacity: 0.8, weight: 2 }}
+              radius={mismatched ? 7 : 6}
+              pathOptions={
+                mismatched
+                  ? { color: '#b91c1c', fillColor: '#ef4444', fillOpacity: 0.85, weight: 2.5 }
+                  : { color: '#047857', fillColor: '#10b981', fillOpacity: 0.8, weight: 2 }
+              }
             >
               <Tooltip direction="top" offset={[0, -6]} opacity={1}>
                 <div className="text-[10px] leading-tight">
                   <div className="font-bold">{sub.village || sub.upazila || 'স্থানীয় এন্ট্রি'}</div>
                   <div className="text-slate-600">{toBnNum(total)} টি চারা</div>
+                  {mismatched && <div className="text-red-600 font-semibold">⚠️ সীমানা অমিল</div>}
                 </div>
               </Tooltip>
               <Popup>
@@ -415,6 +441,11 @@ export default function MapTab({ geoState, onMapReady }: MapTabProps) {
                     <div><b>উপজেলা/জেলা:</b> {sub.upazila}, {sub.district}</div>
                     <div><b>ফলদ:</b> {toBnNum(counts.fruit)} · <b>বনজ:</b> {toBnNum(counts.forest)} · <b>ঔষধি:</b> {toBnNum(counts.medicinal)}</div>
                   </div>
+                  {mismatched && (
+                    <div className="mt-1.5 bg-red-50 border border-red-200 rounded px-1.5 py-1 text-[10px] text-red-700">
+                      ⚠️ GPS অবস্থান {actualUpazila ? `"${actualUpazila}"-তে পড়ে` : 'ঘোষিত উপজেলার সীমানার বাইরে'}, কিন্তু "{sub.upazila}" হিসেবে দেওয়া আছে — যাচাই প্রয়োজন
+                    </div>
+                  )}
                   <button
                     onClick={() => setGrowthTarget({
                       entryId: String(sub.id || sub.submissionId || `${pos[0]},${pos[1]}`),
@@ -431,26 +462,34 @@ export default function MapTab({ geoState, onMapReady }: MapTabProps) {
         })}
 
         {/* AppScript (Google Sheet) national entries */}
-        {nationalPoints.map(({ pos, entry }, i) => (
-          <Marker key={`nat-${entry.id || entry.submissionId || i}`} position={pos} icon={appscriptIcon}>
-            <Popup>
-              <div className="text-xs min-w-[160px]">
-                <div className="font-bold text-blue-700 mb-1">{entry.farmerName || entry.nurseryName || entry.village || 'অজানা'}</div>
-                <div className="text-[11px] text-slate-700"><b>উপজেলা/জেলা:</b> {entry.upazila}, {entry.district}</div>
-                <div className="text-[10px] text-blue-600 mt-1">📡 AppScript তথ্য</div>
-                <button
-                  onClick={() => setGrowthTarget({
-                    entryId: String(entry.id || entry.submissionId || `${pos[0]},${pos[1]}`),
-                    label: `${entry.farmerName || entry.nurseryName || entry.village || 'অজানা'}, ${entry.district || ''}`,
-                  })}
-                  className="mt-2 w-full bg-emerald-700 hover:bg-emerald-800 text-white text-[10px] font-semibold py-1.5 rounded-lg cursor-pointer"
-                >
-                  📈 বৃদ্ধি ট্র্যাক করুন
-                </button>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+        {nationalPoints.map(({ pos, entry, mismatched }, i) => {
+          const actualUpazila = mismatched ? findContainingUpazila(pos[0], pos[1]) : null;
+          return (
+            <Marker key={`nat-${entry.id || entry.submissionId || i}`} position={pos} icon={mismatched ? appscriptMismatchIcon : appscriptIcon}>
+              <Popup>
+                <div className="text-xs min-w-[160px]">
+                  <div className="font-bold text-blue-700 mb-1">{entry.farmerName || entry.nurseryName || entry.village || 'অজানা'}</div>
+                  <div className="text-[11px] text-slate-700"><b>উপজেলা/জেলা:</b> {entry.upazila}, {entry.district}</div>
+                  <div className="text-[10px] text-blue-600 mt-1">📡 AppScript তথ্য</div>
+                  {mismatched && (
+                    <div className="mt-1.5 bg-red-50 border border-red-200 rounded px-1.5 py-1 text-[10px] text-red-700">
+                      ⚠️ GPS অবস্থান {actualUpazila ? `"${actualUpazila}"-তে পড়ে` : 'ঘোষিত উপজেলার সীমানার বাইরে'}, কিন্তু "{entry.upazila}" হিসেবে দেওয়া আছে — যাচাই প্রয়োজন
+                    </div>
+                  )}
+                  <button
+                    onClick={() => setGrowthTarget({
+                      entryId: String(entry.id || entry.submissionId || `${pos[0]},${pos[1]}`),
+                      label: `${entry.farmerName || entry.nurseryName || entry.village || 'অজানা'}, ${entry.district || ''}`,
+                    })}
+                    className="mt-2 w-full bg-emerald-700 hover:bg-emerald-800 text-white text-[10px] font-semibold py-1.5 rounded-lg cursor-pointer"
+                  >
+                    📈 বৃদ্ধি ট্র্যাক করুন
+                  </button>
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
 
         <FitBoundsOnData points={allPoints} />
         <BoundsTracker onBoundsChange={setBounds} />
