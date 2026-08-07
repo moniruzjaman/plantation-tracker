@@ -3,10 +3,12 @@ import { MapContainer, TileLayer, CircleMarker, Marker, Popup, Tooltip, useMapEv
 import L from 'leaflet';
 import type { LatLngBounds, LatLngTuple, Map as LeafletMap } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Plus, Minus, Loader2, AlertTriangle, BarChart3, RefreshCw, Trees, Cloud, CheckCircle2 } from 'lucide-react';
+import { Plus, Minus, Loader2, AlertTriangle, BarChart3, RefreshCw, Trees, Cloud, CheckCircle2, MapPin } from 'lucide-react';
 import type { JSX } from 'react';
 import type { GeoState } from '../GeolocationIndicator';
 import { type LayerId, getLayerTiles, NDVI_BANDS, isValidBdCoord, BD_CENTER, BD_ZOOM, toBnNum } from '../../utils/mapHelper';
+import { isWithinUpazilaPolygon, findContainingUpazila } from '../../data/upazilaPointInPolygon';
+import { useDistrictPolygons } from '../../data/useDistrictPolygons';
 import { useMapData } from '../../utils/useMapData';
 import { countSeedlings } from '../../types/plantation';
 import NdviController from './NdviController';
@@ -27,6 +29,17 @@ const appscriptIcon = L.divIcon({
   className: 'appscript-tree-icon',
   iconSize: [8, 8],
   iconAnchor: [4, 4],
+});
+
+// Same square shape, but red — flags a national entry whose GPS point
+// doesn't fall inside its own declared upazila. Kept visible (not
+// dropped) so a reviewer can see and investigate it, rather than the
+// mismatch only surfacing in a backend report nobody opens.
+const appscriptMismatchIcon = L.divIcon({
+  html: '<div style="background:#dc2626;width:9px;height:9px;border-radius:2px;border:1.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>',
+  className: 'appscript-tree-icon-mismatch',
+  iconSize: [9, 9],
+  iconAnchor: [4.5, 4.5],
 });
 
 const LAYER_LABELS: Record<LayerId, string> = {
@@ -76,6 +89,70 @@ function NDVILegend({ visible }: { visible: boolean }) {
       ) : (
         <button onClick={() => setOpen(true)} className="w-8 h-8 sm:w-9 sm:h-9 bg-white/95 rounded-full shadow-lg flex items-center justify-center cursor-pointer">
           <BarChart3 size={14} className="text-gray-600 sm:w-4 sm:h-4" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function DistrictSelector({
+  ownDistrict,
+  activeDistricts,
+  availableDistricts,
+  onAdd,
+  onRemove,
+}: {
+  ownDistrict: string | null;
+  activeDistricts: string[];
+  availableDistricts: string[];
+  onAdd: (name: string) => void;
+  onRemove: (name: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  // Extra districts a reviewer added beyond their own posting.
+  const extra = activeDistricts.filter((d) => d !== ownDistrict);
+  const addable = availableDistricts.filter((d) => !activeDistricts.includes(d));
+
+  return (
+    <div className="absolute bottom-14 right-2 sm:right-3 z-[1000]">
+      {open ? (
+        <div className="bg-white/95 backdrop-blur rounded-lg shadow-lg p-2 sm:p-2.5 w-48 sm:w-52">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[9px] sm:text-[10px] font-bold text-gray-600">সীমানা যাচাই — জেলা</span>
+            <button onClick={() => setOpen(false)} className="text-gray-400 text-[10px] cursor-pointer">✕</button>
+          </div>
+          <div className="flex flex-wrap gap-1 mb-1.5">
+            {ownDistrict && (
+              <span className="text-[9px] sm:text-[10px] bg-emerald-100 text-emerald-800 rounded-full px-2 py-0.5">
+                {ownDistrict} (নিজ কর্মস্থল)
+              </span>
+            )}
+            {extra.map((d) => (
+              <span key={d} className="flex items-center gap-1 text-[9px] sm:text-[10px] bg-blue-100 text-blue-800 rounded-full px-2 py-0.5">
+                {d}
+                <button onClick={() => onRemove(d)} className="text-blue-500 hover:text-blue-800 cursor-pointer">✕</button>
+              </span>
+            ))}
+          </div>
+          {addable.length > 0 && (
+            <select
+              onChange={(e) => {
+                if (e.target.value) onAdd(e.target.value);
+                e.target.value = '';
+              }}
+              defaultValue=""
+              className="w-full border border-gray-200 rounded-md px-1.5 py-1 text-[10px] bg-white"
+            >
+              <option value="">+ অন্য জেলা যোগ করুন</option>
+              {addable.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+          )}
+        </div>
+      ) : (
+        <button onClick={() => setOpen(true)} className="w-8 h-8 sm:w-9 sm:h-9 bg-white/95 rounded-full shadow-lg flex items-center justify-center cursor-pointer" title="সীমানা যাচাই সেটিংস">
+          <MapPin size={14} className="text-gray-600 sm:w-4 sm:h-4" />
         </button>
       )}
     </div>
@@ -292,23 +369,44 @@ export default function MapTab({ geoState, onMapReady }: MapTabProps) {
   // fully functional today; dropping a real free-tier endpoint URL into env
   // vars later (no code change needed) switches it to live satellite data.
 
+  // Auto-loads the signed-in officer's own posting district; exposes
+  // addDistrict/removeDistrict for the manual selector below so a DD
+  // reviewing other areas can bring in their boundary data on demand.
+  const {
+    mergedPolygons,
+    activeDistricts,
+    ownDistrict,
+    availableDistricts,
+    addDistrict,
+    removeDistrict,
+  } = useDistrictPolygons();
+
   // Build the validated marker point list once per data change.
-  const localPoints: { pos: LatLngTuple; sub: (typeof localSubmissions)[number] }[] = [];
+  const localPoints: { pos: LatLngTuple; sub: (typeof localSubmissions)[number]; mismatched: boolean }[] = [];
   localSubmissions.forEach((s) => {
     const raw = (s.coordinates || s.geoLocation || '').toString();
     if (!raw.includes(',')) return;
     const [lat, lng] = raw.split(',').map((v) => parseFloat(v));
     if (!isValidBdCoord(lat, lng)) return;
-    localPoints.push({ pos: [lat, lng], sub: s });
+    // Flag (don't drop) entries whose GPS point doesn't fall inside their
+    // own declared upazila's real boundary — a mismatch here means the
+    // dropdown/text field and the actual device location disagree, which
+    // a name-only check can never catch. Unrecognized upazila names, or
+    // upazilas in a district that hasn't been loaded yet, are left
+    // unflagged (isWithinUpazilaPolygon returns true in both cases) —
+    // never a false positive from missing data.
+    const mismatched = !!s.upazila && !isWithinUpazilaPolygon(mergedPolygons, lat, lng, s.upazila);
+    localPoints.push({ pos: [lat, lng], sub: s, mismatched });
   });
 
-  const nationalPoints: { pos: LatLngTuple; entry: (typeof nationalEntries)[number] }[] = [];
+  const nationalPoints: { pos: LatLngTuple; entry: (typeof nationalEntries)[number]; mismatched: boolean }[] = [];
   nationalEntries.forEach((s) => {
     const raw = (s.geoLocation || s.coordinates || '').toString().trim();
     if (!raw.includes(',')) return;
     const [lat, lng] = raw.split(',').map((v) => parseFloat(v));
     if (!isValidBdCoord(lat, lng)) return;
-    nationalPoints.push({ pos: [lat, lng], entry: s });
+    const mismatched = !!s.upazila && !isWithinUpazilaPolygon(mergedPolygons, lat, lng, s.upazila);
+    nationalPoints.push({ pos: [lat, lng], entry: s, mismatched });
   });
 
   const allPoints: LatLngTuple[] = [...localPoints.map((p) => p.pos), ...nationalPoints.map((p) => p.pos)];
@@ -392,20 +490,26 @@ export default function MapTab({ geoState, onMapReady }: MapTabProps) {
         <TileLayer key={activeLayer} url={tiles.url} attribution={tiles.attribution} maxZoom={tiles.maxZoom} />
 
         {/* This device's local submissions */}
-        {localPoints.map(({ pos, sub }, i) => {
+        {localPoints.map(({ pos, sub, mismatched }, i) => {
           const counts = countSeedlings(sub);
           const total = counts.fruit + counts.forest + counts.medicinal;
+          const actualUpazila = mismatched ? findContainingUpazila(mergedPolygons, pos[0], pos[1]) : null;
           return (
             <CircleMarker
               key={`local-${sub.id || sub.submissionId || i}`}
               center={pos}
-              radius={6}
-              pathOptions={{ color: '#047857', fillColor: '#10b981', fillOpacity: 0.8, weight: 2 }}
+              radius={mismatched ? 7 : 6}
+              pathOptions={
+                mismatched
+                  ? { color: '#b91c1c', fillColor: '#ef4444', fillOpacity: 0.85, weight: 2.5 }
+                  : { color: '#047857', fillColor: '#10b981', fillOpacity: 0.8, weight: 2 }
+              }
             >
               <Tooltip direction="top" offset={[0, -6]} opacity={1}>
                 <div className="text-[10px] leading-tight">
                   <div className="font-bold">{sub.village || sub.upazila || 'স্থানীয় এন্ট্রি'}</div>
                   <div className="text-slate-600">{toBnNum(total)} টি চারা</div>
+                  {mismatched && <div className="text-red-600 font-semibold">⚠️ সীমানা অমিল</div>}
                 </div>
               </Tooltip>
               <Popup>
@@ -415,6 +519,11 @@ export default function MapTab({ geoState, onMapReady }: MapTabProps) {
                     <div><b>উপজেলা/জেলা:</b> {sub.upazila}, {sub.district}</div>
                     <div><b>ফলদ:</b> {toBnNum(counts.fruit)} · <b>বনজ:</b> {toBnNum(counts.forest)} · <b>ঔষধি:</b> {toBnNum(counts.medicinal)}</div>
                   </div>
+                  {mismatched && (
+                    <div className="mt-1.5 bg-red-50 border border-red-200 rounded px-1.5 py-1 text-[10px] text-red-700">
+                      ⚠️ GPS অবস্থান {actualUpazila ? `"${actualUpazila}"-তে পড়ে` : 'ঘোষিত উপজেলার সীমানার বাইরে'}, কিন্তু "{sub.upazila}" হিসেবে দেওয়া আছে — যাচাই প্রয়োজন
+                    </div>
+                  )}
                   <button
                     onClick={() => setGrowthTarget({
                       entryId: String(sub.id || sub.submissionId || `${pos[0]},${pos[1]}`),
@@ -431,26 +540,34 @@ export default function MapTab({ geoState, onMapReady }: MapTabProps) {
         })}
 
         {/* AppScript (Google Sheet) national entries */}
-        {nationalPoints.map(({ pos, entry }, i) => (
-          <Marker key={`nat-${entry.id || entry.submissionId || i}`} position={pos} icon={appscriptIcon}>
-            <Popup>
-              <div className="text-xs min-w-[160px]">
-                <div className="font-bold text-blue-700 mb-1">{entry.farmerName || entry.nurseryName || entry.village || 'অজানা'}</div>
-                <div className="text-[11px] text-slate-700"><b>উপজেলা/জেলা:</b> {entry.upazila}, {entry.district}</div>
-                <div className="text-[10px] text-blue-600 mt-1">📡 AppScript তথ্য</div>
-                <button
-                  onClick={() => setGrowthTarget({
-                    entryId: String(entry.id || entry.submissionId || `${pos[0]},${pos[1]}`),
-                    label: `${entry.farmerName || entry.nurseryName || entry.village || 'অজানা'}, ${entry.district || ''}`,
-                  })}
-                  className="mt-2 w-full bg-emerald-700 hover:bg-emerald-800 text-white text-[10px] font-semibold py-1.5 rounded-lg cursor-pointer"
-                >
-                  📈 বৃদ্ধি ট্র্যাক করুন
-                </button>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+        {nationalPoints.map(({ pos, entry, mismatched }, i) => {
+          const actualUpazila = mismatched ? findContainingUpazila(mergedPolygons, pos[0], pos[1]) : null;
+          return (
+            <Marker key={`nat-${entry.id || entry.submissionId || i}`} position={pos} icon={mismatched ? appscriptMismatchIcon : appscriptIcon}>
+              <Popup>
+                <div className="text-xs min-w-[160px]">
+                  <div className="font-bold text-blue-700 mb-1">{entry.farmerName || entry.nurseryName || entry.village || 'অজানা'}</div>
+                  <div className="text-[11px] text-slate-700"><b>উপজেলা/জেলা:</b> {entry.upazila}, {entry.district}</div>
+                  <div className="text-[10px] text-blue-600 mt-1">📡 AppScript তথ্য</div>
+                  {mismatched && (
+                    <div className="mt-1.5 bg-red-50 border border-red-200 rounded px-1.5 py-1 text-[10px] text-red-700">
+                      ⚠️ GPS অবস্থান {actualUpazila ? `"${actualUpazila}"-তে পড়ে` : 'ঘোষিত উপজেলার সীমানার বাইরে'}, কিন্তু "{entry.upazila}" হিসেবে দেওয়া আছে — যাচাই প্রয়োজন
+                    </div>
+                  )}
+                  <button
+                    onClick={() => setGrowthTarget({
+                      entryId: String(entry.id || entry.submissionId || `${pos[0]},${pos[1]}`),
+                      label: `${entry.farmerName || entry.nurseryName || entry.village || 'অজানা'}, ${entry.district || ''}`,
+                    })}
+                    className="mt-2 w-full bg-emerald-700 hover:bg-emerald-800 text-white text-[10px] font-semibold py-1.5 rounded-lg cursor-pointer"
+                  >
+                    📈 বৃদ্ধি ট্র্যাক করুন
+                  </button>
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
 
         <FitBoundsOnData points={allPoints} />
         <BoundsTracker onBoundsChange={setBounds} />
@@ -459,6 +576,13 @@ export default function MapTab({ geoState, onMapReady }: MapTabProps) {
       <LayerSwitcher active={activeLayer} onChange={setActiveLayer} />
       <NDVILegend visible={showLegend} />
       <CustomZoomControl mapRef={mapRef} />
+      <DistrictSelector
+        ownDistrict={ownDistrict}
+        activeDistricts={activeDistricts}
+        availableDistricts={availableDistricts}
+        onAdd={addDistrict}
+        onRemove={removeDistrict}
+      />
       <TileStatusIndicator loading={tileLoading} error={tileError} />
       <NdviController totalTrees={totalTrees} bounds={bounds} />
       {growthTarget && (
