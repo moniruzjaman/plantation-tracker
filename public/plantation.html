@@ -73,7 +73,11 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <meta property="og:description" content="৫ বছরে ২৫ কোটি বৃক্ষরোপণ কর্মসূচি।">
 
 <!-- Single Open Graph image -->
-<meta property="og:image" content="https://plantation-tracker.vercel.app/og-share-large.png">
+<!-- NOTE: bump ?v=N whenever og-share-large.png's content changes.
+     Social platforms cache link-preview images independently of Vercel
+     and of each other, often for days-to-weeks -- a new query string is
+     the only reliable way to force a fresh fetch everywhere at once. -->
+<meta property="og:image" content="https://plantation-tracker.vercel.app/og-share-large.png?v=2">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:type" content="image/png">
