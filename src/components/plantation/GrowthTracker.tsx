@@ -7,6 +7,8 @@ import {
   deleteGrowthReading,
   getReadingsForEntry,
 } from '../../utils/growthDb';
+import { addCarbonHistory } from '../../utils/auditDb';
+import { estimateCarbonFromNdvi } from '../../utils/carbonEstimate';
 
 const HEALTH_LABELS: Record<HealthStatus, { label: string; color: string }> = {
   healthy: { label: 'সুস্থ', color: '#16a34a' },
@@ -91,6 +93,17 @@ export default function GrowthTracker({ entryId, entryLabel, officerName, onClos
         note,
         recordedBy: resolvedOfficerName(),
       });
+
+      const parsedNdvi = ndvi ? parseFloat(ndvi) : null;
+      if (parsedNdvi != null) {
+        await addCarbonHistory({
+          site_id: entryId,
+          date: new Date().toISOString().slice(0, 10),
+          carbon_tons: estimateCarbonFromNdvi(parsedNdvi),
+          method: 'ndvi_derived',
+        });
+      }
+
       setNdvi(''); setHeightCm(''); setNote(''); setHealth('healthy');
       setShowForm(false);
       load();
