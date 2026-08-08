@@ -8,6 +8,7 @@ import type { JSX } from 'react';
 import type { GeoState } from '../GeolocationIndicator';
 import { type LayerId, getLayerTiles, NDVI_BANDS, isValidBdCoord, BD_CENTER, BD_ZOOM, toBnNum } from '../../utils/mapHelper';
 import { isWithinUpazilaPolygon, findContainingUpazila } from '../../data/upazilaPointInPolygon';
+import { canonicalizeUpazilaAgainstRegistry } from '../../data/canonicalizeUpazilaAgainstRegistry';
 import { useDistrictPolygons } from '../../data/useDistrictPolygons';
 import { useMapData } from '../../utils/useMapData';
 import { countSeedlings } from '../../types/plantation';
@@ -394,8 +395,11 @@ export default function MapTab({ geoState, onMapReady }: MapTabProps) {
     // a name-only check can never catch. Unrecognized upazila names, or
     // upazilas in a district that hasn't been loaded yet, are left
     // unflagged (isWithinUpazilaPolygon returns true in both cases) —
-    // never a false positive from missing data.
-    const mismatched = !!s.upazila && !isWithinUpazilaPolygon(mergedPolygons, lat, lng, s.upazila);
+    // never a false positive from missing data. Canonicalized first since
+    // this entry could have been written by plantation-tracker-app's
+    // Nominatim-sourced form, which doesn't guarantee canonical spelling.
+    const upazila = canonicalizeUpazilaAgainstRegistry(s.upazila, Object.keys(mergedPolygons));
+    const mismatched = !!upazila && !isWithinUpazilaPolygon(mergedPolygons, lat, lng, upazila);
     localPoints.push({ pos: [lat, lng], sub: s, mismatched });
   });
 
@@ -405,7 +409,8 @@ export default function MapTab({ geoState, onMapReady }: MapTabProps) {
     if (!raw.includes(',')) return;
     const [lat, lng] = raw.split(',').map((v) => parseFloat(v));
     if (!isValidBdCoord(lat, lng)) return;
-    const mismatched = !!s.upazila && !isWithinUpazilaPolygon(mergedPolygons, lat, lng, s.upazila);
+    const upazila = canonicalizeUpazilaAgainstRegistry(s.upazila, Object.keys(mergedPolygons));
+    const mismatched = !!upazila && !isWithinUpazilaPolygon(mergedPolygons, lat, lng, upazila);
     nationalPoints.push({ pos: [lat, lng], entry: s, mismatched });
   });
 

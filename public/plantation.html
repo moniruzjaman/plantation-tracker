@@ -1553,7 +1553,22 @@ function syncProfileToSheet(p){
 // matches those names against our own BD/BD_UPAZILA/BD_DIVISIONS lists so
 // the four cascading dropdowns fill themselves instead of the SAAO tapping
 // through each one by hand.
-function _norm(s){return (s||"").toString().replace(/\s*(district|zila|division|উপজেলা|জেলা|বিভাগ)\s*/gi,"").trim().toLowerCase()}
+function _norm(s){
+  // .normalize('NFC') matters here: Nominatim's Bengali text and this
+  // file's own BD_UPAZILA constant can encode visually-identical
+  // characters (e.g. ড়) in different Unicode forms (precomposed vs
+  // decomposed+nukta) depending on which tool/source produced the text.
+  // Without normalizing both sides the same way, an exact string
+  // comparison silently fails even though the text is "the same" to a
+  // human reader -- this is what was leaving উপজেলা auto-fill blank for
+  // some upazilas (কুড়িগ্রাম সদর, নাগেশ্বরী, ফুলবাড়ী and others sharing
+  // that character) even when Nominatim's response was correct.
+  return (s||"").toString().normalize('NFC')
+    .replace(/\s*(district|zila|division|উপজেলা|জেলা|বিভাগ)\s*/gi,"")
+    .replace(/ী/g,"ি").replace(/ৌ/g,"ো").replace(/ূ/g,"ু") // common vowel-sign variants across Bengali data sources
+    .replace(/\s+/g,"")
+    .trim().toLowerCase();
+}
 function _findKeyMatch(candidates,keys){
   for(var i=0;i<candidates.length;i++){
     var c=_norm(candidates[i]); if(!c)continue;
