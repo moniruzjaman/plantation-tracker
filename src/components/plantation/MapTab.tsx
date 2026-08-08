@@ -328,6 +328,33 @@ export default function MapTab({ geoState, onMapReady }: MapTabProps) {
   const [pipelineState, setPipelineState] = useState<PipelineState>('idle');
   const [result, setResult] = useState<PipelineResult | null>(null);
   const [growthTarget, setGrowthTarget] = useState<{ entryId: string; label: string } | null>(null);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+
+  const handleValidationDecision = useCallback(async (entryId: string, decision: 'approved' | 'rejected') => {
+    const setter = decision === 'approved' ? setApprovingId : setRejectingId;
+    setter(entryId);
+    try {
+      const userRaw = localStorage.getItem('dae_user_profile');
+      const user = userRaw ? JSON.parse(userRaw) : {};
+      await fetch('/api/validation-tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          task_id: entryId,
+          submission_id: entryId,
+          decision,
+          remarks: decision === 'approved' ? 'SAAO-approved from dashboard' : 'Rejected from dashboard',
+          user_id: user.uid || user.mobile || 'dashboard_user',
+          user_name: user.name || 'ড্যাশবোর্ড ব্যবহারকারী',
+        }),
+      });
+    } catch (e) {
+      console.error('Validation decision failed:', e);
+    } finally {
+      setter(null);
+    }
+  }, []);
 
   const tiles = getLayerTiles(activeLayer);
   const satelliteTiles = getLayerTiles('satellite');
@@ -533,6 +560,22 @@ export default function MapTab({ geoState, onMapReady }: MapTabProps) {
                   >
                     📈 বৃদ্ধি ট্র্যাক করুন
                   </button>
+                  <div className="mt-1.5 flex gap-1">
+                    <button
+                      disabled={approvingId === String(sub.id || sub.submissionId || `${pos[0]},${pos[1]}`)}
+                      onClick={() => handleValidationDecision(String(sub.id || sub.submissionId || `${pos[0]},${pos[1]}`), 'approved')}
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-[10px] font-semibold py-1 rounded cursor-pointer"
+                    >
+                      {approvingId === String(sub.id || sub.submissionId || `${pos[0]},${pos[1]}`) ? '✓ অগ্রযান' : '✓ অনুমোদন'}
+                    </button>
+                    <button
+                      disabled={rejectingId === String(sub.id || sub.submissionId || `${pos[0]},${pos[1]}`)}
+                      onClick={() => handleValidationDecision(String(sub.id || sub.submissionId || `${pos[0]},${pos[1]}`), 'rejected')}
+                      className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white text-[10px] font-semibold py-1 rounded cursor-pointer"
+                    >
+                      {rejectingId === String(sub.id || sub.submissionId || `${pos[0]},${pos[1]}`) ? '✗ প্রত্যাখ্যান' : '✗ প্রত্যাখ্যান'}
+                    </button>
+                  </div>
                 </div>
               </Popup>
             </CircleMarker>
@@ -563,6 +606,22 @@ export default function MapTab({ geoState, onMapReady }: MapTabProps) {
                   >
                     📈 বৃদ্ধি ট্র্যাক করুন
                   </button>
+                  <div className="mt-1.5 flex gap-1">
+                    <button
+                      disabled={approvingId === String(entry.id || entry.submissionId || `${pos[0]},${pos[1]}`)}
+                      onClick={() => handleValidationDecision(String(entry.id || entry.submissionId || `${pos[0]},${pos[1]}`), 'approved')}
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-[10px] font-semibold py-1 rounded cursor-pointer"
+                    >
+                      {approvingId === String(entry.id || entry.submissionId || `${pos[0]},${pos[1]}`) ? '✓ অগ্রযান' : '✓ অনুমোদন'}
+                    </button>
+                    <button
+                      disabled={rejectingId === String(entry.id || entry.submissionId || `${pos[0]},${pos[1]}`)}
+                      onClick={() => handleValidationDecision(String(entry.id || entry.submissionId || `${pos[0]},${pos[1]}`), 'rejected')}
+                      className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white text-[10px] font-semibold py-1 rounded cursor-pointer"
+                    >
+                      {rejectingId === String(entry.id || entry.submissionId || `${pos[0]},${pos[1]}`) ? '✗ প্রত্যাখ্যান' : '✗ প্রত্যাখ্যান'}
+                    </button>
+                  </div>
                 </div>
               </Popup>
             </Marker>
