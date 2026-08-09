@@ -32,9 +32,10 @@
  */
 
 const DB_NAME = 'plantation_growth_db';
-const DB_VERSION = 1;
+const DB_VERSION = 3;
 const STORE_READINGS = 'growth_readings';
 const STORE_PLANTATIONS = 'plantations';
+const STORE_LIFECYCLE = 'lifecycle_events';
 
 export type HealthStatus = 'healthy' | 'stressed' | 'diseased' | 'dead';
 
@@ -58,6 +59,31 @@ export interface PlantationRecord {
   speciesName: string;
   plantedDate: string;
   lastSyncedAt: string;
+}
+
+export interface LifecycleEvent {
+  eventId: string;
+  formId: string;
+  plantId: string;
+  eventType: 'planting' | 'maintenance' | 'survival_check' | 'caretaker_handoff';
+  eventDate: string;       // ISO date (yyyy-mm-dd)
+  capturedAt: string;      // ISO datetime
+  capturedBy: string;
+  deviceId?: string;
+  payload: {
+    alive?: boolean;
+    healthStatus?: 'healthy' | 'stressed' | 'diseased' | 'dead';
+    heightCm?: number;
+    ndvi?: number;
+    note?: string;
+    fromCaretaker?: string;
+    toCaretaker?: string;
+    photoBase64?: string;
+    speciesName?: string;
+    quantity?: number;
+  };
+  synced?: boolean;
+  syncedAt?: string;
 }
 
 let dbPromise: Promise<IDBDatabase> | null = null;
@@ -84,6 +110,15 @@ function openDb(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(STORE_PLANTATIONS)) {
         const plantations = db.createObjectStore(STORE_PLANTATIONS, { keyPath: 'entryId' });
         plantations.createIndex('by_district', 'district', { unique: false });
+      }
+
+      if (!db.objectStoreNames.contains(STORE_LIFECYCLE)) {
+        const lifecycle = db.createObjectStore(STORE_LIFECYCLE, { keyPath: 'eventId' });
+        lifecycle.createIndex('by_formId', 'formId', { unique: false });
+        lifecycle.createIndex('by_plantId', 'plantId', { unique: false });
+        lifecycle.createIndex('by_eventType', 'eventType', { unique: false });
+        lifecycle.createIndex('by_eventDate', 'eventDate', { unique: false });
+        lifecycle.createIndex('by_form_plant', ['formId', 'plantId'], { unique: false });
       }
     };
 
@@ -207,4 +242,86 @@ export async function upsertPlantation(p: PlantationRecord): Promise<void> {
 
 export async function getPlantation(entryId: string): Promise<PlantationRecord | undefined> {
   return tx<PlantationRecord | undefined>(STORE_PLANTATIONS, 'readonly', (store) => store.get(entryId));
+}
+
+// ── Phase-2: Lifecycle Events CRUD ──
+
+function syncLifecycleEventToSheet_(event: LifecycleEvent): void {
+  try {
+    const deviceId = localStorage.getItem('dae_device_id') || '';
+    const profileRaw = localStorage.getItem('dae_user_profile');
+    const profile = profileRaw ? JSON.parse(profileRaw) : {};
+    fetch(GAS_SYNC_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        entryType: 'lifecycle_event',
+        eventId: event.eventId,
+        formId: event.formId,
+        plantId: event.plantId,
+        eventType: event.eventType,
+        eventDate: event.eventDate,
+        capturedAt: event.capturedAt,
+        capturedBy: event.capturedBy || profile.name || '',
+        deviceId,
+        payload: event.payload,
+      }),
+    }).catch((err) => console.warn('Lifecycle event sync failed (kept locally):', err));
+  } catch (err) {
+    console.warn('Lifecycle event sync skipped:', err);
+  }
+}
+
+export async function addLifecycleEvent(event: Omit<LifecycleEvent, 'capturedAt'>): Promise<string> {
+  const full: LifecycleEvent = { ...event, capturedAt: new Date().toISOString() };
+  const eventId = full.eventId;
+  await tx<IDBValidKey>(STORE_LIFECYCLE, 'readwrite', (store) => store.put(full) as IDBRequest<IDBValidKey>);
+  syncLifecycleEventToSheet_(full);
+  return eventId;
+}
+
+export async function getLifecycleEventsForPlant(formId: string, plantId: string): Promise<LifecycleEvent[]> {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const t = db.transaction(STORE_LIFECYCLE, 'readonly');
+    const idx = t.objectStore(STORE_LIFECYCLE).index('by_form_plant');
+    const range = IDBKeyRange.bound([formId, plantId], [formId, plantId]);
+    const results: LifecycleEvent[] = [];
+    const req = idx.openCursor(range);
+    req.onsuccess = () => {
+      const cursor = req.result;
+      if (cursor) {
+        results.push(cursor.value as LifecycleEvent);
+        cursor.continue();
+      } else {
+        resolve(results);
+      }
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+export async function getLifecycleEventsForForm(formId: string): Promise<LifecycleEvent[]> {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const t = db.transaction(STORE_LIFECYCLE, 'readonly');
+    const idx = t.objectStore(STORE_LIFECYCLE).index('by_formId');
+    const req = idx.getAll(formId);
+    req.onsuccess = () => resolve(req.result as LifecycleEvent[]);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+export async function getAllLifecycleEvents(): Promise<LifecycleEvent[]> {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const t = db.transaction(STORE_LIFECYCLE, 'readonly');
+    const req = t.objectStore(STORE_LIFECYCLE).getAll();
+    req.onsuccess = () => resolve(req.result as LifecycleEvent[]);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+export async function deleteLifecycleEvent(eventId: string): Promise<void> {
+  await tx<undefined>(STORE_LIFECYCLE, 'readwrite', (store) => store.delete(eventId) as IDBRequest<undefined>);
 }
