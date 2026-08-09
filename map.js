@@ -580,6 +580,348 @@ window.handlePhotoChange = function(e){
 
 // ── Seedling Builder ──`, `// ── Seedling Builder ──`);
 
+  // ── Phase-2: Lifecycle Tracking ──
+  // 1. Desktop nav - add lifecycle tab after admin
+  h = h.replace(`<button onclick="switchTab('admin')" class="nav-btn flex-1 py-3.5 text-sm font-semibold text-gray-500 hover:text-green-700 hover:bg-green-50 flex flex-col items-center gap-1" data-tab="admin">
+<span class="text-lg">🔐</span>এডমিন
+<div class="nav-dot"></div>
+</button>
+</div>
+</nav>
+
+<!-- ==================== MOBILE BOTTOM NAV ==================== -->`, `<button onclick="switchTab('admin')" class="nav-btn flex-1 py-3.5 text-sm font-semibold text-gray-500 hover:text-green-700 hover:bg-green-50 flex flex-col items-center gap-1" data-tab="admin">
+<span class="text-lg">🔐</span>এডমিন
+<div class="nav-dot"></div>
+</button>
+<button onclick="switchTab('lifecycle')" class="nav-btn flex-1 py-3.5 text-sm font-semibold text-gray-500 hover:text-green-700 hover:bg-green-50 flex flex-col items-center gap-1" data-tab="lifecycle">
+<span class="text-lg">🌱</span>জীবনচক্র
+<div class="nav-dot"></div>
+</button>
+</div>
+</nav>
+
+<!-- ==================== MOBILE BOTTOM NAV ==================== -->`);
+
+  // 2. Mobile nav - add lifecycle tab after admin
+  h = h.replace(`<button onclick="switchTab('admin')" class="nav-btn flex-1 py-2.5 flex flex-col items-center gap-0.5 text-gray-400" data-tab="admin">
+<span class="text-xl">🔐</span><span class="text-xs font-semibold" style="font-size:10px">এডমিন</span>
+<div class="nav-dot mt-0.5"></div>
+</button>
+</nav>
+
+<!-- ==================== PWA INSTALL BANNERS ==================== -->`, `<button onclick="switchTab('admin')" class="nav-btn flex-1 py-2.5 flex flex-col items-center gap-0.5 text-gray-400" data-tab="admin">
+<span class="text-xl">🔐</span><span class="text-xs font-semibold" style="font-size:10px">এডমিন</span>
+<div class="nav-dot mt-0.5"></div>
+</button>
+<button onclick="switchTab('lifecycle')" class="nav-btn flex-1 py-2.5 flex flex-col items-center gap-0.5 text-gray-400" data-tab="lifecycle">
+<span class="text-xl">🌱</span><span class="text-xs font-semibold" style="font-size:10px">জীবনচক্র</span>
+<div class="nav-dot mt-0.5"></div>
+</button>
+</nav>
+
+<!-- ==================== PWA INSTALL BANNERS ==================== -->`);
+
+  // 3. Add lifecycle tab content after admin tab
+  h = h.replace(`</div>
+</section>
+
+</main>
+<!-- ==================== PROFILE MODAL (User_Profile sheet) ==================== -->`, `</div>
+</section>
+
+<!-- ========== TAB: LIFECYCLE ========== -->
+<section id="tab-lifecycle" class="tab-content hidden">
+<div class="max-w-4xl mx-auto p-4 sm:p-6">
+<h2 class="text-xl font-bold text-green-700 mb-4">🌱 জীবনচক্র ট্র্যাকিং</h2>
+<div class="bg-white rounded-xl shadow p-4 sm:p-5 mb-4">
+<h3 class="text-sm font-bold text-gray-700 mb-3">📝 নতুন ইভেন্ট যোগ করুন</h3>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+<div>
+<label class="block text-xs font-semibold text-gray-600 mb-1">ফর্ম (রোপণের এন্ট্রি) <span style="color:#ef4444">*</span></label>
+<select id="lcFormId" onchange="onLifecycleFormChange()" class="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+<option value="">ফর্ম নির্বাচন করুন</option>
+</select>
+</div>
+<div>
+<label class="block text-xs font-semibold text-gray-600 mb-1">চারা (Plant ID) <span style="color:#ef4444">*</span></label>
+<select id="lcPlantId" class="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+<option value="">চারা নির্বাচন করুন</option>
+</select>
+</div>
+<div>
+<label class="block text-xs font-semibold text-gray-600 mb-1">ইভেন্টের ধরন <span style="color:#ef4444">*</span></label>
+<select id="lcEventType" onchange="onLifecycleEventTypeChange()" class="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+<option value="maintenance">🔧 রক্ষণাবেক্ষণ</option>
+<option value="survival_check">🔍 জীবিত পরীক্ষা</option>
+<option value="caretaker_handoff">👤 পরিচারক হ্যান্ডঅফ</option>
+</select>
+</div>
+<div>
+<label class="block text-xs font-semibold text-gray-600 mb-1">তারিখ <span style="color:#ef4444">*</span></label>
+<input type="date" id="lcEventDate" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+</div>
+</div>
+<div id="lcDynamicFields" class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+<div class="mt-3">
+<label class="block text-xs font-semibold text-gray-600 mb-1">ছবি (ঐচ্ছিক)</label>
+<input type="file" id="lcPhoto" accept="image/*" capture="environment" class="w-full border rounded-md px-3 py-2 text-xs focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+<div id="lcPhotoPreviewWrap" class="hidden mt-2">
+<img id="lcPhotoPreview" alt="preview" class="rounded-lg border" style="max-height:120px;border-color:#d1d5db">
+</div>
+</div>
+<button type="button" onclick="saveLifecycleEvent()" class="mt-4 w-full sm:w-auto text-white px-6 py-2.5 rounded-lg font-semibold text-sm transition cursor-pointer" style="background:#15803d">
+💾 ইভেন্ট সংরক্ষণ করুন
+</button>
+</div>
+<div class="bg-white rounded-xl shadow p-4 sm:p-5">
+<h3 class="text-sm font-bold text-gray-700 mb-3">📋 ইভেন্ট লগ</h3>
+<div id="lifecycleEventLog" class="space-y-2">
+<p class="text-xs text-gray-400">ফর্ম এবং চারা নির্বাচন করে ইভেন্ট লগ দেখুন।</p>
+</div>
+</div>
+</div>
+</section>
+
+</main>
+<!-- ==================== PROFILE MODAL (User_Profile sheet) ==================== -->`);
+
+  // 4. Submit handler - add plantId generation
+  h = h.replace(`  var seedlings=collectSeedlings("seedlingRows");
+  if(seedlings.length===0){showBanner("errorBanner","অন্তত একটি চারা যোগ করুন (প্রজাতির নাম ও সংখ্যা দিন)।");return}`, `  var seedlings=collectSeedlings("seedlingRows");
+  if(seedlings.length===0){showBanner("errorBanner","অন্তত একটি চারা যোগ করুন (প্রজাতির নাম ও সংখ্যা দিন)।");return}
+  seedlings.forEach(function(s, i){
+    if(!s.plantId){ s.plantId = base.submissionId + '-P' + String(i+1).padStart(3, '0'); }
+  });`);
+
+  // 5. toGASRows - add plantId
+  h = h.replace(`  return seedlings.map(function(s){
+    return Object.assign({}, base, {
+      speciesName: s.speciesName || "",
+      category:    s.category || "",
+      quantity:    s.quantity || 0
+    });
+  });`, `  return seedlings.map(function(s){
+    return Object.assign({}, base, {
+      plantId:     s.plantId || "",
+      speciesName: s.speciesName || "",
+      category:    s.category || "",
+      quantity:    s.quantity || 0
+    });
+  });`);
+
+  // 6. Add lifecycle JS functions before switchTab
+  h = h.replace(`window.switchTab=function(tab){
+try{
+document.querySelectorAll(".tab-content").forEach(function(el){el.classList.add("hidden")});
+document.querySelectorAll(".nav-btn").forEach(function(b){b.classList.remove("active")});`, `// ── Phase-2: Lifecycle Tracking ──
+window._lcPhotoBase64 = "";
+function generatePlantIds(seedlings, formId) {
+  return seedlings.map(function(s, i) {
+    return Object.assign({}, s, {
+      plantId: formId + '-P' + String(i + 1).padStart(3, '0')
+    });
+  });
+}
+function onLifecycleFormChange() {
+  var formId = document.getElementById("lcFormId").value;
+  var plantSelect = document.getElementById("lcPlantId");
+  plantSelect.innerHTML = '<option value="">চারা নির্বাচন করুন</option>';
+  if (!formId) { renderLifecycleEventLog(); return; }
+  var subs = getSubmissions();
+  var sub = subs.find(function(s) { return s.submissionId === formId || s.id === formId; });
+  if (!sub || !sub.seedlings) return;
+  sub.seedlings.forEach(function(sd, i) {
+    var opt = document.createElement("option");
+    opt.value = sd.plantId || (formId + '-P' + String(i + 1).padStart(3, '0'));
+    opt.textContent = (sd.speciesName || 'অজানা') + ' #' + (i + 1);
+    plantSelect.appendChild(opt);
+  });
+  renderLifecycleEventLog();
+}
+function onLifecycleEventTypeChange() {
+  var type = document.getElementById("lcEventType").value;
+  var container = document.getElementById("lcDynamicFields");
+  if (!container) return;
+  var html = '';
+  if (type === 'survival_check') {
+    html = '<div><label class="block text-xs font-semibold text-gray-600 mb-1">জীবিত? <span style="color:#ef4444">*</span></label><select id="lcAlive" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="true">হ্যাঁ</option><option value="false">না</option></select></div><div><label class="block text-xs font-semibold text-gray-600 mb-1">স্বাস্থ্য অবস্থা</label><select id="lcHealthStatus" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="healthy">সুস্থ</option><option value="stressed">চাপগ্রস্ত</option><option value="diseased">রোগগ্রস্ত</option><option value="dead">মৃত</option></select></div><div><label class="block text-xs font-semibold text-gray-600 mb-1">উচ্চতা (cm)</label><input type="number" id="lcHeightCm" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db" placeholder="উচ্চতা"></div>';
+  } else if (type === 'maintenance') {
+    html = '<div class="sm:col-span-2"><label class="block text-xs font-semibold text-gray-600 mb-1">রক্ষণাবেক্ষণের বিবরণ</label><textarea id="lcNote" rows="2" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db" placeholder="যেমন: সার প্রযোজন, পানি দান..."></textarea></div><div><label class="block text-xs font-semibold text-gray-600 mb-1">উচ্চতা (cm)</label><input type="number" id="lcHeightCm" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db" placeholder="উচ্চতা"></div>';
+  } else if (type === 'caretaker_handoff') {
+    html = '<div><label class="block text-xs font-semibold text-gray-600 mb-1">পূর্বের পরিচারক</label><input type="text" id="lcFromCaretaker" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db" placeholder="পুরানো পরিচারকের নাম"></div><div><label class="block text-xs font-semibold text-gray-600 mb-1">নতুন পরিচারক <span style="color:#ef4444">*</span></label><input type="text" id="lcToCaretaker" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db" placeholder="নতুন পরিচারকের নাম"></div><div class="sm:col-span-2"><label class="block text-xs font-semibold text-gray-600 mb-1">হ্যান্ডঅফ নোট</label><textarea id="lcNote" rows="2" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db" placeholder="বিস্তারিত..."></textarea></div>';
+  } else {
+    html = '<div class="sm:col-span-2"><label class="block text-xs font-semibold text-gray-600 mb-1">নোট</label><textarea id="lcNote" rows="2" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db" placeholder="রোপণের বিবরণ..."></textarea></div>';
+  }
+  container.innerHTML = html;
+}
+async function saveLifecycleEvent() {
+  var formId = document.getElementById("lcFormId").value;
+  var plantId = document.getElementById("lcPlantId").value;
+  var eventType = document.getElementById("lcEventType").value;
+  var eventDate = document.getElementById("lcEventDate").value;
+  var capturedBy = (getProfile() || {}).name || "field_worker";
+  if (!formId || !plantId || !eventType || !eventDate) {
+    showBanner("errorBanner", "ফর্ম, চারা, ইভেন্টের ধরন এবং তারিখ সব Gutum 필요।");
+    setTimeout(function(){hideBanner("errorBanner");},3000);
+    return;
+  }
+  var payload = { speciesName: "", quantity: 0, note: "" };
+  var noteEl = document.getElementById("lcNote");
+  if (noteEl) payload.note = noteEl.value.trim();
+  var heightEl = document.getElementById("lcHeightCm");
+  if (heightEl) payload.heightCm = parseInt(heightEl.value) || null;
+  var aliveEl = document.getElementById("lcAlive");
+  if (aliveEl) payload.alive = aliveEl.value === "true";
+  var healthEl = document.getElementById("lcHealthStatus");
+  if (healthEl) payload.healthStatus = healthEl.value;
+  var fromEl = document.getElementById("lcFromCaretaker");
+  if (fromEl) payload.fromCaretaker = fromEl.value.trim();
+  var toEl = document.getElementById("lcToCaretaker");
+  if (toEl) payload.toCaretaker = toEl.value.trim();
+  var subs = getSubmissions();
+  var sub = subs.find(function(s) { return s.submissionId === formId || s.id === formId; });
+  if (sub && sub.seedlings) {
+    var sd = sub.seedlings.find(function(s) { return s.plantId === plantId; });
+    if (sd) {
+      payload.speciesName = sd.speciesName || "";
+      payload.quantity = parseInt(sd.quantity) || 0;
+    }
+  }
+  var photoEl = document.getElementById("lcPhoto");
+  if (photoEl && photoEl.files && photoEl.files[0]) {
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      var img = new Image();
+      img.onload = function() {
+        var maxDim = 1024;
+        var scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        var canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+        payload.photoBase64 = canvas.toDataURL("image/jpeg", 0.6);
+        _submitLifecycleEvent(formId, plantId, eventType, eventDate, capturedBy, payload);
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(photoEl.files[0]);
+  } else {
+    _submitLifecycleEvent(formId, plantId, eventType, eventDate, capturedBy, payload);
+  }
+}
+async function _submitLifecycleEvent(formId, plantId, eventType, eventDate, capturedBy, payload) {
+  try {
+    var eventId = formId + '-' + plantId + '-' + eventType + '-' + Date.now();
+    if (typeof addLifecycleEvent !== 'undefined') {
+      await addLifecycleEvent({
+        eventId: eventId,
+        formId: formId,
+        plantId: plantId,
+        eventType: eventType,
+        eventDate: eventDate,
+        capturedBy: capturedBy,
+        payload: payload
+      });
+    }
+    showBanner("successBanner", "জীবনচক্র ইভেন্ট সংরক্ষিত হয়েছে!");
+    setTimeout(function(){hideBanner("successBanner");},3000);
+    renderLifecycleEventLog();
+    var noteEl = document.getElementById("lcNote");
+    if (noteEl) noteEl.value = "";
+    var photoEl = document.getElementById("lcPhoto");
+    if (photoEl) photoEl.value = "";
+    var wrap = document.getElementById("lcPhotoPreviewWrap");
+    if (wrap) wrap.classList.add("hidden");
+  } catch (err) {
+    console.error("Lifecycle event save failed:", err);
+    showBanner("errorBanner", "সংরক্ষণ ব্যর্থ হয়েছে।");
+    setTimeout(function(){hideBanner("errorBanner");},3000);
+  }
+}
+async function renderLifecycleEventLog() {
+  var formId = document.getElementById("lcFormId").value;
+  var plantId = document.getElementById("lcPlantId").value;
+  var container = document.getElementById("lifecycleEventLog");
+  if (!container) return;
+  if (!formId || !plantId) {
+    container.innerHTML = '<p class="text-xs text-gray-400">ফর্ম এবং চারা নির্বাচন করে ইভেন্ট লগ দেখুন।</p>';
+    return;
+  }
+  var events = [];
+  if (typeof getLifecycleEventsForPlant !== 'undefined') {
+    events = await getLifecycleEventsForPlant(formId, plantId);
+  } else if (typeof window.getLifecycleEventsForPlant !== 'undefined') {
+    events = await window.getLifecycleEventsForPlant(formId, plantId);
+  }
+  if (!events.length) {
+    container.innerHTML = '<p class="text-xs text-gray-400">এই চারার জন্য কোনো ইভেন্ট পাওয়া যায়নি।</p>';
+    return;
+  }
+  var typeLabels = { planting: 'রোপণ', maintenance: 'রক্ষণাবেক্ষণ', survival_check: 'জীবিত পরীক্ষা', caretaker_handoff: 'হ্যান্ডঅফ' };
+  var typeIcons = { planting: '🌱', maintenance: '🔧', survival_check: '🔍', caretaker_handoff: '👤' };
+  var html = events.sort(function(a,b){ return a.eventDate.localeCompare(b.eventDate); }).map(function(e) {
+    var badge = typeIcons[e.eventType] || '📌';
+    var detail = '';
+    if (e.eventType === 'survival_check') {
+      detail = '<span style="color:' + (e.payload.alive ? '#16a34a' : '#dc2626') + '">' + (e.payload.alive ? 'জীবিত' : 'মৃত') + '</span>';
+      if (e.payload.healthStatus) detail += ' | ' + e.payload.healthStatus;
+    } else if (e.eventType === 'caretaker_handoff') {
+      detail = (e.payload.fromCaretaker || '?') + ' → ' + (e.payload.toCaretaker || '?');
+    } else if (e.payload.note) {
+      detail = e.payload.note;
+    }
+    return '<div style="border:1px solid #e5e7eb;border-radius:10px;padding:10px;background:#fafafa"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;font-size:13px">' + badge + ' ' + (typeLabels[e.eventType] || e.eventType) + '</span><span style="font-size:11px;color:#6b7280">' + e.eventDate + '</span></div><div style="font-size:12px;color:#374151;margin-top:4px">' + detail + '</div>' + (e.payload.photoBase64 ? '<img src="' + e.payload.photoBase64 + '" style="max-height:60px;margin-top:6px;border-radius:6px;border:1px solid #e5e7eb">' : '') + '</div>';
+  }).join("");
+  container.innerHTML = html;
+}
+function populateLifecycleFormSelect() {
+  var formSelect = document.getElementById("lcFormId");
+  if (!formSelect) return;
+  var subs = getSubmissions();
+  formSelect.innerHTML = '<option value="">ফর্ম নির্বাচন করুন</option>' + subs.map(function(s) {
+    var label = (s.village || 'অজানা') + ' (' + (s.plantingDate || s.submittedAt || '').slice(0,10) + ')';
+    return '<option value="' + (s.submissionId || s.id) + '">' + label + '</option>';
+  }).join("");
+}
+
+window.switchTab=function(tab){
+try{
+document.querySelectorAll(".tab-content").forEach(function(el){el.classList.add("hidden")});
+document.querySelectorAll(".nav-btn").forEach(function(b){b.classList.remove("active")});`);
+
+  // 7. Add lifecycle tab to switchTab active class logic
+  h = h.replace(`  if(tab==="form")document.getElementById("tab-form").classList.remove("hidden");
+  if(tab==="dashboard")renderDashboard();
+  if(tab==="map")renderMap();
+  if(tab==="storedData")renderMyTab();
+  if(tab==="admin"&&isAdmin)renderAdminTable();`, `  if(tab==="form")document.getElementById("tab-form").classList.remove("hidden");
+  if(tab==="dashboard")renderDashboard();
+  if(tab==="map")renderMap();
+  if(tab==="storedData")renderMyTab();
+  if(tab==="admin"&&isAdmin)renderAdminTable();
+  if(tab==="lifecycle"){document.getElementById("tab-lifecycle").classList.remove("hidden"); populateLifecycleFormSelect();}`);
+
+  // 8. Add lifecycle photo handler in init
+  h = h.replace(`var fPhotoEl=document.getElementById("fPhoto");
+if(fPhotoEl){fPhotoEl.addEventListener("change", window.handlePhotoChange);}
+initProfile();`, `var fPhotoEl=document.getElementById("fPhoto");
+if(fPhotoEl){fPhotoEl.addEventListener("change", window.handlePhotoChange);}
+var lcPhotoEl=document.getElementById("lcPhoto");
+if(lcPhotoEl){lcPhotoEl.addEventListener("change", function(e){
+  var file = e.target.files && e.target.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev){
+    window._lcPhotoBase64 = ev.target.result;
+    var prev = document.getElementById("lcPhotoPreview");
+    var wrap = document.getElementById("lcPhotoPreviewWrap");
+    if(prev) prev.src = ev.target.result;
+    if(wrap) wrap.classList.remove("hidden");
+  };
+  reader.readAsDataURL(file);
+});}
+initProfile();`);
+
   return h;
 }
 
