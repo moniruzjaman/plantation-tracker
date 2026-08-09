@@ -926,5 +926,5 @@ initProfile();`);
 }
 
 const patched = applyPatches(html);
-fs.writeFileSync('public/plantation.html', patched);
+fs.writeFileSync('public/legacy/plantation.html', patched);
 console.log('Done mapping + Phase-1 patches.');

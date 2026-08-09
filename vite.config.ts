@@ -79,6 +79,8 @@ export default defineConfig(({mode}) => {
         manifest: {
           name: 'plantation-tracker',
           short_name: 'বৃক্ষরোপণ ট্র্যাকার',
+          start_url: '/',
+          scope: '/',
           description: '“০৫ বছরে ২৫ কোটি বৃক্ষরোপণ” কর্মসূচী - অ্যাপ | স্বয়ংক্রিয় জিও-কোঅর্ডিনেট, স্বয়ংক্রিয় ফর্ম পূরণ, লোকাল স্টোরেজ, অটো সিঙ্ক, সার্ভার/Kobo/ODK সিঙ্ক (আসন্ন)',
           theme_color: '#006A4E',
           background_color: '#006A4E',
@@ -132,7 +134,21 @@ export default defineConfig(({mode}) => {
               sizes: '180x180',
               type: 'image/png'
             }
-          ]
+            ],
+            shortcuts: [
+              {
+                name: 'বৃক্ষরোপণ ট্র্যাকার',
+                short_name: 'ট্র্যাকার',
+                url: '/',
+                icons: [
+                  {
+                    src: 'icon-192.png',
+                    sizes: '192x192',
+                    type: 'image/png'
+                  }
+                ]
+              }
+            ]
         }
       })
     ],

@@ -58,7 +58,7 @@ export default function App() {
       <PWAInstaller />
       <SyncToast />
       <iframe
-        src="plantation.html"
+        src="/legacy/plantation.html"
         style={{ display: 'block', width: '100%', height: '100%', border: 'none' }}
         title="Plantation Form"
         allow="geolocation"
