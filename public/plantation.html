@@ -6,8 +6,8 @@
 <title>বৃক্ষ রোপণে সাজাই দেশ, সবার আগে বাংলাদেশ | কৃষি সম্প্রসারণ অধিদপ্তর</title>
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<meta name="description" content="৫ বছরে ২৫ কোটি বৃক্ষ রোপণের জাতীয় মহা উদ্দ্যোগ। বৃক্ষ রোপণের তথ্য ডিজিটাল নথিভূক্তকরণ, স্যাটেলাইট পর্যবেক্ষণ, অফিসিয়াল রিপোর্টিং।">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<meta name="description" content="বৃক্ষ রোপণে সাজাই দেশ, সবার আগে বাংলাদেশ। কৃষি সম্প্রসারণ অধিদপ্তর।">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
 if(typeof tailwind!=='undefined'){
@@ -22,7 +22,6 @@ document.head.appendChild(s);
 </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -66,22 +65,6 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 #profileModal .overflow-y-auto{-webkit-overflow-scrolling:touch}
 @media(max-width:640px){#profileModal input,#profileModal select{font-size:16px}}
 </style>
-<!-- Open Graph tags for Messenger, WhatsApp and Facebook -->
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://plantation-tracker.vercel.app/">
-<meta property="og:title" content="বৃক্ষ রোপণে সাজাই দেশ, সবার আগে বাংলাদেশ">
-<meta property="og:description" content="৫ বছরে ২৫ কোটি বৃক্ষরোপণ কর্মসূচি।">
-
-<!-- Single Open Graph image -->
-<!-- NOTE: bump ?v=N whenever og-share-large.png's content changes.
-     Social platforms cache link-preview images independently of Vercel
-     and of each other, often for days-to-weeks -- a new query string is
-     the only reliable way to force a fresh fetch everywhere at once. -->
-<meta property="og:image" content="https://plantation-tracker.vercel.app/og-share-large.png?v=2">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:image:type" content="image/png">
-<meta property="og:image:alt" content="বৃক্ষ রোপণে সাজাই দেশ, সবার আগে বাংলাদেশ">
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col">
 
@@ -98,18 +81,13 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <img src="/dae-logo.webp" onerror="this.onerror=null;this.src='/dae-logo.png'" alt="কৃষি সম্প্রসারণ অধিদপ্তর" class="w-11 h-11 sm:w-14 sm:h-14 bg-white rounded-full p-1 shadow flex-shrink-0">
 </div>
 <div style="height:3px;background:linear-gradient(to right,#166534,#dc2626 50%,#166534);margin-top:10px;border-radius:2px;opacity:.9;position:relative;z-index:1"></div>
-<div class="max-w-6xl mx-auto flex items-center justify-between" style="position:relative;z-index:1;margin-top:6px">
-<!-- React-portal slots: GPS Accuracy + Mobile Control -->
-<div id="header-react-slots" class="flex items-center gap-2" style="min-height:28px"></div>
-<!-- Instruction & Share buttons -->
-<div class="flex items-center gap-4">
+<div class="max-w-6xl mx-auto flex items-center justify-end gap-4" style="position:relative;z-index:1;margin-top:6px">
 <button onclick="openGuideModal()" title="ব্যবহার নির্দেশিকা" aria-label="ব্যবহার নির্দেশিকা" class="header-icon-plain flex items-center gap-1 cursor-pointer" style="background:transparent;border:none;color:#dcfce7;padding:2px 4px">
 <span style="font-size:15px;line-height:1">📘</span><span class="text-[10px] font-semibold">নির্দেশিকা</span>
 </button>
 <button onclick="openShareModal()" title="অ্যাপ শেয়ার করুন" aria-label="অ্যাপ শেয়ার করুন" class="header-icon-plain flex items-center gap-1 cursor-pointer" style="background:transparent;border:none;color:#fecaca;padding:2px 4px">
 <span style="font-size:15px;line-height:1">📤</span><span class="text-[10px] font-semibold">শেয়ার</span>
 </button>
-</div>
 </div>
 </header>
 
@@ -129,7 +107,11 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <div class="nav-dot"></div>
 </button>
 <button onclick="switchTab('storedData')" class="nav-btn flex-1 py-3.5 text-sm font-semibold text-gray-500 hover:text-green-700 hover:bg-green-50 flex flex-col items-center gap-1" data-tab="storedData">
-<span class="text-lg">👤</span>প্রোফাইল
+<span class="text-lg">📂</span>আমার তথ্য
+<div class="nav-dot"></div>
+</button>
+<button onclick="switchTab('admin')" class="nav-btn flex-1 py-3.5 text-sm font-semibold text-gray-500 hover:text-green-700 hover:bg-green-50 flex flex-col items-center gap-1" data-tab="admin">
+<span class="text-lg">🔐</span>এডমিন
 <div class="nav-dot"></div>
 </button>
 </div>
@@ -150,7 +132,11 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <div class="nav-dot mt-0.5"></div>
 </button>
 <button onclick="switchTab('storedData')" class="nav-btn flex-1 py-2.5 flex flex-col items-center gap-0.5 text-gray-400" data-tab="storedData">
-<span class="text-xl">👤</span><span class="text-xs font-semibold" style="font-size:10px">প্রোফাইল</span>
+<span class="text-xl">📂</span><span class="text-xs font-semibold" style="font-size:10px">আমার তথ্য</span>
+<div class="nav-dot mt-0.5"></div>
+</button>
+<button onclick="switchTab('admin')" class="nav-btn flex-1 py-2.5 flex flex-col items-center gap-0.5 text-gray-400" data-tab="admin">
+<span class="text-xl">🔐</span><span class="text-xs font-semibold" style="font-size:10px">এডমিন</span>
 <div class="nav-dot mt-0.5"></div>
 </button>
 </nav>
@@ -205,13 +191,28 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <span id="profileBarText" class="text-xs font-semibold text-green-800">👤 প্রোফাইল লোড হচ্ছে...</span>
 <button type="button" onclick="openProfileModal()" class="text-xs font-semibold" style="color:#15803d">পরিবর্তন</button>
 </div>
+<!-- Phase-1 Quick Actions: Copy Last Entry / Repeat with New GPS -->
+<div id="quickActionsBar" class="flex flex-wrap gap-2 mb-4">
+<button type="button" onclick="copyLastEntry()" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition active:scale-95 cursor-pointer" style="min-height:44px">
+<svg style="height:14px;width:14px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+<span>শেষ এন্ট্রি কপি করুন</span>
+</button>
+<button type="button" onclick="repeatWithNewGPS()" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition active:scale-95 cursor-pointer" style="min-height:44px">
+<svg style="height:14px;width:14px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+<span>নতুন GPS দিয়ে পুনরায়</span>
+</button>
+</div>
 <form id="nurseryForm" novalidate>
 <input type="hidden" id="editId" value="">
-<input type="hidden" id="fGeoFencePoints" value="">
-<input type="hidden" id="fGeoFenceAreaSqm" value="">
 
 <!-- ===== 1. GENERAL INFO ===== -->
-<fieldset style="border-color:#86efac;background:#f9fafb" class="rounded-xl border-2 p-4 sm:p-5 mb-4">
+<div class="flex items-center justify-between mb-3">
+<span class="text-xs font-semibold text-gray-500">📱 মোবাইল ফ্রেন্ডলি ফর্ম</span>
+<button type="button" onclick="toggleGuidedMode()" id="guidedModeBtn" class="text-[11px] font-bold px-3 py-2 rounded-full border-2 transition cursor-pointer" style="border-color:#15803d;color:#15803d;background:#f0fdf4;min-height:44px">
+🎯 সহজ মোড: বন্ধ
+</button>
+</div>
+<fieldset id="fs-general" style="border-color:#86efac;background:#f9fafb" class="rounded-xl border-2 p-4 sm:p-5 mb-4">
 <legend class="px-3 py-1 rounded-lg text-white font-bold text-sm" style="background:#15803d">১. সাধারণ তথ্য</legend>
 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
 
@@ -321,47 +322,11 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 </div>
 
 <div class="sm:col-span-2">
-<label class="block text-xs font-semibold text-gray-700 mb-1">জিও লোকেশন
-<button type="button" onclick="fetchGeoLocation()" id="geoBtn" class="ml-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full transition" style="font-size:10px;font-weight:500;color:#15803d;background:#f0fdf4;border:1px solid #bbf7d0" title="লোকেশন আপডেট করুন"><svg id="geoIcon" style="height:12px;width:12px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg><span id="geoBtnText">স্বয়ংক্রিয়</span></button>
-<button type="button" onclick="toggleGeoManualPanel()" id="geoManualToggleBtn" class="ml-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full transition" style="font-size:10px;font-weight:500;color:#1d4ed8;background:#eff6ff;border:1px solid #93c5fd" title="ম্যাপ দেখুন / নিজে কোঅর্ডিনেট লিখুন">🗺️ <span id="geoManualToggleText">ম্যাপ/ম্যানুয়াল</span></button>
-</label>
+<label class="block text-xs font-semibold text-gray-700 mb-1">জিও লোকেশন <button type="button" onclick="fetchGeoLocation()" id="geoBtn" class="ml-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full transition" style="font-size:10px;font-weight:500;color:#15803d;background:#f0fdf4;border:1px solid #bbf7d0" title="লোকেশন আপডেট করুন"><svg id="geoIcon" style="height:12px;width:12px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg><span id="geoBtnText">স্বয়ংক্রিয়</span></button></label>
 <div class="flex gap-2">
 <input type="text" id="fGeo" placeholder="অক্ষাংশ, দ্রাঘিমাংশ" class="flex-1 border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db" onchange="if(window.onGeoLocationChange){window.onGeoLocationChange(this, 'fAddress')}">
 </div>
 <p id="geoStatus" class="hidden mt-0.5" style="font-size:10px;color:#9ca3af"><span id="geoStatusText"></span></p>
-
-<!-- ===== Manual coordinate entry + OpenStreetMap + geofence walker ===== -->
-<div id="geoManualPanel" class="mt-2 p-3 rounded-lg border" style="background:#f8fafc;border-color:#dbeafe">
-
-  <div class="grid grid-cols-2 gap-2 mb-2">
-    <div>
-      <label class="block text-[10px] font-bold text-gray-500 mb-0.5">অক্ষাংশ (Latitude)</label>
-      <input type="text" inputmode="decimal" id="fGeoLatManual" placeholder="যেমন: 25.805417" class="w-full border rounded px-2 py-1.5 text-sm" style="border-color:#93c5fd">
-    </div>
-    <div>
-      <label class="block text-[10px] font-bold text-gray-500 mb-0.5">দ্রাঘিমাংশ (Longitude)</label>
-      <input type="text" inputmode="decimal" id="fGeoLngManual" placeholder="যেমন: 89.636861" class="w-full border rounded px-2 py-1.5 text-sm" style="border-color:#93c5fd">
-    </div>
-  </div>
-  <div class="flex gap-2 mb-2">
-    <button type="button" onclick="showManualGeoOnMap()" id="geoManualShowBtn" class="flex-1 text-white rounded-md py-1.5 text-xs font-semibold" style="background:#1d4ed8">📍 ম্যানুয়াল কোঅর্ডিনেট ম্যাপে দেখান</button>
-  </div>
-  <p id="geoManualStatus" class="hidden mb-2" style="font-size:10px;color:#9ca3af"></p>
-
-  <div id="fGeoMap" class="w-full rounded-lg border" style="height:240px;border-color:#93c5fd"></div>
-  <p style="font-size:10px;color:#6b7280" class="mt-1">মানচিত্রে ট্যাপ করুন অথবা মার্কার টেনে সঠিক অবস্থান নির্ধারণ করুন। ম্যানুয়াল ইনপুট ঘরে যা লিখবেন, মার্কার ঠিক সেই কোঅর্ডিনেটেই বসবে।</p>
-  <p id="geoOfflineNotice" class="hidden mt-1" style="font-size:10px;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:4px 6px">⚠️ আপনি এখন অফলাইনে আছেন — আগে দেখা এলাকার ম্যাপ ট্যাইল দেখা যাবে, কিন্তু নতুন/অদেখা এলাকার ট্যাইল লোড হবে না। জিপিএস অবস্থান নেওয়া ও সীমানা (জিও-ফেন্স) হাঁটা অফলাইনেও পুরোপুরি কাজ করবে।</p>
-
-  <!-- Geo-fencing: walk the boundary of a plant cluster to record its outline -->
-  <div class="mt-3 pt-3" style="border-top:1px dashed #bfdbfe">
-    <p class="text-xs font-bold text-gray-700 mb-1.5">🚶 জিও-ফেন্সিং (ক্লাস্টার/সারিবদ্ধ চারার সীমানা হাঁটার মাধ্যমে রেকর্ড করুন)</p>
-    <div class="flex gap-2 flex-wrap">
-      <button type="button" onclick="toggleGeoFenceWalk()" id="geoFenceWalkBtn" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-semibold text-white" style="background:#15803d">🚶 হাঁটা শুরু করুন</button>
-      <button type="button" onclick="clearGeoFence()" id="geoFenceClearBtn" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-semibold" style="background:#fee2e2;color:#b91c1c">✕ সীমানা মুছুন</button>
-    </div>
-    <p id="geoFenceInfo" class="mt-1.5" style="font-size:10px;color:#6b7280">এখনও কোনো সীমানা রেকর্ড করা হয়নি। হাঁটা শুরু করুন এবং ক্লাস্টারের চারপাশ ঘুরে আসুন।</p>
-  </div>
-</div>
 </div>
 
 <div class="sm:col-span-2">
@@ -383,8 +348,9 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 </fieldset>
 
 <!-- ===== 2. SEEDLING REPEATER (one row per species) ===== -->
-<fieldset style="border-color:#86efac;background:#f9faff" class="rounded-xl border-2 p-4 sm:p-5 mb-4">
+<fieldset id="fs-seedlings" style="border-color:#86efac;background:#f9faff" class="rounded-xl border-2 p-4 sm:p-5 mb-4">
 <legend class="px-3 py-1 rounded-lg text-white font-bold text-sm" style="background:#15803d">২. চারার তথ্য <span style="color:#fde68a;font-weight:400;font-size:11px">(প্রতিটি চারার জন্য আলাদা রো — যেমন: আম ৩, + লেবু ২, + পেয়ারা ২)</span></legend>
+<div id="speciesFavoritesBar" class="flex flex-wrap gap-1.5 mt-3 mb-2"></div>
 <datalist id="speciesList">
 <option value="আম"><option value="জাম"><option value="কাঁঠাল"><option value="লেবু"><option value="পেয়ারা"><option value="সফেদা"><option value="তরমুজ"><option value="আনারস"><option value="লিচু"><option value="কলা"><option value="পেঁপে"><option value="সেগুন"><option value="মেহগনি"><option value="আকাশমনি"><option value="নিম"><option value="তুলসী"><option value="বাসক"><option value="অশ্বগন্ধা"><option value="আমলকী"><option value="হারিতকী"><option value="অন্যান্য">
 </datalist>
@@ -393,17 +359,17 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 </fieldset>
 
 <!-- ===== 3. PHOTO ===== -->
-<fieldset style="border-color:#86efac;background:#f9fafb" class="rounded-xl border-2 p-4 sm:p-5 mb-4">
-<legend class="px-3 py-1 rounded-lg text-white font-bold text-sm" style="background:#15803d">৩. ছবি (ঐচ্ছিক কিন্তু সুপারিশকৃত)</legend>
+<fieldset id="fs-photo" style="border-color:#86efac;background:#f9fafb" class="rounded-xl border-2 p-4 sm:p-5 mb-4">
+<legend class="px-3 py-1 rounded-lg text-white font-bold text-sm" style="background:#15803d">৩. ছবি (ঐচ্ছিক কিন্তু সুপারিশকৃত) — সর্বোচ্চ ৫টি</legend>
 <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
 <div>
 <label class="block text-xs font-semibold text-gray-700 mb-1">রোপণকৃত স্থানের ছবি দিন</label>
-<input type="file" id="fPhoto" accept="image/*" capture="environment" class="w-full border rounded-md px-3 py-2 text-xs focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
-<p class="text-[10px] text-gray-500 mt-1">ছবি স্বয়ংক্রিয়ভাবে সংকুচিত হবে (সর্বোচ্চ ১০২৪px)। প্রতিটি রো এই ছবিটি গুগল ড্রাইভে সংরক্ষিত হবে এবং শিটে ইনলাইন প্রদর্শিত হবে।</p>
+<input type="file" id="fPhoto" accept="image/*" capture="environment" multiple class="w-full border rounded-md px-3 py-2 text-xs focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+<p class="text-[10px] text-gray-500 mt-1">অনেক ছবি Select করুন (সর্বোচ্চ ৫টি, প্রতিটি ≤ 10MB)। ছবিগুলো স্বয়ংক্রিয়ভাবে সংকুচিত হবে (১০২৪px) এবং জিপিএস + সময়স্ট্যাম্প স্ট্যাম্প যুক্ত হবে।</p>
 </div>
-<div class="hidden" id="fPhotoPreviewWrap">
-<img id="fPhotoPreview" alt="preview" class="rounded-lg border" style="max-height:140px;border-color:#d1d5db">
-<button type="button" onclick="clearPhoto()" class="block mt-2 text-xs text-red-600 hover:underline">✕ ছবি সরান</button>
+<div id="fPhotoPreviewWrap" class="hidden">
+<div id="fPhotoPreviewGrid" class="grid grid-cols-2 gap-2"></div>
+<button type="button" onclick="clearPhoto()" class="block mt-2 text-xs text-red-600 hover:underline">✕ সব ছবি সরান</button>
 </div>
 </div>
 </fieldset>
@@ -430,50 +396,6 @@ tbody tr{border-bottom:1px solid #e5e7eb}
     <span id="dashDataSourceNote" class="text-xs text-gray-400">লোকাল + জাতীয় ডাটা মার্জ করা হয়েছে</span>
   </div>
   <button onclick="refreshDashNationalData()" class="text-xs font-semibold px-3 py-1.5 rounded-md border cursor-pointer hover:bg-gray-50 transition" style="border-color:#15803d;color:#15803d" id="dashRefreshBtn">🔄 রিফ্রেশ</button>
-</div>
-
-<!-- ── Filters (MOVED TO TOP — applies to KPIs, charts, table and Excel exports) ── -->
-<div class="bg-white rounded-xl shadow p-4 mb-6" style="border:1px solid #bbf7d0">
-  <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
-    <p class="font-semibold text-gray-700 text-sm">🔍 ফিল্টার করুন <span class="text-xs text-gray-400 font-normal">(KPI, চার্ট, টেবিল ও Excel এক্সপোর্ট — সবখানে প্রযোজ্য)</span></p>
-    <div class="flex gap-2">
-      <button onclick="resetDashFilters()" class="text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer" style="background:#f3f4f6;color:#374151">রিসেট</button>
-      <button onclick="renderDashboard()" class="text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer" style="background:#15803d;color:#fff">প্রয়োগ করুন</button>
-    </div>
-  </div>
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-    <div>
-      <label class="block text-[10px] font-semibold text-gray-500 mb-1">তারিখ থেকে</label>
-      <input type="date" id="dashDateFrom" onchange="renderDashboard()" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
-    </div>
-    <div>
-      <label class="block text-[10px] font-semibold text-gray-500 mb-1">তারিখ পর্যন্ত</label>
-      <input type="date" id="dashDateTo" onchange="renderDashboard()" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
-    </div>
-    <div>
-      <label class="block text-[10px] font-semibold text-gray-500 mb-1">চারার উৎস</label>
-      <select id="dashSourceType" onchange="renderDashboard()" class="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
-        <option value="">সব উৎস</option>
-        <option value="প্রদর্শনী">প্রদর্শনী</option>
-        <option value="প্রণোদনা">প্রণোদনা</option>
-        <option value="নিজস্ব">নিজস্ব</option>
-        <option value="অন্যান্য">অন্যান্য</option>
-      </select>
-    </div>
-    <div>
-      <label class="block text-[10px] font-semibold text-gray-500 mb-1">অঞ্চল</label>
-      <select id="dashRegion" onchange="onDashFilterChange()" class="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব অঞ্চল</option></select>
-    </div>
-    <div>
-      <label class="block text-[10px] font-semibold text-gray-500 mb-1">জেলা</label>
-      <select id="dashDistrict" onchange="onDashDistrictChange()" class="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব জেলা</option></select>
-    </div>
-    <div>
-      <label class="block text-[10px] font-semibold text-gray-500 mb-1">উপজেলা</label>
-      <select id="dashUpazila" onchange="renderDashboard()" class="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব উপজেলা</option></select>
-    </div>
-  </div>
-  <p id="dashFilterSummary" class="text-xs text-gray-500 mt-3" style="border-top:1px dashed #e5e7eb;padding-top:8px"></p>
 </div>
 
 <!-- ── KPI Cards ── -->
@@ -510,6 +432,16 @@ tbody tr{border-bottom:1px solid #e5e7eb}
   </div>
 </div>
 
+<!-- ── Filters ── -->
+<div class="bg-white rounded-xl shadow p-4 mb-6">
+  <p class="font-semibold text-gray-700 mb-3 text-sm">🔍 ফিল্টার করুন</p>
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+    <select id="dashRegion" onchange="onDashFilterChange()" class="border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব অঞ্চল</option></select>
+    <select id="dashDistrict" onchange="onDashDistrictChange()" class="border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব জেলা</option></select>
+    <select id="dashUpazila" onchange="renderDashboard()" class="border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব উপজেলা</option></select>
+  </div>
+</div>
+
 <!-- ── Charts Row 1: Region bar + Category doughnut ── -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
   <div class="bg-white rounded-xl shadow p-4">
@@ -534,39 +466,6 @@ tbody tr{border-bottom:1px solid #e5e7eb}
   </div>
 </div>
 
-<!-- ── Charts Row 3: Upazila + SAAO ── -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-  <div class="bg-white rounded-xl shadow p-4">
-    <p class="font-semibold text-gray-700 mb-3 text-sm">📍 উপজেলা অনুযায়ী চারা সংখ্যা</p>
-    <canvas id="chartUpazila" height="220"></canvas>
-  </div>
-  <div class="bg-white rounded-xl shadow p-4">
-    <p class="font-semibold text-gray-700 mb-3 text-sm">👤 SAAO অনুযায়ী এন্ট্রি ও চারা</p>
-    <canvas id="chartSaao" height="220"></canvas>
-  </div>
-</div>
-
-<!-- ── Charts Row 4: Officer ── -->
-<div class="grid grid-cols-1 gap-4 mb-6">
-  <div class="bg-white rounded-xl shadow p-4">
-    <p class="font-semibold text-gray-700 mb-3 text-sm">🛡️ মনিটরিং অফিসার অনুযায়ী কর্মক্ষমতা</p>
-    <canvas id="chartOfficer" height="220"></canvas>
-  </div>
-</div>
-
-<!-- ── Charts Row 5: Daily/Weekly/Monthly Trend ── -->
-<div class="bg-white rounded-xl shadow p-4 mb-6">
-  <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
-    <p class="font-semibold text-gray-700 text-sm">📈 দিন/সপ্তাহ/মাস অনুযায়ী এন্ট্রি ও চারা প্রবণতা</p>
-    <div class="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5" id="trendPeriodToggle">
-      <button onclick="setTrendPeriod('daily')" id="btnTrendDaily" class="px-3 py-1 text-xs font-semibold rounded-md bg-white text-green-700 shadow-sm transition-all focus:outline-none cursor-pointer">দৈনিক</button>
-      <button onclick="setTrendPeriod('weekly')" id="btnTrendWeekly" class="px-3 py-1 text-xs font-semibold rounded-md text-gray-600 hover:text-green-700 transition-all focus:outline-none cursor-pointer">সাপ্তাহিক</button>
-      <button onclick="setTrendPeriod('monthly')" id="btnTrendMonthly" class="px-3 py-1 text-xs font-semibold rounded-md text-gray-600 hover:text-green-700 transition-all focus:outline-none cursor-pointer">মাসিক</button>
-    </div>
-  </div>
-  <canvas id="chartTrend" height="220"></canvas>
-</div>
-
 <!-- ── Data Table ── -->
 <div class="bg-white rounded-xl shadow p-4 mb-6 overflow-x-auto">
 <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
@@ -579,7 +478,6 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 </div>
 <div class="flex gap-2">
 <button onclick="exportToGovExcel('dash')" class="text-white text-xs sm:text-sm px-4 py-2 rounded-lg shadow transition font-semibold hover:opacity-90 cursor-pointer" style="background:#0284c7">📥 সরকারি ছক (Official)</button>
-<button onclick="export17ColGovExcel('dash')" class="text-white text-xs sm:text-sm px-4 py-2 rounded-lg shadow transition font-semibold hover:opacity-90 cursor-pointer" style="background:#7c3aed">📥 ১৭ কলাম ছক</button>
 <button onclick="exportToExcel('dash')" class="text-white text-xs sm:text-sm px-4 py-2 rounded-lg shadow transition font-semibold hover:opacity-90 cursor-pointer" style="background:#15803d">📥 Excel</button>
 <button onclick="exportToCSV('dash')" class="text-white text-xs sm:text-sm px-4 py-2 rounded-lg shadow transition font-semibold hover:opacity-90 cursor-pointer" style="background:#4f46e5">📥 CSV</button>
 </div>
@@ -654,64 +552,21 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 
 <!-- ========== TAB: MAP ========== -->
 <section id="tab-map" class="tab-content hidden">
-<div class="bg-white rounded-xl shadow p-4 mb-4" style="border:1px solid #bbf7d0">
-<div class="flex items-center justify-between mb-3 flex-wrap gap-2">
-<p class="font-semibold text-gray-700 text-sm">🗺️ রোপণ লোকেশন ফিল্টার করুন <span class="text-xs text-gray-400 font-normal">(ম্যাপ মার্কার ও Excel এক্সপোর্ট — উভয়ের জন্য প্রযোজ্য)</span></p>
-<div class="flex gap-2">
-<button onclick="resetMapFilters()" class="text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer" style="background:#f3f4f6;color:#374151">রিসেট</button>
-<button onclick="renderMap()" class="text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer" style="background:#15803d;color:#fff">প্রয়োগ করুন</button>
-</div>
-</div>
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-<div>
-<label class="block text-[10px] font-semibold text-gray-500 mb-1">তারিখ থেকে</label>
-<input type="date" id="mapDateFrom" onchange="renderMap()" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
-</div>
-<div>
-<label class="block text-[10px] font-semibold text-gray-500 mb-1">তারিখ পর্যন্ত</label>
-<input type="date" id="mapDateTo" onchange="renderMap()" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
-</div>
-<div>
-<label class="block text-[10px] font-semibold text-gray-500 mb-1">চারার উৎস</label>
-<select id="mapSourceType" onchange="renderMap()" class="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
-<option value="">সব উৎস</option>
-<option value="প্রদর্শনী">প্রদর্শনী</option>
-<option value="প্রণোদনা">প্রণোদনা</option>
-<option value="নিজস্ব">নিজস্ব</option>
-<option value="অন্যান্য">অন্যান্য</option>
-</select>
-</div>
-<div>
-<label class="block text-[10px] font-semibold text-gray-500 mb-1">অঞ্চল</label>
-<select id="mapRegion" onchange="onMapFilterChange()" class="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব অঞ্চল</option></select>
-</div>
-<div>
-<label class="block text-[10px] font-semibold text-gray-500 mb-1">জেলা</label>
-<select id="mapDistrict" onchange="onMapDistrictChange()" class="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব জেলা</option></select>
-</div>
-<div>
-<label class="block text-[10px] font-semibold text-gray-500 mb-1">উপজেলা</label>
-<select id="mapUpazila" onchange="onMapUpazilaChange()" class="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব উপজেলা</option></select>
-</div>
+<div class="bg-white rounded-xl shadow p-4 mb-4">
+<p class="font-semibold text-gray-700 mb-3 text-sm">🗺️ রোপণ লোকেশন ফিল্টার করুন</p>
+<div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+<select id="mapRegion" onchange="onMapFilterChange()" class="border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব অঞ্চল</option></select>
+<select id="mapDistrict" onchange="onMapDistrictChange()" class="border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব জেলা</option></select>
+<select id="mapUpazila" onchange="onMapUpazilaChange()" class="border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব উপজেলা</option></select>
+<button onclick="zoomToMyGeoLocation()" class="text-white px-4 py-2 rounded-lg text-sm font-semibold transition hover:bg-green-800 flex items-center justify-center gap-1.5" style="background:#15803d">
+<svg id="geoIcon" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+আমার অবস্থান খুঁজুন
+</button>
 </div>
 <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
 <div id="mapSyncStatus" class="text-xs text-gray-500">📡 App_Entry (সকল জেলা) থেকে তথ্য লোড হচ্ছে...</div>
 <button onclick="refreshNationalMapData()" class="text-xs font-semibold px-3 py-1.5 rounded-md border" style="border-color:#15803d;color:#15803d" id="mapRefreshBtn">🔄 তথ্য রিফ্রেশ করুন</button>
 </div>
-<!-- ── Filter-aware Excel / CSV export row (mirrors Dashboard) ── -->
-<div class="mt-3 flex flex-wrap items-center gap-2" style="border-top:1px dashed #e5e7eb;padding-top:10px">
-<p class="text-xs text-gray-500 mr-1">📥 ফিল্টার করা তথ্য ডাউনলোড:</p>
-<button onclick="exportToGovExcel('map')" class="text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition hover:opacity-90 cursor-pointer" style="background:#0284c7">মন্ত্রণালয় ছক (Excel)</button>
-<button onclick="export17ColGovExcel('map')" class="text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition hover:opacity-90 cursor-pointer" style="background:#7c3aed">১৭ কলাম ছক (Excel)</button>
-<button onclick="exportToExcel('map')" class="text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition hover:opacity-90 cursor-pointer" style="background:#15803d">সাধারণ Excel</button>
-<button onclick="exportToKoboExcel('map')" class="text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition hover:opacity-90 cursor-pointer" style="background:#16a34a">KoBo XLS</button>
-<button onclick="exportToCSV('map')" class="text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition hover:opacity-90 cursor-pointer" style="background:#4f46e5">CSV</button>
-<button onclick="zoomToMyGeoLocation()" class="text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition hover:bg-green-800 flex items-center justify-center gap-1.5 cursor-pointer" style="background:#15803d">
-<svg id="geoIcon" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-আমার অবস্থান
-</button>
-</div>
-<p id="mapFilterSummary" class="text-xs text-gray-500 mt-2"></p>
 </div>
 <div class="bg-white rounded-xl shadow p-3 mb-6 relative">
 <div id="leafletMap" class="w-full h-[450px] sm:h-[550px] rounded-lg border border-gray-200" style="z-index: 10;"></div>
@@ -730,14 +585,6 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <!-- ========== TAB: STORED DATA (LOOKUP ONLY) ========== -->
 <section id="tab-storedData" class="tab-content hidden">
 <div class="max-w-4xl mx-auto">
-
-<!-- Sub-tabs: আমার এন্ট্রি vs এডমিন (admin now lives inside এই ট্যাবে, not a separate top-level tab) -->
-<div class="flex gap-1 mb-4 p-1 rounded-lg" style="background:#f3f4f6;max-width:22rem">
-<button onclick="switchMyDataSubTab('mine')" id="myDataSubBtnMine" class="flex-1 text-xs sm:text-sm font-semibold py-2 rounded-md transition cursor-pointer" style="background:#ffffff;color:#15803d;box-shadow:0 1px 2px rgba(0,0,0,.06)">📂 আমার এন্ট্রি</button>
-<button onclick="switchMyDataSubTab('admin')" id="myDataSubBtnAdmin" class="flex-1 text-xs sm:text-sm font-semibold py-2 rounded-md transition cursor-pointer text-gray-500">🔐 এডমিন</button>
-</div>
-
-<div id="myDataPane-mine">
 
 <!-- Profile summary (merged from Profile modal) -->
 <div id="myProfileCard" class="bg-white rounded-xl shadow p-4 sm:p-5 mb-4"></div>
@@ -804,10 +651,10 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 
 <div id="mySubmissionsList" class="space-y-3"></div>
 </div>
-<!-- /myDataPane-mine -->
+</section>
 
-<!-- ========== SUB-TAB: ADMIN (moved from the old standalone tab-admin) ========== -->
-<div id="myDataPane-admin" class="hidden">
+<!-- ========== TAB: ADMIN ========== -->
+<section id="tab-admin" class="tab-content hidden">
 <div id="adminLogin" class="max-w-sm mx-auto bg-white rounded-xl shadow p-6 mt-8">
 <div class="text-center mb-4"><span class="text-4xl">🔐</span><h2 class="text-lg font-bold text-green-700 mt-2">এডমিন লগইন</h2></div>
 <div class="space-y-3">
@@ -817,7 +664,7 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 </div>
 </div>
 <div id="adminPanel" class="hidden">
-<div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+<div class="flex items-center justify-between mb-4 flex-wrap gap-2">
 <div class="flex items-center gap-2"><span class="text-xs font-semibold px-3 py-1 rounded-full" style="background:#dcfce7;color:#166534">✅ এডমিন</span><button onclick="changePassword()" class="text-xs underline" style="color:#2563eb">পাসওয়ার্ড পরিবর্তন</button></div>
 <div class="flex gap-2 flex-wrap">
 <button onclick="exportToGovExcel('admin')" class="text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition hover:opacity-90 cursor-pointer" style="background:#0284c7">📥 মন্ত্রণালয় ছক (Excel)</button>
@@ -829,10 +676,6 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <button onclick="adminLogout()" class="text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition hover:opacity-90 cursor-pointer" style="background:#dc2626">🚪 লগআউট</button>
 </div>
 </div>
-<div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-<span id="adminDataSourceNote" class="text-xs text-gray-400">লোকাল + জাতীয় App_Entry ডাটা মার্জ করা হয়েছে</span>
-<button onclick="refreshAdminNationalData()" class="text-xs font-semibold px-3 py-1.5 rounded-md border cursor-pointer hover:bg-gray-50 transition" style="border-color:#15803d;color:#15803d" id="adminRefreshBtn">🔄 রিফ্রেশ</button>
-</div>
 <div class="bg-white rounded-xl shadow p-3 mb-4">
 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
 <select id="adminRegion" onchange="onAdminRegionChange()" class="border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব অঞ্চল</option></select>
@@ -841,14 +684,10 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 </div>
 <div class="bg-white rounded-xl shadow overflow-x-auto">
 <table class="w-full text-xs sm:text-sm" id="adminTable">
-<thead><tr style="background:#f0fdf4;color:#166534"><th class="px-2 py-2 text-left whitespace-nowrap">ক্রম</th><th class="px-2 py-2 text-left whitespace-nowrap">উৎস</th><th class="px-2 py-2 text-left whitespace-nowrap">অঞ্চল</th><th class="px-2 py-2 text-left whitespace-nowrap">জেলা</th><th class="px-2 py-2 text-left whitespace-nowrap">উপজেলা</th><th class="px-2 py-2 text-left whitespace-nowrap">রোপণকারীর নাম</th><th class="px-2 py-2 text-left whitespace-nowrap">মোবাইল</th><th class="px-2 py-2 text-left whitespace-nowrap">চারা</th><th class="px-2 py-2 text-left whitespace-nowrap">তারিখ</th><th class="px-2 py-2 text-center whitespace-nowrap">অ্যাকশন</th></tr></thead>
+<thead><tr style="background:#f0fdf4;color:#166534"><th class="px-2 py-2 text-left whitespace-nowrap">ক্রম</th><th class="px-2 py-2 text-left whitespace-nowrap">অঞ্চল</th><th class="px-2 py-2 text-left whitespace-nowrap">জেলা</th><th class="px-2 py-2 text-left whitespace-nowrap">উপজেলা</th><th class="px-2 py-2 text-left whitespace-nowrap">রোপণকারীর নাম</th><th class="px-2 py-2 text-left whitespace-nowrap">মোবাইল</th><th class="px-2 py-2 text-left whitespace-nowrap">চারা</th><th class="px-2 py-2 text-left whitespace-nowrap">তারিখ</th><th class="px-2 py-2 text-center whitespace-nowrap">অ্যাকশন</th></tr></thead>
 <tbody id="adminTableBody"></tbody>
 </table>
 <p id="adminNoData" class="hidden text-center text-gray-400 py-8">কোনো তথ্য নেই।</p>
-</div>
-</div>
-<!-- /myDataPane-admin -->
-
 </div>
 </div>
 </section>
@@ -888,8 +727,6 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <div>
 <label class="block text-xs font-semibold text-gray-700 mb-1">ইমেইল <span class="text-gray-400 font-normal">(ঐচ্ছিক)</span></label>
 <input type="email" id="pEmail" placeholder="name@example.com" autocomplete="email" class="w-full border rounded-md px-3 py-2 text-sm" style="border-color:#d1d5db">
-<div id="googleSignInBox" class="mt-2"></div>
-<p id="pEmailVerifiedNote" class="hidden text-[10px] mt-1" style="color:#15803d">✓ Google দিয়ে যাচাইকৃত ইমেইল স্বয়ংক্রিয়ভাবে যুক্ত হয়েছে</p>
 </div>
 <div>
 <label class="block text-xs font-semibold text-gray-700 mb-1">ডিভাইস আইডি</label>
@@ -927,10 +764,8 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 </div>
 <div class="flex flex-col-reverse sm:flex-row gap-3 mt-5 border-t px-5 py-4">
 <button type="button" onclick="saveProfileFromModal()" class="flex-1 text-white px-4 py-2.5 rounded-lg font-semibold text-sm" style="background:#15803d;min-height:46px">সংরক্ষণ করুন</button>
-<button type="button" id="profileGuestBtn" onclick="continueAsGuest()" class="hidden px-4 py-2.5 rounded-lg font-semibold text-sm" style="background:#eff6ff;color:#1d4ed8;min-height:46px">🔍 অতিথি হিসেবে দেখুন</button>
 <button type="button" id="profileCancelBtn" onclick="closeProfileModal()" class="hidden px-4 py-2.5 rounded-lg font-semibold text-sm" style="background:#f3f4f6;color:#374151;min-height:46px">বাতিল</button>
 </div>
-<p id="profileMandatoryNote" class="hidden text-xs text-center px-5 pb-4" style="color:#b45309">তথ্য জমা দিতে বা সম্পাদনা করতে সম্পূর্ণ প্রোফাইল প্রয়োজন — নাম, মোবাইল ও জেলা পূরণ করুন।</p>
 </div>
 </div>
 </div>
@@ -1048,8 +883,13 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 </div>
 
 <div class="guide-section rounded-lg p-3" style="background:#f9fafb">
-<p class="font-bold text-sm mb-1" style="color:#166534">📂 ৪. আমার তথ্য — সংরক্ষিত এন্ট্রি ও এডমিন</p>
-<p class="text-xs text-gray-600 leading-relaxed">আপনার মোবাইলে জমাকৃত সকল তথ্যের তালিকা দেখুন, প্রয়োজনে সম্পাদনা (✏️) করুন অথবা মুছে ফেলুন। সিঙ্ক না হওয়া তথ্য এখানে চিহ্নিত অবস্থায় দেখা যাবে। এই ট্যাবের ভেতরে "🔐 এডমিন" সাব-ট্যাবে নির্ধারিত পাসওয়ার্ড দিয়ে প্রবেশ করলে App_Entry শীটের সকল কর্মকর্তার (জাতীয়) তথ্যসহ সব রেকর্ড পর্যালোচনা, এক্সপোর্ট (Excel) এবং প্রয়োজনে মুছে ফেলা যায়। শুধুমাত্র অনুমোদিত ব্যবহারকারীর জন্য।</p>
+<p class="font-bold text-sm mb-1" style="color:#166534">📂 ৪. আমার তথ্য — সংরক্ষিত এন্ট্রি</p>
+<p class="text-xs text-gray-600 leading-relaxed">আপনার মোবাইলে জমাকৃত সকল তথ্যের তালিকা দেখুন, প্রয়োজনে সম্পাদনা (✏️) করুন অথবা মুছে ফেলুন। সিঙ্ক না হওয়া তথ্য এখানে চিহ্নিত অবস্থায় দেখা যাবে।</p>
+</div>
+
+<div class="guide-section rounded-lg p-3" style="background:#f9fafb">
+<p class="font-bold text-sm mb-1" style="color:#166534">🔐 ৫. এডমিন — ব্যবস্থাপনা</p>
+<p class="text-xs text-gray-600 leading-relaxed">নির্ধারিত পাসওয়ার্ড দিয়ে প্রবেশ করে সকল তথ্য পর্যালোচনা, এক্সপোর্ট (Excel) এবং প্রয়োজনে মুছে ফেলা যায়। শুধুমাত্র অনুমোদিত ব্যবহারকারীর জন্য।</p>
 </div>
 
 <div class="rounded-lg p-3" style="background:#fef2f2;border:1px solid #fecaca">
@@ -1077,6 +917,53 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <script>
 (function(){
 "use strict";
+
+// ── Phase-1: Offline Queue Integration ──
+var _queueReady = false;
+var _queueAPI = null;
+function _initQueueBridge(){
+  try {
+    _queueAPI = window.offlineQueueAPI || window.parent?.offlineQueueAPI;
+    if (!_queueAPI) {
+      var attempts = 0;
+      var poll = setInterval(function(){
+        _queueAPI = window.offlineQueueAPI || window.parent?.offlineQueueAPI;
+        if (_queueAPI || attempts++ > 20) {
+          clearInterval(poll);
+          if (_queueAPI) _seedQueueFromLocal();
+        }
+      }, 200);
+      return;
+    }
+    _queueReady = true;
+    _seedQueueFromLocal();
+  } catch(e) { console.warn('[QueueBridge] init failed:', e); }
+}
+function _seedQueueFromLocal(){
+  if (!_queueAPI || typeof _queueAPI.getAllSubmissions !== 'function') return;
+  _queueAPI.getAllSubmissions().then(function(existing){
+    if (existing && existing.length) return;
+    var raw = localStorage.getItem(LS_KEY);
+    if (!raw) return;
+    try {
+      var parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return;
+      parsed.forEach(function(s){
+        var q = {
+          submissionId: s.submissionId || s.id || genId(),
+          syncStatus: s.synced ? 'synced' : 'pending',
+          syncAttempts: s.synced ? 1 : 0,
+          lastSyncAt: s.syncedAt,
+          lastSyncError: undefined,
+          submittedAt: s.submittedAt || new Date().toISOString()
+        };
+        Object.keys(s).forEach(function(k){ q[k] = s[k]; });
+        _queueAPI.enqueueSubmission(q);
+      });
+    } catch(e){}
+  });
+}
+_initQueueBridge();
 
 // Region → Districts (from official XLSX 2026)
 var BD={
@@ -1190,16 +1077,6 @@ var LS_KEY="nursery_submissions";
 var PW_KEY="nursery_admin_pw";
 var PROFILE_KEY="dae_user_profile";
 var DEVICE_ID_KEY="dae_device_id";
-var GUEST_MODE_KEY="dae_guest_mode";
-var VISITOR_PING_KEY="dae_visitor_ping_sent";
-// Fill this in with a real OAuth 2.0 Web Client ID (Google Cloud Console ->
-// APIs & Services -> Credentials -> Create Credentials -> OAuth client ID ->
-// Web application -> add this site's URL(s) under Authorized JavaScript
-// origins) to enable auto-fetching a verified email via Google Sign-In.
-// Until then, every Google-auth call below quietly no-ops and the app
-// behaves exactly as before (manual, optional email field).
-var GOOGLE_CLIENT_ID="946498250876-okv2fbfob3gd2ghjnq9v1t4vlc1g3giq.apps.googleusercontent.com";
-var _pendingVerifiedEmail=null;
 
 // ── Device fingerprint ──
 // Generates a stable device identifier. On Android (Capacitor) uses native UUID;
@@ -1343,16 +1220,11 @@ document.addEventListener("DOMContentLoaded",function(){
     });
   });
 });
-window.openProfileModal=function(mandatory){
+window.openProfileModal=function(){
   populatePDistrictDD();
   document.getElementById("profileLookupNote").classList.add("hidden");
   document.getElementById("pDeviceId").value=getDeviceId();
-  document.getElementById("pEmailVerifiedNote").classList.add("hidden");
-  _pendingVerifiedEmail=null;
   var p=getProfile();
-  var guestBtn=document.getElementById("profileGuestBtn"), mandNote=document.getElementById("profileMandatoryNote");
-  if(mandatory){ guestBtn.classList.add("hidden"); mandNote.classList.remove("hidden"); }
-  else { mandNote.classList.add("hidden"); if(!p) guestBtn.classList.remove("hidden"); else guestBtn.classList.add("hidden"); }
   if(p){
     document.getElementById("pShortRole").value=p.shortRole||"SAAO";
     document.getElementById("pRoleLabel").value=p.roleLabel||ROLE_LABELS[p.shortRole]||"";
@@ -1367,7 +1239,6 @@ window.openProfileModal=function(mandatory){
     document.getElementById("pBlock").value=p.block?(isStdBlock?p.block:"__other__"):"";
     if(p.block&&!isStdBlock){document.getElementById("pBlockCustom").classList.remove("hidden");document.getElementById("pBlockCustom").value=p.block;}
     document.getElementById("profileCancelBtn").classList.remove("hidden");
-    if(p.email&&p.emailVerified){document.getElementById("pEmailVerifiedNote").classList.remove("hidden");_pendingVerifiedEmail=p.email;}
   }else{
     document.getElementById("pShortRole").value="SAAO";
     document.getElementById("pRoleLabel").value=ROLE_LABELS["SAAO"];
@@ -1376,91 +1247,8 @@ window.openProfileModal=function(mandatory){
     document.getElementById("profileCancelBtn").classList.add("hidden");
   }
   document.getElementById("profileModal").classList.remove("hidden");
-  renderGoogleSignInButton();
 };
 window.closeProfileModal=function(){document.getElementById("profileModal").classList.add("hidden")};
-
-// ── Guest mode ──
-// Lets a person browse without filling the profile form. Submitting the
-// plantation form or editing an entry still requires a completed profile --
-// requireProfileOrPrompt() below is the gate used at both of those points.
-window.continueAsGuest=function(){
-  localStorage.setItem(GUEST_MODE_KEY,"1");
-  closeProfileModal();
-  attemptSilentVisitorPing();
-};
-function isGuestMode(){ return !getProfile() && localStorage.getItem(GUEST_MODE_KEY)==="1"; }
-// Returns true if a real profile exists (i.e. it's fine to proceed). If not,
-// opens the profile modal in mandatory mode (no Guest-View escape) and
-// returns false so the caller can abort the submit/edit in progress.
-function requireProfileOrPrompt(){
-  if(getProfile()) return true;
-  openProfileModal(true);
-  return false;
-}
-
-// ── Google Sign-In (optional email auto-fetch) ──
-// No-ops entirely until GOOGLE_CLIENT_ID above is replaced with a real one.
-function _googleAuthConfigured(){ return GOOGLE_CLIENT_ID.indexOf("YOUR_")!==0; }
-function _decodeGoogleJwt(token){
-  try{
-    var payload=token.split(".")[1];
-    payload=payload.replace(/-/g,"+").replace(/_/g,"/");
-    while(payload.length%4)payload+="=";
-    return JSON.parse(decodeURIComponent(escape(atob(payload))));
-  }catch(e){ console.error("Google JWT decode error:",e); return null; }
-}
-function initGoogleAuth(){
-  if(!_googleAuthConfigured() || typeof google==="undefined" || !google.accounts || !google.accounts.id) return;
-  try{
-    google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential, auto_select: false });
-    if(!document.getElementById("profileModal").classList.contains("hidden")) renderGoogleSignInButton();
-  }catch(e){ console.error("Google auth init error:",e); }
-}
-function renderGoogleSignInButton(){
-  if(!_googleAuthConfigured() || typeof google==="undefined" || !google.accounts || !google.accounts.id) return;
-  var box=document.getElementById("googleSignInBox");
-  if(!box) return;
-  box.innerHTML="";
-  try{
-    google.accounts.id.renderButton(box,{ theme:"outline", size:"medium", text:"continue_with", width:260 });
-  }catch(e){ console.error("Google button render error:",e); }
-}
-function handleGoogleCredential(response){
-  var payload=_decodeGoogleJwt(response.credential);
-  if(!payload || !payload.email) return;
-  _pendingVerifiedEmail=payload.email;
-  var emailField=document.getElementById("pEmail");
-  if(emailField && !document.getElementById("profileModal").classList.contains("hidden")){
-    emailField.value=payload.email;
-    document.getElementById("pEmailVerifiedNote").classList.remove("hidden");
-    if(payload.name && !_val("pName")) document.getElementById("pName").value=payload.name;
-  } else {
-    // Fired outside the profile modal -- this is the passive guest-visitor
-    // path: log the ping so we can count unique visitors without requiring
-    // guests to fill in the profile form.
-    logVisitorPing(payload.email, isGuestMode()?"guest":"unprompted");
-  }
-}
-// One Tap, once per browser session, so we can identify guest visitors
-// (who by definition never open/complete the profile form) for analytics.
-function attemptSilentVisitorPing(){
-  if(!_googleAuthConfigured() || typeof google==="undefined" || !google.accounts || !google.accounts.id) return;
-  if(sessionStorage.getItem(VISITOR_PING_KEY)==="1") return;
-  sessionStorage.setItem(VISITOR_PING_KEY,"1");
-  try{
-    google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential, auto_select: true });
-    google.accounts.id.prompt();
-  }catch(e){ console.error("Silent visitor ping error:",e); }
-}
-function logVisitorPing(email, mode){
-  try{
-    fetch(GAS_SYNC_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
-      entryType:"visitor_ping", email:email, mode:mode||"unknown", deviceId:getDeviceId()
-    })}).catch(function(e){console.error("Visitor ping failed:",e)});
-  }catch(e){console.error("Visitor ping error:",e)}
-}
-
 window.saveProfileFromModal=function(){
   var shortRole=_val("pShortRole");
   var roleLabel=_val("pRoleLabel")||ROLE_LABELS[shortRole]||shortRole;
@@ -1474,11 +1262,9 @@ window.saveProfileFromModal=function(){
   if(!name||!/^01[3-9]\d{8}$/.test(mobile)||!district){err.classList.remove("hidden");return}
   err.classList.add("hidden");
   var email=_val("pEmail");
-  var emailVerified=!!(email && _pendingVerifiedEmail && email===_pendingVerifiedEmail);
   var deviceId=getDeviceId();
-  var p={shortRole:shortRole,roleLabel:roleLabel,name:name,mobile:mobile,email:email,emailVerified:emailVerified,deviceId:deviceId,district:district,upazila:upazila,union:union,block:block};
+  var p={shortRole:shortRole,roleLabel:roleLabel,name:name,mobile:mobile,email:email,deviceId:deviceId,district:district,upazila:upazila,union:union,block:block};
   saveProfile(p);
-  localStorage.removeItem(GUEST_MODE_KEY); // completing a real profile supersedes guest browsing
   applyProfileToForm();
   closeProfileModal();
   syncProfileToSheet(p);
@@ -1516,12 +1302,8 @@ function applyProfileToForm(){
 }
 function initProfile(){
   var p=getProfile();
-  if(!p){ if(!isGuestMode()) openProfileModal(false); } else { applyProfileToForm(); }
+  if(!p){openProfileModal();} else {applyProfileToForm();}
   upgradeDeviceIdAsync();
-  setTimeout(function(){
-    initGoogleAuth();
-    if(!p) attemptSilentVisitorPing(); // covers both guests and anyone who dismissed the modal
-  }, 300);
 }
 function syncProfileToSheet(p){
   try{
@@ -1553,22 +1335,7 @@ function syncProfileToSheet(p){
 // matches those names against our own BD/BD_UPAZILA/BD_DIVISIONS lists so
 // the four cascading dropdowns fill themselves instead of the SAAO tapping
 // through each one by hand.
-function _norm(s){
-  // .normalize('NFC') matters here: Nominatim's Bengali text and this
-  // file's own BD_UPAZILA constant can encode visually-identical
-  // characters (e.g. ড়) in different Unicode forms (precomposed vs
-  // decomposed+nukta) depending on which tool/source produced the text.
-  // Without normalizing both sides the same way, an exact string
-  // comparison silently fails even though the text is "the same" to a
-  // human reader -- this is what was leaving উপজেলা auto-fill blank for
-  // some upazilas (কুড়িগ্রাম সদর, নাগেশ্বরী, ফুলবাড়ী and others sharing
-  // that character) even when Nominatim's response was correct.
-  return (s||"").toString().normalize('NFC')
-    .replace(/\s*(district|zila|division|উপজেলা|জেলা|বিভাগ)\s*/gi,"")
-    .replace(/ী/g,"ি").replace(/ৌ/g,"ো").replace(/ূ/g,"ু") // common vowel-sign variants across Bengali data sources
-    .replace(/\s+/g,"")
-    .trim().toLowerCase();
-}
+function _norm(s){return (s||"").toString().replace(/\s*(district|zila|division|উপজেলা|জেলা|বিভাগ)\s*/gi,"").trim().toLowerCase()}
 function _findKeyMatch(candidates,keys){
   for(var i=0;i<candidates.length;i++){
     var c=_norm(candidates[i]); if(!c)continue;
@@ -1607,10 +1374,44 @@ window.autoSelectAdminFromGeo=function(addr){
     }
   }catch(e){console.error("Auto admin-select failed:",e)}
 };
-var chartDiv=null,chartCat=null,chartDist=null,chartSpec=null,chartUpazila=null,chartSaao=null,chartOfficer=null,chartTrend=null,isAdmin=false;
+var chartDiv=null,chartCat=null,chartDist=null,chartSpec=null,isAdmin=false;
 
-function getSubmissions(){try{return JSON.parse(localStorage.getItem(LS_KEY)||"[]")}catch(e){return[]}}
-function saveSubmissions(d){localStorage.setItem(LS_KEY,JSON.stringify(d))}
+function getSubmissions(){
+  try {
+    var raw = localStorage.getItem(LS_KEY);
+    if (raw) {
+      var parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch(e){}
+  return [];
+}
+function _syncToQueue(submissions){
+  if (!_queueAPI || typeof _queueAPI.getAllSubmissions !== 'function') return;
+  _queueAPI.getAllSubmissions().then(function(existing){
+    var byId = {};
+    existing.forEach(function(e){ byId[e.submissionId] = e; });
+    submissions.forEach(function(s){
+      var id = s.submissionId || s.id;
+      if (!id) return;
+      var prev = byId[id];
+      var q = {
+        submissionId: id,
+        syncStatus: s.synced ? 'synced' : (s.syncStatus || 'pending'),
+        syncAttempts: prev ? (prev.syncAttempts || 0) : 0,
+        lastSyncAt: s.syncedAt || (prev ? prev.lastSyncAt : undefined),
+        lastSyncError: prev ? prev.lastSyncError : undefined,
+        submittedAt: s.submittedAt || new Date().toISOString()
+      };
+      Object.keys(s).forEach(function(k){ q[k] = s[k]; });
+      _queueAPI.enqueueSubmission(q);
+    });
+  }).catch(function(e){ console.warn('[QueueBridge] sync failed:', e); });
+}
+function saveSubmissions(d){
+  localStorage.setItem(LS_KEY, JSON.stringify(d));
+  _syncToQueue(d);
+}
 function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
 function getAdminPw(){return localStorage.getItem(PW_KEY)||"admin2026"}
 function setAdminPw(p){localStorage.setItem(PW_KEY,p)}
@@ -1625,33 +1426,11 @@ if(sec)sec.classList.remove("hidden");
 document.querySelectorAll('.nav-btn[data-tab="'+tab+'"]').forEach(function(b){b.classList.add("active")});
 hideBanner("successBanner");hideBanner("errorBanner");
 if(tab==="dashboard")renderDashboard();
+if(tab==="admin"&&isAdmin)renderAdminTable();
 if(tab==="map")renderMap();
-if(tab==="storedData")switchMyDataSubTab(window.currentMyDataSubTab||"mine");
+if(tab==="storedData")renderMyTab();
 window.scrollTo({top:0,behavior:"smooth"});
 }catch(err){console.error("Tab switch error:",err)}
-};
-
-// এডমিন এখন আলাদা টপ-লেভেল ট্যাব নয় — "আমার তথ্য" ট্যাবের ভেতরে একটি সাব-ট্যাব।
-// sub === "mine" | "admin"
-window.currentMyDataSubTab = "mine";
-window.switchMyDataSubTab=function(sub){
-try{
-window.currentMyDataSubTab=sub;
-var mineBtn=document.getElementById("myDataSubBtnMine"),adminBtn=document.getElementById("myDataSubBtnAdmin");
-var minePane=document.getElementById("myDataPane-mine"),adminPane=document.getElementById("myDataPane-admin");
-if(!mineBtn||!adminBtn||!minePane||!adminPane)return;
-var activeStyle="background:#ffffff;color:#15803d;box-shadow:0 1px 2px rgba(0,0,0,.06)";
-var inactiveStyle="color:#6b7280";
-if(sub==="admin"){
-  minePane.classList.add("hidden"); adminPane.classList.remove("hidden");
-  mineBtn.setAttribute("style",inactiveStyle); adminBtn.setAttribute("style",activeStyle);
-  if(isAdmin)renderAdminTable();
-}else{
-  adminPane.classList.add("hidden"); minePane.classList.remove("hidden");
-  adminBtn.setAttribute("style",inactiveStyle); mineBtn.setAttribute("style",activeStyle);
-  renderMyTab();
-}
-}catch(err){console.error("My Data sub-tab switch error:",err)}
 };
 
 function showBanner(id,text){var el=document.getElementById(id);if(!el)return;if(id==="errorBanner"&&text)document.getElementById("errorText").textContent=text;el.classList.remove("hidden");el.scrollIntoView({behavior:"smooth",block:"nearest"})}
@@ -1698,7 +1477,7 @@ try{window.open("/icons/icon-512.webp","_blank")}catch(e){}
 window.downloadShareImage=function(){
 try{
 var a=document.createElement("a");
-a.href="/og-share-large.png";
+a.href="/og-image-large.png";
 a.download="plantation-tracker-share.png";
 document.body.appendChild(a);a.click();document.body.removeChild(a);
 }catch(e){console.error("Download share image error:",e)}
@@ -1864,6 +1643,265 @@ window.onEditDivisionChange=function(){/* placeholder */};
 window.onEditRegionChange=function(){populateDistrictDD(document.getElementById("eDistrict"),document.getElementById("eRegion").value);document.getElementById("eUpazila").innerHTML='<option value="">উপজেলা নির্বাচন করুন</option>'};
 window.onEditDistrictChange=function(){populateUpazilaDD(document.getElementById("eUpazila"),document.getElementById("eDistrict").value)};
 
+// ── Phase-1 Quick Actions ──
+window.copyLastEntry = function(){
+  var subs = getSubmissions();
+  if (!subs.length) {
+    showBanner("errorBanner","কোনো পূর্বের এন্ট্রি পাওয়া যায়নি।");
+    setTimeout(function(){hideBanner("errorBanner");},3000);
+    return;
+  }
+  var last = subs[subs.length - 1];
+  _fillFormFromSubmission(last);
+  document.getElementById("formTitle").textContent="📋 শেষ এন্ট্রি কপি করা হয়েছে — সংশোধন করুন";
+  document.getElementById("cancelBtn").classList.remove("hidden");
+  document.getElementById("submitBtn").textContent="আপডেট করুন";
+  showBanner("successBanner","শেষ এন্ট্রির তথ্য ফর্মে লোড হয়েছে। প্রয়োজনে পরিবর্তন করে আপডেট করুন।");
+  setTimeout(function(){hideBanner("successBanner");},3000);
+};
+
+window.repeatWithNewGPS = function(){
+  var subs = getSubmissions();
+  if (!subs.length) {
+    showBanner("errorBanner","কোনো পূর্বের এন্ট্রি পাওয়া যায়নি।");
+    setTimeout(function(){hideBanner("errorBanner");},3000);
+    return;
+  }
+  var last = subs[subs.length - 1];
+  _fillFormFromSubmission(last);
+  document.getElementById("fGeo").value = "";
+  document.getElementById("fGeoLatManual").value = "";
+  document.getElementById("fGeoLngManual").value = "";
+  document.getElementById("fNdvi").value = "";
+  window._photoBase64 = "";
+  window._photoBase64Array = [];
+  var photoWrap = document.getElementById("fPhotoPreviewWrap");
+  if(photoWrap) photoWrap.classList.add("hidden");
+  var grid = document.getElementById("fPhotoPreviewGrid");
+  if(grid) grid.innerHTML = "";
+  if(window.clearGeoFence) window.clearGeoFence();
+  if(geoManualMarker && geoManualMap){ geoManualMap.removeLayer(geoManualMarker); geoManualMarker = null; }
+  document.getElementById("formTitle").textContent="📍 নতুন GPS দিয়ে পুনরায় জমা দিন";
+  document.getElementById("cancelBtn").classList.remove("hidden");
+  document.getElementById("submitBtn").textContent="তথ্য জমা দিন";
+  fetchGeoLocation();
+  showBanner("successBanner","শেষ এন্ট্রির তথ্য লোড হয়েছে — এখন নতুন জিপিএস নিন।");
+  setTimeout(function(){hideBanner("successBanner");},3000);
+};
+
+function _fillFormFromSubmission(s){
+  if(s.division){document.getElementById("fDivision").value=s.division;}
+  document.getElementById("fRegion").value=s.region;onFormRegionChange();
+  setTimeout(function(){
+    document.getElementById("fDistrict").value=s.district;onFormDistrictChange();
+    document.getElementById("fUpazila").value=s.upazila||"";
+    document.getElementById("fNursery").value=s.farmerName||s.nurseryName||"";
+    document.getElementById("fMobile").value=s.farmerMobile||s.mobile||"";
+    document.getElementById("fAddress").value=s.address||"";
+    document.getElementById("fUnion").value=s.union||"";
+    document.getElementById("fVillage").value=s.village||"";
+    document.getElementById("fLocationType").value=s.locationType||"";
+    document.getElementById("fSaaoName").value=s.saaoName||"";
+    document.getElementById("fSaaoMobile").value=s.saaoMobile||"";
+    document.getElementById("fOfficerName").value=s.officerName||s.caretakerName||"";
+    document.getElementById("fOfficerMobile").value=s.officerMobile||s.caretakerMobile||"";
+    document.getElementById("fRemarks").value=s.remarks||"";
+    document.getElementById("fPlantingDate").value=s.plantingDate||new Date().toISOString().slice(0,10);
+    var rowsEl=document.getElementById("seedlingRows");
+    rowsEl.innerHTML="";
+    if(Array.isArray(s.seedlings) && s.seedlings.length){
+      s.seedlings.forEach(function(sd){ addSeedlingRow("seedlingRows", sd); });
+    } else {
+      [["fruitSeedlings","ফলদ"],["forestSeedlings","বনজ"],["medicinalSeedlings","ঔষধি"]].forEach(function(pair){
+        (s[pair[0]]||[]).forEach(function(e){
+          addSeedlingRow("seedlingRows", { speciesName:e.name, category:pair[1], quantity:(parseInt(e.count)||0)+(parseInt(e.graftingCount)||0) });
+        });
+      });
+    }
+    if(!rowsEl.children.length){ addSeedlingRow("seedlingRows"); }
+    document.getElementById("tab-form").scrollIntoView({behavior:"smooth"});
+  },100);
+}
+
+// ── Phase-1: Species Favorites / Recent ──
+var SPECIES_FAV_KEY = "species_favorites_v1";
+var MAX_FAV_SPECIES = 8;
+function getSpeciesFavorites(){
+  try {
+    var raw = localStorage.getItem(SPECIES_FAV_KEY);
+    if(raw) return JSON.parse(raw);
+  } catch(e){}
+  return ["আম","জাম","লেবু","কাঁঠাল","পেয়ারা","সেগুন","নিম","তুলসী"];
+}
+function saveSpeciesFavorites(list){
+  try { localStorage.setItem(SPECIES_FAV_KEY, JSON.stringify(list.slice(0, MAX_FAV_SPECIES))); } catch(e){}
+}
+function addSpeciesFavorite(name){
+  if(!name) return;
+  var favs = getSpeciesFavorites();
+  name = name.trim();
+  var idx = favs.indexOf(name);
+  if(idx >= 0) favs.splice(idx, 1);
+  favs.unshift(name);
+  saveSpeciesFavorites(favs);
+  renderSpeciesFavorites();
+}
+function renderSpeciesFavorites(){
+  var bar = document.getElementById("speciesFavoritesBar");
+  if(!bar) return;
+  var favs = getSpeciesFavorites();
+  bar.innerHTML = favs.map(function(name){
+    return '<button type="button" onclick="addSpeciesFavorite(\'' + name.replace(/'/g, "\\'") + '\');addSeedlingRow(\'seedlingRows\',{speciesName:\'' + name.replace(/'/g, "\\'") + '\'});document.getElementById(\'seedlingRows\').lastElementChild.scrollIntoView({behavior:\'smooth\',block:\'center\'});" class="text-[11px] font-bold px-2.5 py-1.5 rounded-full bg-lime-50 text-lime-800 border border-lime-200 hover:bg-lime-100 transition active:scale-95 cursor-pointer" style="min-height:36px">' + name + ' +</button>';
+  }).join("");
+}
+function extractSpeciesFromSubmissions(){
+  var subs = getSubmissions();
+  var counts = {};
+  subs.forEach(function(s){
+    var items = s.seedlings || [];
+    if(!items.length){
+      (s.fruitSeedlings||[]).concat(s.forestSeedlings||[],s.medicinalSeedlings||[]).forEach(function(e){
+        if(e.name) counts[e.name] = (counts[e.name]||0) + 1;
+      });
+    } else {
+      items.forEach(function(e){
+        if(e.speciesName) counts[e.speciesName] = (counts[e.speciesName]||0) + 1;
+      });
+    }
+  });
+  return Object.keys(counts).sort(function(a,b){return counts[b]-counts[a]}).slice(0, MAX_FAV_SPECIES);
+}
+function refreshSpeciesFavorites(){
+  var recent = extractSpeciesFromSubmissions();
+  if(recent.length){
+    var merged = recent.concat(getSpeciesFavorites().filter(function(f){return recent.indexOf(f)<0}));
+    saveSpeciesFavorites(merged);
+  }
+  renderSpeciesFavorites();
+}
+
+// ── Guided Mode ──
+window.toggleGuidedMode = function(){
+  var btn = document.getElementById("guidedModeBtn");
+  if(!btn) return;
+  var isGuided = btn.textContent.indexOf("চালু") > -1;
+  var fieldsets = document.querySelectorAll("#tab-form fieldset");
+  if(isGuided){
+    btn.textContent = "🎯 সহজ মোড: বন্ধ";
+    btn.style.background = "#f0fdf4";
+    btn.style.color = "#15803d";
+    fieldsets.forEach(function(fs){ fs.style.display = ""; });
+  } else {
+    btn.textContent = "🎯 সহজ মোড: চালু";
+    btn.style.background = "#15803d";
+    btn.style.color = "#fff";
+    fieldsets.forEach(function(fs, i){
+      if(i > 0) fs.style.display = "none";
+    });
+  }
+};
+
+// ── Multi-photo support ──
+window._photoBase64 = "";
+window._photoBase64Array = [];
+window.MAX_PHOTOS = 5;
+window.MAX_PHOTO_SIZE_MB = 10;
+window.clearPhoto = function(){
+  window._photoBase64 = "";
+  window._photoBase64Array = [];
+  var inp = document.getElementById("fPhoto");
+  if(inp) inp.value = "";
+  var wrap = document.getElementById("fPhotoPreviewWrap");
+  if(wrap) wrap.classList.add("hidden");
+  var grid = document.getElementById("fPhotoPreviewGrid");
+  if(grid) grid.innerHTML = "";
+};
+window.handlePhotoChange = function(e){
+  var files = e.target.files;
+  if(!files || !files.length) return;
+  if(files.length > window.MAX_PHOTOS){
+    showBanner("errorBanner","সর্বোচ্চ " + window.MAX_PHOTOS + "টি ছবি Select করা যায়।");
+    setTimeout(function(){hideBanner("errorBanner");},3500);
+    e.target.value = "";
+    return;
+  }
+  var results = [];
+  var remaining = files.length;
+  Array.from(files).forEach(function(file, idx){
+    if(file.size > window.MAX_PHOTO_SIZE_MB * 1024 * 1024){
+      showBanner("errorBanner","ছবির সাইজ " + window.MAX_PHOTO_SIZE_MB + "MB এর বেশি (" + file.name + ")।");
+      setTimeout(function(){hideBanner("errorBanner");},3500);
+      e.target.value = "";
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function(ev){
+      var img = new Image();
+      img.onload = function(){
+        var maxDim = 1024;
+        var scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        var canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        var ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        var stamped = _stampPhoto(ctx, canvas.width, canvas.height);
+        try {
+          results[idx] = stamped.canvas.toDataURL("image/jpeg", 0.6);
+        } catch(err){
+          console.error("Photo downscale failed:", err);
+          results[idx] = ev.target.result;
+        }
+        remaining--;
+        if(remaining <= 0){
+          window._photoBase64Array = results.filter(Boolean);
+          window._photoBase64 = window._photoBase64Array[0] || "";
+          renderPhotoPreviewGrid();
+        }
+      };
+      img.onerror = function(){
+        console.error("Image load error:", file.name);
+        remaining--;
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+};
+function _stampPhoto(ctx, w, h){
+  var now = new Date();
+  var ts = now.toLocaleString("bn-BD");
+  var geoStr = document.getElementById("fGeo") ? document.getElementById("fGeo").value : "";
+  var text = ts + (geoStr ? " | " + geoStr : "");
+  ctx.font = "bold " + Math.max(14, w * 0.04) + "px Arial";
+  ctx.fillStyle = "rgba(0,0,0,0.6)";
+  var tw = ctx.measureText(text).width;
+  ctx.fillRect(0, h - Math.max(28, h * 0.08), tw + 16, Math.max(28, h * 0.08));
+  ctx.fillStyle = "#fff";
+  ctx.fillText(text, 8, h - Math.max(8, h * 0.02));
+  return { canvas: ctx.canvas };
+}
+function renderPhotoPreviewGrid(){
+  var wrap = document.getElementById("fPhotoPreviewWrap");
+  var grid = document.getElementById("fPhotoPreviewGrid");
+  if(!wrap || !grid) return;
+  grid.innerHTML = "";
+  window._photoBase64Array.forEach(function(src, i){
+    var div = document.createElement("div");
+    div.style.cssText = "position:relative;border-radius:8px;overflow:hidden;border:1px solid #d1d5db;";
+    var img = document.createElement("img");
+    img.src = src;
+    img.alt = "ছবি " + (i+1);
+    img.style.cssText = "width:100%;height:80px;object-fit:cover;display:block;";
+    var badge = document.createElement("span");
+    badge.textContent = (i+1) + "/" + window._photoBase64Array.length;
+    badge.style.cssText = "position:absolute;top:4px;left:4px;background:rgba(0,0,0,0.6);color:#fff;font-size:10px;padding:1px 6px;border-radius:999px;font-weight:700;";
+    div.appendChild(img);
+    div.appendChild(badge);
+    grid.appendChild(div);
+  });
+  wrap.classList.remove("hidden");
+}
 // ── Flat seedling repeater (one row per species) ──
 // Replaces the old 3-fixed-category fieldset. Each row produces ONE GAS row.
 function addSeedlingRow(containerId, data){
@@ -1885,51 +1923,12 @@ function addSeedlingRow(containerId, data){
     + '<select class="seedling-category w-full border rounded px-2 py-1.5 text-sm bg-white" style="border-color:#d1d5db">'+catOpts+'</select></div>'
     + '<div class="col-span-4 sm:col-span-2"><label class="block text-[10px] font-bold text-gray-500 mb-0.5">সংখ্যা</label>'
     + '<input type="number" min="1" placeholder="০" value="'+qtyVal+'" class="seedling-quantity w-full border rounded px-2 py-1.5 text-sm" style="border-color:#d1d5db"></div>'
-    + '<div class="col-span-8 sm:col-span-2 flex justify-end gap-1">'
-    + '<button type="button" onclick="saveSeedlingRow(this)" class="seedling-save-btn text-white text-[11px] font-semibold px-2.5 py-1.5 rounded whitespace-nowrap" style="background:#15803d">💾 সংরক্ষণ</button>'
+    + '<div class="col-span-2 sm:col-span-2 flex justify-end">'
     + '<button type="button" onclick="this.closest(\'.seedling-row\').remove()" class="text-red-500 text-xs px-2 py-1.5 hover:bg-red-50 rounded">✕</button></div>'
     + '</div>';
   container.insertAdjacentHTML("beforeend", html);
 }
 window.addSeedlingRow = addSeedlingRow;
-
-// Per-row "save": locks in a seedling entry (validates species + quantity,
-// then disables the fields and flips the button to an editable "saved"
-// state) so a user adding many species can confirm each one as they go,
-// rather than only finding out about a missing field at final submit time.
-window.saveSeedlingRow = function(btn){
-  var row = btn.closest(".seedling-row");
-  if(!row) return;
-  var nameEl = row.querySelector(".seedling-name");
-  var catEl = row.querySelector(".seedling-category");
-  var qtyEl = row.querySelector(".seedling-quantity");
-  var isSaved = row.classList.contains("seedling-saved");
-
-  if(isSaved){
-    row.classList.remove("seedling-saved");
-    row.style.background = "";
-    [nameEl, catEl, qtyEl].forEach(function(el){ if(el) el.disabled = false; });
-    btn.textContent = "💾 সংরক্ষণ";
-    btn.style.background = "#15803d";
-    return;
-  }
-
-  var qtyOk = parseInt(qtyEl && qtyEl.value) > 0;
-  if(!nameEl || !nameEl.value.trim() || !qtyOk){
-    [nameEl, qtyEl].forEach(function(el){
-      if(!el) return;
-      el.classList.add("shake"); el.style.borderColor = "#ef4444";
-      setTimeout(function(){ el.classList.remove("shake"); el.style.borderColor = "#d1d5db"; }, 350);
-    });
-    return;
-  }
-
-  row.classList.add("seedling-saved");
-  row.style.background = "#f0fdf4";
-  [nameEl, catEl, qtyEl].forEach(function(el){ if(el) el.disabled = true; });
-  btn.textContent = "✅ সংরক্ষিত (সম্পাদনা)";
-  btn.style.background = "#047857";
-};
 
 function collectSeedlings(containerId){
   containerId = containerId || "seedlingRows";
@@ -1944,55 +1943,6 @@ function collectSeedlings(containerId){
   }).filter(function(s){ return s.speciesName && s.quantity > 0; });
 }
 window.collectSeedlings = collectSeedlings;
-
-// ── Photo capture + downscale ──
-window._photoBase64 = "";
-window.clearPhoto = function(){
-  window._photoBase64 = "";
-  var inp = document.getElementById("fPhoto");
-  if(inp) inp.value = "";
-  var wrap = document.getElementById("fPhotoPreviewWrap");
-  if(wrap) wrap.classList.add("hidden");
-};
-window.handlePhotoChange = function(e){
-  var file = e.target.files && e.target.files[0];
-  if(!file) return;
-  if(file.size > 15 * 1024 * 1024){
-    showBanner("errorBanner","ছবির সাইজ ১৫MB এর বেশি। অনুগ্রহ করে ছোট ছবি দিন।");
-    setTimeout(function(){hideBanner("errorBanner");},3500);
-    e.target.value = "";
-    return;
-  }
-  var reader = new FileReader();
-  reader.onload = function(ev){
-    var img = new Image();
-    img.onload = function(){
-      var maxDim = 1024;
-      var scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-      var canvas = document.createElement("canvas");
-      canvas.width = Math.round(img.width * scale);
-      canvas.height = Math.round(img.height * scale);
-      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-      try {
-        window._photoBase64 = canvas.toDataURL("image/jpeg", 0.7);
-      } catch(err){
-        console.error("Photo downscale failed:", err);
-        window._photoBase64 = ev.target.result;
-      }
-      var prev = document.getElementById("fPhotoPreview");
-      var wrap = document.getElementById("fPhotoPreviewWrap");
-      if(prev) prev.src = window._photoBase64;
-      if(wrap) wrap.classList.remove("hidden");
-    };
-    img.onerror = function(){
-      console.error("Image load error");
-      showBanner("errorBanner","ছবি লোড করা যায়নি। অন্য ছবি চেষ্টা করুন।");
-      setTimeout(function(){hideBanner("errorBanner");},3500);
-    };
-    img.src = ev.target.result;
-  };
-  reader.readAsDataURL(file);
-};
 
 // ── Seedling Builder ──
 function buildSeedlingHTML(prefix,type,idx,data){
@@ -2093,8 +2043,6 @@ function buildBaseSubmission(prefix){
     latitude:    lat,
     longitude:   lng,
     geoLocation: geoStr,
-    geoFencePoints:   prefix === "f" ? _val(prefix+"GeoFencePoints") : "",
-    geoFenceAreaSqm:  prefix === "f" ? _val(prefix+"GeoFenceAreaSqm") : "",
     plantingDate:pDateVal,
     farmerName:  _val(prefix+"Nursery"),
     farmerMobile:_val(prefix+"Mobile"),
@@ -2105,6 +2053,7 @@ function buildBaseSubmission(prefix){
     ndvi:        _val(prefix+"Ndvi"),
     remarks:     _val(prefix+"Remarks"),
     photoBase64: prefix === "f" ? (window._photoBase64 || "") : "",
+    additionalPhotosBase64: prefix === "f" ? (window._photoBase64Array || []).slice(1) : [],
     submittedAt: new Date().toISOString()
   };
 }
@@ -2140,47 +2089,28 @@ async function sendToGAS(rows){
 
 document.getElementById("nurseryForm").addEventListener("submit",async function(e){
 e.preventDefault();hideBanner("successBanner");hideBanner("errorBanner");
-if(!requireProfileOrPrompt())return;
 if(!validateForm("f"))return;
 var seedlings=collectSeedlings("seedlingRows");
 if(seedlings.length===0){showBanner("errorBanner","অন্তত একটি চারা যোগ করুন (প্রজাতির নাম ও সংখ্যা দিন)।");return}
 var btn=document.getElementById("submitBtn");btn.disabled=true;btn.textContent="জমা হচ্ছে...";
 try{
   var base = buildBaseSubmission("f");
+  var rows = toGASRows(base, seedlings);
   var editId = document.getElementById("editId").value;
   var subs = getSubmissions();
 
   if(editId){
     var idx = subs.findIndex(function(s){return s.id===editId || s.submissionId===editId;});
-    var existing = idx > -1 ? subs[idx] : findEntryById(editId);
-    base.submissionId = (existing && (existing.submissionId||existing.id)) || base.submissionId;
-    base.id = (existing && existing.id) || base.submissionId;
-    var rows = toGASRows(base, seedlings);
-    // Was previously mine-but-national-only (no local record) -- this
-    // creates the local shadow record now so it can sync/re-sync normally.
-    var updatedRecord = Object.assign({}, existing||{}, base, { seedlings: seedlings, synced: false, syncedAt: null, _source: "local" });
-    if(idx > -1){ subs[idx] = updatedRecord; } else { subs.push(updatedRecord); }
-    saveSubmissions(subs);
-
-    var editResult = await sendToGAS(rows);
-    if(editResult && editResult.ok){
-      var updatedSubs = getSubmissions();
-      var newIdx = updatedSubs.findIndex(function(s){return s.id===updatedRecord.id || s.submissionId===updatedRecord.submissionId;});
-      if(newIdx > -1){
-        updatedSubs[newIdx].synced = true;
-        updatedSubs[newIdx].syncedAt = new Date().toISOString();
-        saveSubmissions(updatedSubs);
-      }
-      showBanner("successBanner");
-    } else {
-      console.warn("GAS sync failed (edit):", editResult && editResult.error);
-      showBanner("errorBanner","সিঙ্ক ব্যর্থ — তথ্য অফলাইনে সংরক্ষিত আছে। ড্যাশবোর্ড থেকে পরে আবার সিঙ্ক করুন।");
-      setTimeout(function(){hideBanner("errorBanner");},5000);
+    if(idx > -1){
+      base.submissionId = subs[idx].submissionId || subs[idx].id || base.submissionId;
+      base.id = subs[idx].id;
+      subs[idx] = Object.assign({}, subs[idx], base, { seedlings: seedlings, synced: false, syncedAt: null });
+      saveSubmissions(subs);
     }
     document.getElementById("editId").value="";
+    showBanner("successBanner");
     resetForm();
   } else {
-    var rows = toGASRows(base, seedlings);
     base.id = base.submissionId;
     base.seedlings = seedlings;
     base.synced = false;
@@ -2197,10 +2127,17 @@ try{
         updated[lastIdx].syncedAt = new Date().toISOString();
         saveSubmissions(updated);
       }
+      if (_queueAPI && typeof _queueAPI.markSynced === 'function') {
+        _queueAPI.markSynced(base.submissionId).catch(function(e){ console.warn('[Queue] markSynced failed:', e); });
+      }
       showBanner("successBanner");
       try{ window.parent.postMessage({ type:"offline-synced-success", count: rows.length }, "*"); }catch(_){}
+      refreshSpeciesFavorites();
     } else {
       console.warn("GAS sync failed:", result && result.error);
+      if (_queueAPI && typeof _queueAPI.markFailed === 'function') {
+        _queueAPI.markFailed(base.submissionId, result && result.error || "unknown").catch(function(e){ console.warn('[Queue] markFailed failed:', e); });
+      }
       showBanner("errorBanner","সিঙ্ক ব্যর্থ — তথ্য অফলাইনে সংরক্ষিত আছে। ড্যাশবোর্ড থেকে পরে আবার সিঙ্ক করুন।");
       setTimeout(function(){hideBanner("errorBanner");},5000);
     }
@@ -2230,8 +2167,6 @@ if(photoWrap) photoWrap.classList.add("hidden");
 var ndviEl = document.getElementById("fNdvi");
 if(ndviEl) ndviEl.value = "";
 document.getElementById("fSourceTypeCustom").classList.add("hidden");
-if(window.clearGeoFence) window.clearGeoFence();
-if(geoManualMarker && geoManualMap){ geoManualMap.removeLayer(geoManualMarker); geoManualMarker = null; }
 applyProfileToForm();
 fetchGeoLocation();
 };
@@ -2309,224 +2244,6 @@ window.autoFillNdvi && window.autoFillNdvi(lat, lng);
 }catch(e){console.error("Geo error:",e)}
 };
 
-// ── Manual coordinate entry + OpenStreetMap + geofence walker ──
-var geoManualMap = null, geoManualMarker = null, geoFenceLayer = null;
-var geoFenceWatchId = null, geoFencePoints = [], geoFenceWalking = false;
-
-function _setFGeoFromLatLng(lat, lng, exact){
-  // `exact` preserves whatever precision was typed/tapped rather than forcing
-  // a fixed rounding, per the "bound to follow exact input" requirement.
-  var latStr = exact ? String(lat) : Number(lat).toFixed(6);
-  var lngStr = exact ? String(lng) : Number(lng).toFixed(6);
-  var geoField = document.getElementById("fGeo");
-  if(geoField) geoField.value = latStr + ", " + lngStr;
-  var latManual = document.getElementById("fGeoLatManual");
-  var lngManual = document.getElementById("fGeoLngManual");
-  if(latManual) latManual.value = latStr;
-  if(lngManual) lngManual.value = lngStr;
-}
-
-function _ensureGeoManualMap(){
-  if(geoManualMap) return geoManualMap;
-  var el = document.getElementById("fGeoMap");
-  if(!el || typeof L === "undefined") return null;
-
-  var startLat = 23.8103, startLng = 90.4125, startZoom = 7;
-  var existing = (_val("fGeo") || "").split(",");
-  var eLat = parseFloat(existing[0]), eLng = parseFloat(existing[1]);
-  if(!isNaN(eLat) && !isNaN(eLng)){ startLat = eLat; startLng = eLng; startZoom = 17; }
-
-  geoManualMap = L.map("fGeoMap").setView([startLat, startLng], startZoom);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-  }).addTo(geoManualMap);
-
-  if(startZoom === 17){
-    geoManualMarker = L.marker([startLat, startLng], {draggable:true}).addTo(geoManualMap);
-    _bindGeoManualMarkerEvents();
-  }
-
-  geoManualMap.on("click", function(e){
-    _placeGeoManualMarker(e.latlng.lat, e.latlng.lng, false);
-  });
-
-  // Geofence walking must draw on this same map instance.
-  if(geoFencePoints.length){ _redrawGeoFence(); }
-
-  return geoManualMap;
-}
-
-function _bindGeoManualMarkerEvents(){
-  if(!geoManualMarker) return;
-  geoManualMarker.on("dragend", function(){
-    var ll = geoManualMarker.getLatLng();
-    _setFGeoFromLatLng(ll.lat.toFixed(6), ll.lng.toFixed(6), true);
-    window.reverseGeocode && window.reverseGeocode(ll.lat.toFixed(6), ll.lng.toFixed(6), "fAddress");
-    window.autoFillNdvi && window.autoFillNdvi(ll.lat.toFixed(6), ll.lng.toFixed(6));
-  });
-}
-
-function _placeGeoManualMarker(lat, lng, exact){
-  var map = _ensureGeoManualMap();
-  if(!map) return;
-  var latlng = [lat, lng];
-  if(!geoManualMarker){
-    geoManualMarker = L.marker(latlng, {draggable:true}).addTo(map);
-    _bindGeoManualMarkerEvents();
-  } else {
-    geoManualMarker.setLatLng(latlng);
-  }
-  map.setView(latlng, Math.max(map.getZoom(), 17));
-  _setFGeoFromLatLng(lat, lng, exact);
-  window.reverseGeocode && window.reverseGeocode(exact ? lat : Number(lat).toFixed(6), exact ? lng : Number(lng).toFixed(6), "fAddress");
-  window.autoFillNdvi && window.autoFillNdvi(lat, lng);
-}
-
-function _updateGeoOfflineNotice(){
-  var el = document.getElementById("geoOfflineNotice");
-  if(!el) return;
-  if(navigator.onLine === false){ el.classList.remove("hidden"); }
-  else { el.classList.add("hidden"); }
-}
-window.addEventListener("online", _updateGeoOfflineNotice);
-window.addEventListener("offline", _updateGeoOfflineNotice);
-
-window.toggleGeoManualPanel = function(){
-  var panel = document.getElementById("geoManualPanel");
-  if(!panel) return;
-  var isHidden = panel.classList.contains("hidden");
-  panel.classList.toggle("hidden");
-  if(isHidden){
-    // Leaflet needs a visible, sized container — init/measure after the
-    // panel becomes visible, same fix already used for the satellite map.
-    _updateGeoOfflineNotice();
-    setTimeout(function(){
-      var map = _ensureGeoManualMap();
-      if(map){ map.invalidateSize(); }
-    }, 50);
-  }
-};
-
-window.showManualGeoOnMap = function(){
-  var latRaw = _val("fGeoLatManual"), lngRaw = _val("fGeoLngManual");
-  var statusEl = document.getElementById("geoManualStatus");
-  var lat = parseFloat(latRaw), lng = parseFloat(lngRaw);
-  if(latRaw === "" || lngRaw === "" || isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180){
-    if(statusEl){ statusEl.textContent = "⚠️ সঠিক অক্ষাংশ (-90 থেকে 90) ও দ্রাঘিমাংশ (-180 থেকে 180) লিখুন।"; statusEl.style.color = "#dc2626"; statusEl.classList.remove("hidden"); }
-    return;
-  }
-  // Pass through the raw typed strings (trimmed) so the marker — and the
-  // saved geo field — reflect exactly what the user entered, not a rounded copy.
-  _placeGeoManualMarker(latRaw.trim(), lngRaw.trim(), true);
-  if(statusEl){ statusEl.textContent = "✅ মার্কার নির্ধারিত কোঅর্ডিনেটে বসানো হয়েছে।"; statusEl.style.color = "#15803d"; statusEl.classList.remove("hidden"); setTimeout(function(){statusEl.classList.add("hidden")}, 3000); }
-};
-
-// Haversine distance in meters — used to filter GPS noise while walking.
-function _haversineMeters(lat1, lng1, lat2, lng2){
-  var R = 6371000;
-  var dLat = (lat2 - lat1) * Math.PI / 180;
-  var dLng = (lng2 - lng1) * Math.PI / 180;
-  var a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-}
-
-// Polygon area via the shoelace formula on a local equirectangular
-// projection (metres) — accurate enough for small plantation plots.
-function _polygonAreaSqm(points){
-  if(points.length < 3) return 0;
-  var lat0 = points[0].lat * Math.PI / 180;
-  var mPerDegLat = 111320;
-  var mPerDegLng = 111320 * Math.cos(lat0);
-  var pts = points.map(function(p){ return { x: p.lng * mPerDegLng, y: p.lat * mPerDegLat }; });
-  var area = 0;
-  for(var i=0;i<pts.length;i++){
-    var j = (i+1) % pts.length;
-    area += pts[i].x * pts[j].y - pts[j].x * pts[i].y;
-  }
-  return Math.abs(area / 2);
-}
-
-function _redrawGeoFence(){
-  var map = _ensureGeoManualMap();
-  if(!map) return;
-  if(geoFenceLayer){ map.removeLayer(geoFenceLayer); geoFenceLayer = null; }
-  if(geoFencePoints.length < 2) return;
-  var latlngs = geoFencePoints.map(function(p){ return [p.lat, p.lng]; });
-  if(geoFenceWalking){
-    geoFenceLayer = L.polyline(latlngs, { color: "#ea580c", weight: 3 }).addTo(map);
-  } else {
-    geoFenceLayer = L.polygon(latlngs, { color: "#15803d", weight: 3, fillOpacity: 0.15 }).addTo(map);
-    map.fitBounds(geoFenceLayer.getBounds(), { maxZoom: 19, padding: [20,20] });
-  }
-}
-
-function _updateGeoFenceInfo(){
-  var infoEl = document.getElementById("geoFenceInfo");
-  if(!infoEl) return;
-  if(!geoFencePoints.length){
-    infoEl.textContent = "এখনও কোনো সীমানা রেকর্ড করা হয়নি। হাঁটা শুরু করুন এবং ক্লাস্টারের চারপাশ ঘুরে আসুন।";
-    return;
-  }
-  var areaSqm = _polygonAreaSqm(geoFencePoints);
-  var areaDecimal = areaSqm / 40.4686; // 1 decimal (শতক) ≈ 40.4686 sqm — familiar local land unit
-  var txt = geoFencePoints.length + "টি পয়েন্ট রেকর্ড হয়েছে।";
-  if(geoFencePoints.length >= 3 && !geoFenceWalking){
-    txt += " আনুমানিক আয়তন: " + areaSqm.toFixed(1) + " বর্গমিটার (≈ " + areaDecimal.toFixed(2) + " শতক)।";
-  } else if(geoFenceWalking){
-    txt += " হাঁটা চলছে...";
-  }
-  infoEl.textContent = txt;
-}
-
-window.toggleGeoFenceWalk = function(){
-  var btn = document.getElementById("geoFenceWalkBtn");
-  if(!geoFenceWalking){
-    if(!navigator.geolocation){
-      var infoEl = document.getElementById("geoFenceInfo");
-      if(infoEl){ infoEl.textContent = "⚠️ আপনার ব্রাউজার লোকেশন সাপোর্ট করে না।"; }
-      return;
-    }
-    _ensureGeoManualMap();
-    geoFenceWalking = true;
-    geoFencePoints = [];
-    if(btn){ btn.textContent = "⏹ হাঁটা শেষ করুন"; btn.style.background = "#dc2626"; }
-    geoFenceWatchId = navigator.geolocation.watchPosition(function(pos){
-      var lat = pos.coords.latitude, lng = pos.coords.longitude;
-      var last = geoFencePoints[geoFencePoints.length - 1];
-      // Ignore GPS jitter: only record a new vertex once the walker has
-      // actually moved at least ~2 metres from the last recorded point.
-      if(!last || _haversineMeters(last.lat, last.lng, lat, lng) >= 2){
-        geoFencePoints.push({ lat: lat, lng: lng });
-        _redrawGeoFence();
-        _updateGeoFenceInfo();
-      }
-    }, function(err){
-      var infoEl = document.getElementById("geoFenceInfo");
-      if(infoEl){ infoEl.textContent = "⚠️ লোকেশন ট্র্যাক করতে সমস্যা হয়েছে (কোড " + err.code + ")।"; }
-    }, { enableHighAccuracy: true, maximumAge: 1000, timeout: 15000 });
-  } else {
-    geoFenceWalking = false;
-    if(geoFenceWatchId !== null){ navigator.geolocation.clearWatch(geoFenceWatchId); geoFenceWatchId = null; }
-    if(btn){ btn.textContent = "🚶 হাঁটা শুরু করুন"; btn.style.background = "#15803d"; }
-    if(geoFencePoints.length >= 3){
-      document.getElementById("fGeoFencePoints").value = JSON.stringify(geoFencePoints);
-      document.getElementById("fGeoFenceAreaSqm").value = _polygonAreaSqm(geoFencePoints).toFixed(1);
-    }
-    _redrawGeoFence();
-    _updateGeoFenceInfo();
-  }
-};
-
-window.clearGeoFence = function(){
-  if(geoFenceWalking){ window.toggleGeoFenceWalk(); }
-  geoFencePoints = [];
-  if(geoFenceLayer && geoManualMap){ geoManualMap.removeLayer(geoFenceLayer); geoFenceLayer = null; }
-  document.getElementById("fGeoFencePoints").value = "";
-  document.getElementById("fGeoFenceAreaSqm").value = "";
-  _updateGeoFenceInfo();
-};
-
 // ── NDVI auto-fill ──
 window.autoFillNdvi = function(lat, lng){
   lat = lat || (_val("fGeo").split(",")[0] || "").trim();
@@ -2590,43 +2307,12 @@ function countSeedlings(s){
 }
 
 // ══════════════════ MY TAB (Profile + Contribution + Report) ══════════════════
-// Returns ALL entries that belong to the logged-in user — merging the device's
-// local submissions with the national App_Entry sheet, de-duplicated by
-// submissionId, and matching on ANY of the three mobile fields (farmer, SAAO,
-// or monitoring officer). Previously this only matched farmerMobile against
-// local submissions, which silently hid entries the user had synced from
-// another device or had recorded as the monitoring officer rather than the
-// planter — those now correctly appear in the Profile tab too.
 function getMySubmissionsBase(){
   var p=getProfile();
   var mob=p&&p.mobile?p.mobile:"";
   if(!mob){var el=document.getElementById("lookupMobile");mob=el?el.value.trim():""}
   if(!mob) return [];
-  var matchesMob=function(s){
-    return (s.farmerMobile||s.mobile)===mob ||
-           s.saaoMobile===mob ||
-           s.officerMobile===mob ||
-           s.caretakerMobile===mob;
-  };
-  var byId={},merged=[];
-  // National (server-synced) entries first — these are the authoritative copies
-  // for anything that has already been pushed to the App_Entry sheet.
-  (_nationalEntries||[]).forEach(function(s){
-    if(!matchesMob(s)) return;
-    var key=s.submissionId||s.id;
-    if(key) byId[key]=true;
-    s._source=s._source||"national";
-    merged.push(s);
-  });
-  // Then local-only entries that haven't been synced yet (or whose sync failed).
-  getSubmissions().forEach(function(s){
-    if(!matchesMob(s)) return;
-    var key=s.submissionId||s.id;
-    if(key&&byId[key]) return; // already included via the national copy
-    s._source=s._source||"local";
-    merged.push(s);
-  });
-  return merged;
+  return getSubmissions().filter(function(s){return (s.farmerMobile||s.mobile)===mob});
 }
 
 function populateMyFilterDropdowns(subs){
@@ -2742,20 +2428,7 @@ function renderMySubmissionsList(subs){
     var sid=s.id||s.submissionId;
     var pD=s.plantingDate?new Date(s.plantingDate).toLocaleDateString("bn-BD"):(s.submittedAt?new Date(s.submittedAt).toLocaleDateString("bn-BD"):"");
     var syncBadge=s.synced?'<span style="color:#047857;font-size:10px" title="সিঙ্কড">✓ সিঙ্কড</span>':'<span style="color:#dc2626;font-size:10px" title="অফলাইন">○ অফলাইন</span>';
-    // Source badge — distinguishes entries that came from the national App_Entry
-    // sheet (synced from any device) vs ones still living only in this browser's
-    // localStorage. Helps the user understand why an entry they "lost" locally
-    // is still showing up here.
-    var srcBadge=s._source==="national"
-      ?'<span style="background:#f0fdf4;color:#15803d;font-size:9px;padding:1px 6px;border-radius:999px;font-weight:600;margin-right:4px" title="App_Entry শীট থেকে সিঙ্ক হয়েছে">জাতীয়</span>'
-      :'<span style="background:#eff6ff;color:#1d4ed8;font-size:9px;padding:1px 6px;border-radius:999px;font-weight:600;margin-right:4px" title="শুধু এই ডিভাইসে — এখনো সিঙ্ক হয়নি">লোকাল</span>';
-    // The 🗑️ button only makes sense for local entries; national entries can
-    // only be removed by an admin (or by deleting the row in the App_Entry sheet
-    // itself), so we hide it to avoid confusing no-op clicks.
-    var isLocal=s._source==="local"||s.synced===false;
-    var editBtn='<button onclick="editMySubmission(\''+sid+'\')" style="background:#dbeafe;color:#1d4ed8;font-size:12px;padding:4px 10px;border-radius:8px;font-weight:600;border:none;cursor:pointer">✏️</button>';
-    var delBtn=isLocal?'<button onclick="deleteMySubmission(\''+sid+'\')" style="background:#fee2e2;color:#b91c1c;font-size:12px;padding:4px 10px;border-radius:8px;font-weight:600;border:none;cursor:pointer">🗑️</button>':'<span style="font-size:9px;color:#9ca3af;padding:4px 6px" title="জাতীয় এন্ট্রি — শুধু এডমিন মুছতে পারবেন">🔒</span>';
-    return '<div class="bg-white rounded-xl shadow p-4 anim-in"><div style="display:flex;align-items:start;justify-content:space-between;gap:8px;margin-bottom:8px"><div><p class="font-semibold text-green-700 text-sm">'+nm+'</p><p class="text-xs text-gray-500">'+(s.region||s.division||"")+" > "+s.district+" > "+s.upazila+'</p><p class="text-xs text-gray-400">'+srcBadge+pD+" · "+(s.sourceType||"—")+' · '+syncBadge+'</p></div><div style="display:flex;gap:4px;align-items:center">'+editBtn+delBtn+'</div></div><div class="grid grid-cols-3 gap-2 text-xs"><div style="background:#fff7ed;border-radius:8px;padding:8px;text-align:center"><p class="font-bold" style="color:#ea580c">'+t.fruit+'</p><p style="color:#6b7280">ফলদ</p></div><div style="background:#ecfdf5;border-radius:8px;padding:8px;text-align:center"><p class="font-bold" style="color:#047857">'+t.forest+'</p><p style="color:#6b7280">বনজ</p></div><div style="background:#eff6ff;border-radius:8px;padding:8px;text-align:center"><p class="font-bold" style="color:#1d4ed8">'+t.medicinal+'</p><p style="color:#6b7280">ঔষধি</p></div></div>'+(total>0?'<p class="text-xs text-gray-500 mt-2">মোট: <b>'+total.toLocaleString("bn-BD")+'</b> চারা</p>':'')+'</div>';
+    return '<div class="bg-white rounded-xl shadow p-4 anim-in"><div style="display:flex;align-items:start;justify-content:space-between;gap:8px;margin-bottom:8px"><div><p class="font-semibold text-green-700 text-sm">'+nm+'</p><p class="text-xs text-gray-500">'+(s.region||s.division||"")+" > "+s.district+" > "+s.upazila+'</p><p class="text-xs text-gray-400">'+pD+" · "+(s.sourceType||"—")+' · '+syncBadge+'</p></div><div style="display:flex;gap:4px"><button onclick="editMySubmission(\''+sid+'\')" style="background:#dbeafe;color:#1d4ed8;font-size:12px;padding:4px 10px;border-radius:8px;font-weight:600;border:none;cursor:pointer">✏️</button><button onclick="deleteMySubmission(\''+sid+'\')" style="background:#fee2e2;color:#b91c1c;font-size:12px;padding:4px 10px;border-radius:8px;font-weight:600;border:none;cursor:pointer">🗑️</button></div></div><div class="grid grid-cols-3 gap-2 text-xs"><div style="background:#fff7ed;border-radius:8px;padding:8px;text-align:center"><p class="font-bold" style="color:#ea580c">'+t.fruit+'</p><p style="color:#6b7280">ফলদ</p></div><div style="background:#ecfdf5;border-radius:8px;padding:8px;text-align:center"><p class="font-bold" style="color:#047857">'+t.forest+'</p><p style="color:#6b7280">বনজ</p></div><div style="background:#eff6ff;border-radius:8px;padding:8px;text-align:center"><p class="font-bold" style="color:#1d4ed8">'+t.medicinal+'</p><p style="color:#6b7280">ঔষধি</p></div></div>'+(total>0?'<p class="text-xs text-gray-500 mt-2">মোট: <b>'+total.toLocaleString("bn-BD")+'</b> চারা</p>':'')+'</div>';
   }).join("");
 }
 
@@ -2772,9 +2445,7 @@ function renderMyProfileCard(){
       '<div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#15803d,#166534);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:18px;flex-shrink:0">'+initial+'</div>'+
       '<div><p class="font-bold text-gray-800 text-sm sm:text-base">'+p.name+'</p>'+
       '<p class="text-xs text-gray-500">'+p.roleLabel+(loc?" · "+loc:"")+'</p>'+
-      '<p class="text-xs text-gray-400">📱 '+p.mobile+'</p>'+
-      (p.email?'<p class="text-xs text-gray-400">✉️ '+p.email+(p.emailVerified?' <span style="color:#15803d">✓ যাচাইকৃত</span>':'')+'</p>':'')+
-      '</div>'+
+      '<p class="text-xs text-gray-400">📱 '+p.mobile+'</p></div>'+
       '</div>'+
       '<button onclick="openProfileModal()" class="text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer flex-shrink-0" style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0">✏️ প্রোফাইল সম্পাদনা</button>'+
       '</div>';
@@ -2786,13 +2457,6 @@ function renderMyProfileCard(){
 window.renderMyTab=function(){
   try{
     renderMyProfileCard();
-    // Make sure national entries are loaded — without this, entries the user
-    // previously synced to App_Entry from another device (or that were matched
-    // by SAAO/monitoring-officer mobile instead of farmer mobile) wouldn't
-    // appear in the Profile tab even though they belong to this user.
-    if(!_nationalEntries && !_nationalEntriesLoading){
-      fetchNationalEntries().then(function(){ renderMyTab(); });
-    }
     var baseSubs=getMySubmissionsBase();
     populateMyFilterDropdowns(baseSubs);
     var filtered=applyMyFilterSet(baseSubs);
@@ -2843,27 +2507,8 @@ window.exportMyReport=function(format){
   }
 };
 
-// Looks an entry up across BOTH national (App_Entry sheet) and local-only
-// data -- editMySubmission and the map popup need this since an entry a
-// user is allowed to edit might only exist in the national dataset (synced
-// from this same device on a prior session, or matched by mobile number).
-function findEntryById(id){
-  var local = getSubmissions().find(function(x){return x.id===id||x.submissionId===id});
-  if(local){ local._source = local._source || "local"; return local; }
-  return (_nationalEntries||[]).find(function(x){return x.id===id||x.submissionId===id});
-}
-
 window.editMySubmission=function(id){
-if(!requireProfileOrPrompt())return;
-var s=findEntryById(id);
-if(!s){ showBanner("errorBanner","এন্ট্রিটি খুঁজে পাওয়া যায়নি।"); setTimeout(function(){hideBanner("errorBanner")},4000); return; }
-var myProfile=getProfile();
-var isMine = s._source==="local" || s._isMine || (myProfile && myProfile.mobile && (s.saaoMobile===myProfile.mobile || s.officerMobile===myProfile.mobile));
-if(!isMine){
-  showBanner("errorBanner","শুধুমাত্র নিজের জমা দেওয়া এন্ট্রি সম্পাদনা করা যায় — এটি অন্য কর্মকর্তার এন্ট্রি।");
-  setTimeout(function(){hideBanner("errorBanner")},5000);
-  return;
-}
+var s=getSubmissions().find(function(x){return x.id===id||x.submissionId===id});if(!s)return;
 switchTab("form");document.getElementById("editId").value=id;
 document.getElementById("formTitle").textContent="✏️ তথ্য সম্পাদনা করুন";
 document.getElementById("cancelBtn").classList.remove("hidden");document.getElementById("submitBtn").textContent="আপডেট করুন";
@@ -2910,94 +2555,19 @@ function getDashEntries(){
   var r=document.getElementById("dashRegion")&&document.getElementById("dashRegion").value;
   var d=document.getElementById("dashDistrict")&&document.getElementById("dashDistrict").value;
   var u=document.getElementById("dashUpazila")&&document.getElementById("dashUpazila").value;
-  var st=document.getElementById("dashSourceType")&&document.getElementById("dashSourceType").value;
-  var from=document.getElementById("dashDateFrom")&&document.getElementById("dashDateFrom").value;
-  var to=document.getElementById("dashDateTo")&&document.getElementById("dashDateTo").value;
   var byId={},merged=[];
   (_nationalEntries||[]).forEach(function(s){var key=s.submissionId||s.id;if(key)byId[key]=true;merged.push(s)});
   getSubmissions().forEach(function(s){var key=s.submissionId||s.id;if(key&&byId[key])return;s._source=s._source||"local";merged.push(s)});
-  return merged.filter(function(s){
-    if(r&&s.region!==r)return false;
-    if(d&&s.district!==d)return false;
-    if(u&&s.upazila!==u)return false;
-    if(st){
-      // "অন্যান্য" (other) is a free-text bucket on the form — anything that
-      // isn't one of the three fixed options counts as "other" here.
-      if(st==="অন্যান্য"){ if(["প্রদর্শনী","প্রণোদনা","নিজস্ব"].indexOf(s.sourceType)!==-1)return false; }
-      else if(s.sourceType!==st)return false;
-    }
-    if(from||to){
-      var pD=s.plantingDate||(s.submittedAt?s.submittedAt.slice(0,10):"");
-      if(from&&pD&&pD<from)return false;
-      if(to&&pD&&pD>to)return false;
-    }
-    return true;
-  });
+  return merged.filter(function(s){if(r&&s.region!==r)return false;if(d&&s.district!==d)return false;if(u&&s.upazila!==u)return false;return true});
 }
 function getFiltered(prefix){
 var r=document.getElementById(prefix+"Region")&&document.getElementById(prefix+"Region").value;
 var d=document.getElementById(prefix+"District")&&document.getElementById(prefix+"District").value;
-var u=document.getElementById(prefix+"Upazila")&&document.getElementById(prefix+"Upazila")&&document.getElementById(prefix+"Upazila").value;
-var st=document.getElementById(prefix+"SourceType")&&document.getElementById(prefix+"SourceType").value;
-var from=document.getElementById(prefix+"DateFrom")&&document.getElementById(prefix+"DateFrom").value;
-var to=document.getElementById(prefix+"DateTo")&&document.getElementById(prefix+"DateTo").value;
-var byId={},merged=[];
-(_nationalEntries||[]).forEach(function(s){var key=s.submissionId||s.id;if(key)byId[key]=true;merged.push(s)});
-getSubmissions().forEach(function(s){var key=s.submissionId||s.id;if(key&&byId[key])return;s._source=s._source||"local";merged.push(s)});
-return merged.filter(function(s){
-  if(r&&s.region!==r)return false;
-  if(d&&s.district!==d)return false;
-  if(u&&s.upazila!==u)return false;
-  if(st){
-    if(st==="অন্যান্য"){ if(["প্রদর্শনী","প্রণোদনা","নিজস্ব"].indexOf(s.sourceType)!==-1)return false; }
-    else if(s.sourceType!==st)return false;
-  }
-  if(from||to){
-    var pD=s.plantingDate||(s.submittedAt?s.submittedAt.slice(0,10):"");
-    if(from&&pD&&pD<from)return false;
-    if(to&&pD&&pD>to)return false;
-  }
-  return true;
-});
+return getSubmissions().filter(function(s){if(r&&s.region!==r)return false;if(d&&s.district!==d)return false;return true});
 }
 window.currentDashboardViewMode = "gov";
-window.dashTrendPeriod = "daily";
 window.onDashFilterChange=function(){populateDistrictDD(document.getElementById("dashDistrict"),document.getElementById("dashRegion").value);populateDashUpazilaDD();renderDashboard()};
 window.onDashDistrictChange=function(){populateDashUpazilaDD();renderDashboard()};
-window.resetDashFilters=function(){
-  ["dashDateFrom","dashDateTo","dashSourceType","dashRegion","dashDistrict","dashUpazila"].forEach(function(id){var el=document.getElementById(id);if(el)el.value=""});
-  populateDistrictDD(document.getElementById("dashDistrict"),"");
-  populateDashUpazilaDD();
-  setTrendPeriod("daily");
-};
-window.setTrendPeriod=function(period){
-  window.dashTrendPeriod=period;
-  ["btnTrendDaily","btnTrendWeekly","btnTrendMonthly"].forEach(function(id){
-    var b=document.getElementById(id);if(!b)return;
-    var active=id==="btnTrend"+period.charAt(0).toUpperCase()+period.slice(1);
-    b.className=active?"px-3 py-1 text-xs font-semibold rounded-md bg-white text-green-700 shadow-sm transition-all focus:outline-none cursor-pointer":"px-3 py-1 text-xs font-semibold rounded-md text-gray-600 hover:text-green-700 transition-all focus:outline-none cursor-pointer";
-  });
-  renderDashboard();
-};
-function renderDashFilterSummary(subs){
-  var el=document.getElementById("dashFilterSummary");
-  if(!el)return;
-  var bits=[];
-  var from=document.getElementById("dashDateFrom")?document.getElementById("dashDateFrom").value:"";
-  var to=document.getElementById("dashDateTo")?document.getElementById("dashDateTo").value:"";
-  if(from)bits.push("তারিখ: "+from+" থেকে");
-  if(to)bits.push(to+" পর্যন্ত");
-  var st=document.getElementById("dashSourceType")?document.getElementById("dashSourceType").value:"";
-  if(st)bits.push("উৎস: "+st);
-  var r=document.getElementById("dashRegion")?document.getElementById("dashRegion").value:"";
-  if(r)bits.push("অঞ্চল: "+r);
-  var d=document.getElementById("dashDistrict")?document.getElementById("dashDistrict").value:"";
-  if(d)bits.push("জেলা: "+d);
-  var u=document.getElementById("dashUpazila")?document.getElementById("dashUpazila").value:"";
-  if(u)bits.push("উপজেলা: "+u);
-  var label=bits.length?("ফিল্টার প্রয়োগ: "+bits.join(" · ")):("কোনো ফিল্টার নেই — সকল এন্ট্রি দেখানো হচ্ছে");
-  el.textContent=label+(" ("+subs.length.toLocaleString("bn-BD")+" টি এন্ট্রি পাওয়া গেছে)");
-}
 function populateDashUpazilaDD(selected){
   var dd=document.getElementById("dashUpazila");
   var district=document.getElementById("dashDistrict").value;
@@ -3032,7 +2602,6 @@ try{
   if(!_nationalEntries&&!_nationalEntriesLoading){fetchNationalEntries().then(function(){renderDashboard()})}
 
   var subs=getDashEntries();
-  renderDashFilterSummary(subs);
 
   var totalFruit=0,totalForest=0,totalMedicinal=0;
   var planters=new Set(), officers=new Set(), speciesMap={}, districtSet=new Set(), upazilaSet=new Set();
@@ -3135,11 +2704,6 @@ try{
     if(specCanvas){
       chartSpec=new Chart(specCanvas,{type:"bar",data:{labels:top10,datasets:[{label:"সংখ্যা",data:top10.map(function(n){return speciesMap[n]}),backgroundColor:"rgba(5,150,105,0.6)",borderRadius:4}]},options:{indexAxis:"y",responsive:true,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{precision:0}}}}});
     }
-
-    renderUpazilaChart(subs);
-    renderSaaoChart(subs);
-    renderOfficerChart(subs);
-    renderTrendChart(subs);
   }
 
   var th=el("dashTableHead"),tb=el("dashTableBody"),nd=el("dashNoData");
@@ -3217,90 +2781,6 @@ try{
   }
 }catch(err){console.error("Dashboard error:",err)}
 };
-
-// ── Additional Charts: Upazila, SAAO, Officer, Trend ──
-function renderUpazilaChart(subs){
-  if(typeof Chart==="undefined") return;
-  var el=function(id){return document.getElementById(id)};
-  var map={};
-  subs.forEach(function(s){var u=s.upazila;if(!u) return;if(!map[u]) map[u]={entries:0,seedlings:0};map[u].entries++;var c=countSeedlings(s);map[u].seedlings+=c.fruit+c.forest+c.medicinal});
-  var items=Object.keys(map).map(function(k){return {label:k,entries:map[k].entries,seedlings:map[k].seedlings}});
-  items.sort(function(a,b){return b.seedlings-a.seedlings});
-  var top=items.slice(0,15);
-  if(chartUpazila) chartUpazila.destroy();
-  var canvas=el("chartUpazila");
-  if(canvas){
-    chartUpazila=new Chart(canvas,{type:"bar",data:{labels:top.map(function(i){return i.label}),datasets:[{label:"চারা সংখ্যা",data:top.map(function(i){return i.seedlings}),backgroundColor:"rgba(37,99,235,0.6)",borderRadius:4}]},options:{indexAxis:"y",responsive:true,plugins:{legend:{display:false},title:{display:true,text:"উপজেলা (শীর্ষ ১৫)",font:{size:11}}},scales:{x:{beginAtZero:true,ticks:{precision:0}}},onClick:function(_,elements){
-      if(elements.length){
-        var idx=elements[0].index;
-        var label=top[idx].label;
-        var dd=document.getElementById("dashUpazila");
-        if(dd){dd.value=label;renderDashboard();}
-      }
-    }}});
-  }
-}
-
-function renderSaaoChart(subs){
-  if(typeof Chart==="undefined") return;
-  var el=function(id){return document.getElementById(id)};
-  var map={};
-  subs.forEach(function(s){var n=s.saaoName;if(!n) return;if(!map[n]) map[n]={entries:0,seedlings:0};map[n].entries++;var c=countSeedlings(s);map[n].seedlings+=c.fruit+c.forest+c.medicinal});
-  var items=Object.keys(map).map(function(k){return {label:k,entries:map[k].entries,seedlings:map[k].seedlings}});
-  items.sort(function(a,b){return b.entries-a.entries});
-  var top=items.slice(0,10);
-  if(chartSaao) chartSaao.destroy();
-  var canvas=el("chartSaao");
-  if(canvas){
-    chartSaao=new Chart(canvas,{type:"bar",data:{labels:top.map(function(i){return i.label}),datasets:[{label:"এন্ট্রি",data:top.map(function(i){return i.entries}),backgroundColor:"rgba(234,88,12,0.6)",borderRadius:4},{label:"চারা",data:top.map(function(i){return i.seedlings}),backgroundColor:"rgba(5,150,105,0.6)",borderRadius:4}]},options:{indexAxis:"y",responsive:true,plugins:{legend:{position:"bottom",labels:{font:{size:10}}}},scales:{x:{beginAtZero:true,ticks:{precision:0}}}}});
-  }
-}
-
-function renderOfficerChart(subs){
-  if(typeof Chart==="undefined") return;
-  var el=function(id){return document.getElementById(id)};
-  var map={};
-  subs.forEach(function(s){var n=s.officerName||s.caretakerName;if(!n) return;if(!map[n]) map[n]={entries:0,seedlings:0};map[n].entries++;var c=countSeedlings(s);map[n].seedlings+=c.fruit+c.forest+c.medicinal});
-  var items=Object.keys(map).map(function(k){return {label:k,entries:map[k].entries,seedlings:map[k].seedlings}});
-  items.sort(function(a,b){return b.entries-a.entries});
-  var top=items.slice(0,10);
-  if(chartOfficer) chartOfficer.destroy();
-  var canvas=el("chartOfficer");
-  if(canvas){
-    chartOfficer=new Chart(canvas,{type:"bar",data:{labels:top.map(function(i){return i.label}),datasets:[{label:"এন্ট্রি",data:top.map(function(i){return i.entries}),backgroundColor:"rgba(124,58,237,0.6)",borderRadius:4},{label:"চারা",data:top.map(function(i){return i.seedlings}),backgroundColor:"rgba(8,145,178,0.6)",borderRadius:4}]},options:{indexAxis:"y",responsive:true,plugins:{legend:{position:"bottom",labels:{font:{size:10}}}},scales:{x:{beginAtZero:true,ticks:{precision:0}}}}});
-  }
-}
-
-function renderTrendChart(subs){
-  if(typeof Chart==="undefined") return;
-  var el=function(id){return document.getElementById(id)};
-  var period=window.dashTrendPeriod||"daily";
-  var map={};
-  subs.forEach(function(s){
-    var d=s.plantingDate||(s.submittedAt?s.submittedAt.slice(0,10):"");
-    if(!d) return;
-    var key="";
-    if(period==="daily"){key=d;}
-    else if(period==="weekly"){
-      var dt=new Date(d+"T00:00:00");
-      var oneJan=new Date(dt.getFullYear(),0,1);
-      var week=Math.ceil((((dt.getTime()-oneJan.getTime())/(86400000))+oneJan.getDay()+1)/7);
-      key=dt.getFullYear()+"-W"+String(week).padStart(2,"0");
-    }else if(period==="monthly"){key=d.slice(0,7);}
-    if(!key) return;
-    if(!map[key]) map[key]={entries:0,seedlings:0};
-    map[key].entries++;
-    var c=countSeedlings(s);map[key].seedlings+=c.fruit+c.forest+c.medicinal;
-  });
-  var items=Object.keys(map).map(function(k){return {key:k,entries:map[k].entries,seedlings:map[k].seedlings}});
-  items.sort(function(a,b){return a.key<b.key?-1:1});
-  if(items.length>60 && period==="daily") items=items.slice(-30);
-  if(chartTrend) chartTrend.destroy();
-  var canvas=el("chartTrend");
-  if(canvas){
-    chartTrend=new Chart(canvas,{type:"line",data:{labels:items.map(function(i){return i.key}),datasets:[{label:"এন্ট্রি",data:items.map(function(i){return i.entries}),borderColor:"rgba(21,128,61,1)",backgroundColor:"rgba(21,128,61,0.1)",fill:true,tension:0.3,pointRadius:period==="daily"?2:4,borderWidth:2},{label:"চারা সংখ্যা",data:items.map(function(i){return i.seedlings}),borderColor:"rgba(234,88,12,1)",backgroundColor:"rgba(234,88,12,0.1)",fill:true,tension:0.3,pointRadius:period==="daily"?2:4,borderWidth:2}]},options:{responsive:true,interaction:{mode:"index",intersect:false},plugins:{legend:{position:"bottom",labels:{font:{size:11}}}},scales:{y:{beginAtZero:true,ticks:{precision:0}},x:{ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:period==="daily"?10:20}}}}});
-  }
-}
 
 // ── Excel Export ──
 window.exportToExcel=function(prefix){
@@ -3812,12 +3292,6 @@ function getGovReportSource_(prefix) {
   if (prefix === 'my') {
     return applyMyFilterSet(getMySubmissionsBase());
   }
-  if (prefix === 'map') {
-    // Use the Map tab's own merged+filtered entry set (local + national, deduped,
-    // region/district/upazila/date/source filtered) so map exports match the
-    // markers currently shown on screen.
-    return getMapEntries();
-  }
   var r = document.getElementById(prefix + 'Region') && document.getElementById(prefix + 'Region').value;
   var d = document.getElementById(prefix + 'District') && document.getElementById(prefix + 'District').value;
   return getDashEntries().filter(function(s) {
@@ -3902,25 +3376,9 @@ window.adminLogin=function(){if(document.getElementById("adminPass").value===get
 window.adminLogout=function(){isAdmin=false;document.getElementById("adminLogin").classList.remove("hidden");document.getElementById("adminPanel").classList.add("hidden");document.getElementById("adminPass").value=""};
 window.changePassword=function(){var np=prompt("নতুন পাসওয়ার্ড দিন:");if(np&&np.trim().length>=4){setAdminPw(np.trim());showBanner("successBanner","পাসওয়ার্ড পরিবর্তন হয়েছে!");setTimeout(function(){hideBanner("successBanner")},3000)}else if(np)showBanner("errorBanner","পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে।")};
 window.renderAdminTable=function(){
-if(!isAdmin)return;
-if(!_nationalEntries&&!_nationalEntriesLoading){fetchNationalEntries().then(function(){renderAdminTable()})}
-var subs=getFiltered("admin"),tb=document.getElementById("adminTableBody"),nd=document.getElementById("adminNoData");
-var noteEl=document.getElementById("adminDataSourceNote");
-if(noteEl){
-  if(_nationalEntries){
-    var localCount=subs.filter(function(s){return s._source==="local"}).length;
-    var t=_nationalEntriesAt?_nationalEntriesAt.toLocaleTimeString("bn-BD"):"";
-    noteEl.textContent=_nationalEntries.length.toLocaleString("bn-BD")+" জাতীয় + "+localCount.toLocaleString("bn-BD")+" লোকাল এন্ট্রি"+(t?" (সর্বশেষ: "+t+")":"");
-  } else {
-    noteEl.textContent="জাতীয় App_Entry ডাটা লোড হচ্ছে...";
-  }
-}
+if(!isAdmin)return;var subs=getFiltered("admin"),tb=document.getElementById("adminTableBody"),nd=document.getElementById("adminNoData");
 if(!subs.length){tb.innerHTML="";nd.classList.remove("hidden");return}nd.classList.add("hidden");
-tb.innerHTML=subs.map(function(s,i){var c=countSeedlings(s),t=c.fruit+c.forest+c.medicinal;var pD = s.plantingDate ? new Date(s.plantingDate).toLocaleDateString("bn-BD") : (s.submittedAt?new Date(s.submittedAt).toLocaleDateString("bn-BD"):"");var sid=s.id||s.submissionId;var nm=s.farmerName||s.nurseryName||"";var mb=s.farmerMobile||s.mobile||"";var isLocal=s._source==="local";var syncBadge=s.synced?'<span style="color:#047857;font-size:9px" title="সিঙ্কড">✓</span>':'<span style="color:#dc2626;font-size:9px" title="অফলাইন">○</span>';var srcBadge=isLocal?'<span style="background:#eff6ff;color:#1d4ed8;font-size:9px;padding:1px 6px;border-radius:999px;font-weight:600">লোকাল</span>':'<span style="background:#f0fdf4;color:#15803d;font-size:9px;padding:1px 6px;border-radius:999px;font-weight:600">জাতীয়</span>';var actions=isLocal?('<button onclick="adminEdit(\''+sid+'\')" style="background:#dbeafe;color:#1d4ed8;font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;border:none;cursor:pointer;margin-right:4px">✏️</button><button onclick="adminDelete(\''+sid+'\')" style="background:#fee2e2;color:#b91c1c;font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;border:none;cursor:pointer">🗑️</button>'):'<span class="text-gray-400" style="font-size:10px" title="এই এন্ট্রিটি অন্য অফিসারের ডিভাইস থেকে সিঙ্ক হয়েছে — এখান থেকে সম্পাদনা/মুছে ফেলা যাবে না">শুধু দেখা যাবে</span>';return '<tr class="border-b"><td class="px-2 py-2">'+(i+1).toLocaleString("bn-BD")+'</td><td class="px-2 py-2">'+srcBadge+'</td><td class="px-2 py-2">'+(s.region||s.division||"")+'</td><td class="px-2 py-2">'+s.district+'</td><td class="px-2 py-2">'+s.upazila+'</td><td class="px-2 py-2">'+nm+' '+syncBadge+'</td><td class="px-2 py-2">'+mb+'</td><td class="px-2 py-2 font-semibold">'+t+'</td><td class="px-2 py-2 text-gray-500 text-xs">'+pD+'</td><td class="px-2 py-2 text-center whitespace-nowrap">'+actions+'</td></tr>'}).join("");
-};
-window.refreshAdminNationalData=function(){
-  var btn=document.getElementById("adminRefreshBtn");if(btn){btn.disabled=true;btn.textContent="রিফ্রেশ হচ্ছে...";}
-  fetchNationalEntries(true).then(function(){if(btn){btn.disabled=false;btn.textContent="🔄 রিফ্রেশ";}renderAdminTable()});
+tb.innerHTML=subs.map(function(s,i){var c=countSeedlings(s),t=c.fruit+c.forest+c.medicinal;var pD = s.plantingDate ? new Date(s.plantingDate).toLocaleDateString("bn-BD") : (s.submittedAt?new Date(s.submittedAt).toLocaleDateString("bn-BD"):"");var sid=s.id||s.submissionId;var nm=s.farmerName||s.nurseryName||"";var mb=s.farmerMobile||s.mobile||"";var syncBadge=s.synced?'<span style="color:#047857;font-size:9px" title="সিঙ্কড">✓</span>':'<span style="color:#dc2626;font-size:9px" title="অফলাইন">○</span>';return '<tr class="border-b"><td class="px-2 py-2">'+(i+1).toLocaleString("bn-BD")+'</td><td class="px-2 py-2">'+(s.region||s.division||"")+'</td><td class="px-2 py-2">'+s.district+'</td><td class="px-2 py-2">'+s.upazila+'</td><td class="px-2 py-2">'+nm+' '+syncBadge+'</td><td class="px-2 py-2">'+mb+'</td><td class="px-2 py-2 font-semibold">'+t+'</td><td class="px-2 py-2 text-gray-500 text-xs">'+pD+'</td><td class="px-2 py-2 text-center whitespace-nowrap"><button onclick="adminEdit(\''+sid+'\')" style="background:#dbeafe;color:#1d4ed8;font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;border:none;cursor:pointer;margin-right:4px">✏️</button><button onclick="adminDelete(\''+sid+'\')" style="background:#fee2e2;color:#b91c1c;font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;border:none;cursor:pointer">🗑️</button></td></tr>'}).join("");
 };
 window.adminEdit=function(id){
 var s=getSubmissions().find(function(x){return x.id===id||x.submissionId===id});if(!s)return;
@@ -4136,9 +3594,6 @@ function getMapEntries() {
   var r = document.getElementById("mapRegion") && document.getElementById("mapRegion").value;
   var d = document.getElementById("mapDistrict") && document.getElementById("mapDistrict").value;
   var u = document.getElementById("mapUpazila") && document.getElementById("mapUpazila").value;
-  var st = document.getElementById("mapSourceType") && document.getElementById("mapSourceType").value;
-  var from = document.getElementById("mapDateFrom") && document.getElementById("mapDateFrom").value;
-  var to = document.getElementById("mapDateTo") && document.getElementById("mapDateTo").value;
 
   var byId = {};
   var merged = [];
@@ -4159,46 +3614,8 @@ function getMapEntries() {
     if (r && s.region !== r) return false;
     if (d && s.district !== d) return false;
     if (u && s.upazila !== u) return false;
-    if (st) {
-      if (st === "অন্যান্য") { if (["প্রদর্শনী","প্রণোদনা","নিজস্ব"].indexOf(s.sourceType) !== -1) return false; }
-      else if (s.sourceType !== st) return false;
-    }
-    if (from || to) {
-      var pD = s.plantingDate || (s.submittedAt ? s.submittedAt.slice(0, 10) : "");
-      if (from && pD && pD < from) return false;
-      if (to && pD && pD > to) return false;
-    }
     return true;
   });
-}
-
-window.resetMapFilters = function() {
-  ["mapDateFrom","mapDateTo","mapSourceType","mapRegion","mapDistrict","mapUpazila"].forEach(function(id) {
-    var el = document.getElementById(id); if (el) el.value = "";
-  });
-  populateDistrictDD(document.getElementById("mapDistrict"), "");
-  populateMapUpazilaDD();
-  renderMap();
-};
-
-function renderMapFilterSummary(subs) {
-  var el = document.getElementById("mapFilterSummary");
-  if (!el) return;
-  var bits = [];
-  var from = document.getElementById("mapDateFrom") ? document.getElementById("mapDateFrom").value : "";
-  var to = document.getElementById("mapDateTo") ? document.getElementById("mapDateTo").value : "";
-  if (from) bits.push("তারিখ: " + from + " থেকে");
-  if (to) bits.push(to + " পর্যন্ত");
-  var st = document.getElementById("mapSourceType") ? document.getElementById("mapSourceType").value : "";
-  if (st) bits.push("উৎস: " + st);
-  var r = document.getElementById("mapRegion") ? document.getElementById("mapRegion").value : "";
-  if (r) bits.push("অঞ্চল: " + r);
-  var d = document.getElementById("mapDistrict") ? document.getElementById("mapDistrict").value : "";
-  if (d) bits.push("জেলা: " + d);
-  var u = document.getElementById("mapUpazila") ? document.getElementById("mapUpazila").value : "";
-  if (u) bits.push("উপজেলা: " + u);
-  var label = bits.length ? ("ফিল্টার প্রয়োগ: " + bits.join(" · ")) : ("কোনো ফিল্টার নেই — সকল এন্ট্রি দেখানো হচ্ছে");
-  el.textContent = label + (" (" + subs.length.toLocaleString("bn-BD") + " টি এন্ট্রি)");
 }
 
 window.renderMap = function() {
@@ -4265,7 +3682,6 @@ window.renderMap = function() {
     
     // Get filtered submissions (local + national App_Entry, deduped, district/region/upazila filtered)
     var subs = getMapEntries();
-    renderMapFilterSummary(subs);
     var _mapUpazilaLegend = {}; // rebuilt each render for the dynamic legend
     
     var bounds = [];
@@ -4312,18 +3728,7 @@ window.renderMap = function() {
       detailsHtml += '<div style="background:#ecfdf5; border-radius:4px; padding:3px;"><span style="color:#047857; font-weight:bold;">' + t.forest + '</span><br><span style="color:#6b7280;">বনজ</span></div>';
       detailsHtml += '<div style="background:#eff6ff; border-radius:4px; padding:3px;"><span style="color:#1d4ed8; font-weight:bold;">' + t.medicinal + '</span><br><span style="color:#6b7280;">ঔষধি</span></div>';
       detailsHtml += '</div>';
-      // Ownership check moved up so the popup's edit button can be gated on it.
-      var myProfile = getProfile();
-      if (!s._isMine) {
-        var pm = myProfile && myProfile.mobile;
-        if (pm && (s.saaoMobile === pm || s.officerMobile === pm)) s._isMine = true;
-      }
-      var _canEdit = s._source === "local" || s._isMine;
-      if (_canEdit) {
-        detailsHtml += '<button onclick="parent.window.editMySubmission ? parent.window.editMySubmission(\''+_sid+'\') : editMySubmission(\''+_sid+'\')" style="width:100%; margin-top:8px; background:#dbeafe; color:#1d4ed8; border:none; padding:5px; border-radius:6px; font-weight:700; cursor:pointer; font-size:11px;">✏️ তথ্য সম্পাদনা</button>';
-      } else {
-        detailsHtml += '<p style="width:100%; margin-top:8px; text-align:center; color:#9ca3af; font-size:10px;">শুধু দেখা যাবে — অন্য কর্মকর্তার এন্ট্রি</p>';
-      }
+      detailsHtml += '<button onclick="parent.window.editMySubmission ? parent.window.editMySubmission(\''+_sid+'\') : editMySubmission(\''+_sid+'\')" style="width:100%; margin-top:8px; background:#dbeafe; color:#1d4ed8; border:none; padding:5px; border-radius:6px; font-weight:700; cursor:pointer; font-size:11px;">✏️ তথ্য সম্পাদনা</button>';
       detailsHtml += '</div>';
       
       // Marker color logic: each upazila gets a distinct color from the
@@ -4331,6 +3736,11 @@ window.renderMap = function() {
       // Special overrides: local-unsynced = gray, current user's own entry = purple.
       var markerBg = upazilaColor(s.upazila);
       if (s._source === "local") markerBg = '#9ca3af'; // Gray — not yet synced
+      var myProfile = getProfile();
+      if (!s._isMine) {
+        var pm = myProfile && myProfile.mobile;
+        if (pm && (s.saaoMobile === pm || s.officerMobile === pm)) s._isMine = true;
+      }
       if (s._source === "local" || s._isMine) markerBg = '#a855f7'; // Purple — my entry
       
       // Track upazila→color for the dynamic legend
@@ -4458,6 +3868,8 @@ populateRegionDD(document.getElementById("mapRegion"));
 populateRegionDD(document.getElementById("adminRegion"));
 document.getElementById("seedlingRows").innerHTML="";
 addSeedlingRow("seedlingRows");
+renderSpeciesFavorites();
+refreshSpeciesFavorites();
 var fPhotoEl=document.getElementById("fPhoto");
 if(fPhotoEl){fPhotoEl.addEventListener("change", window.handlePhotoChange);}
 initProfile();

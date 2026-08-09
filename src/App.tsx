@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useCallback, useRef, Suspense, lazy } from 'react';
+import { useState, useCallback, useRef, useEffect, Suspense, lazy } from 'react';
 import { Satellite, X, Loader2 } from 'lucide-react';
 import NetworkStatus, { NetworkStatusData } from './components/NetworkStatus';
 import GeolocationIndicator, { GeoState } from './components/GeolocationIndicator';
@@ -12,6 +12,7 @@ import PWAInstaller from './components/PWAInstaller';
 import SyncToast from './components/SyncToast';
 import OfflinePlantationDashboard, { Submission } from './components/OfflinePlantationDashboard';
 import MobileControlCenter from './components/MobileControlCenter';
+import { initOfflineQueue } from './lib/offlineQueue';
 
 const MapTab = lazy(() => import('./components/plantation/MapTab'));
 
@@ -20,7 +21,17 @@ export default function App() {
   const [geoState, setGeoState] = useState<GeoState | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [showSatelliteMap, setShowSatelliteMap] = useState(false);
+  const [queueReady, setQueueReady] = useState(false);
   const invalidateMapRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    initOfflineQueue()
+      .then(({ migrated }) => {
+        console.log(`[App] Offline queue initialized. Migrated ${migrated} entries from localStorage.`);
+        setQueueReady(true);
+      })
+      .catch((err) => console.error('[App] Offline queue init failed:', err));
+  }, []);
 
   // MapContainer only ever mounts while this overlay is visible, so it never
   // initializes against a display:none container — the class of bug fixed in
@@ -36,19 +47,20 @@ export default function App() {
     <div style={{ width: '100%', height: '100%', overflow: 'hidden', position: 'relative', backgroundColor: '#FCF9F8' }}>
       <NetworkStatus onStateChange={setNetworkState} />
       <GeolocationIndicator onStateChange={setGeoState} />
-      <OfflinePlantationDashboard onStateChange={setSubmissions} />
-      <MobileControlCenter 
-        networkState={networkState} 
-        geoState={geoState} 
-        submissions={submissions} 
+      <OfflinePlantationDashboard onStateChange={setSubmissions} queueReady={queueReady} />
+      <MobileControlCenter
+        networkState={networkState}
+        geoState={geoState}
+        submissions={submissions}
+        queueReady={queueReady}
       />
       <WelcomeModal />
       <PWAInstaller />
       <SyncToast />
-      <iframe 
-        src="plantation.html" 
+      <iframe
+        src="plantation.html"
         style={{ display: 'block', width: '100%', height: '100%', border: 'none' }}
-        title="Plantation Form" 
+        title="Plantation Form"
         allow="geolocation"
       />
 

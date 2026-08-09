@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Database, 
-  Wifi, 
-  WifiOff, 
-  MapPin, 
-  HelpCircle, 
-  X, 
-  Globe, 
+import {
+  Database,
+  Wifi,
+  WifiOff,
+  MapPin,
+  HelpCircle,
+  X,
+  Globe,
   Info,
   ChevronRight,
   ChevronDown,
@@ -18,24 +18,30 @@ import {
   Copy,
   Check,
   CheckCircle2,
-  HardDrive
+  HardDrive,
+  RefreshCw,
+  AlertTriangle
 } from 'lucide-react';
 
 import { GeoState } from './GeolocationIndicator';
 import { NetworkStatusData } from './NetworkStatus';
 import { Submission } from './OfflinePlantationDashboard';
+import { getQueueStats, getFailedSubmissions, markSyncing, markSynced, markFailed, QueuedSubmission } from '../lib/offlineQueue';
 
 interface MobileControlCenterProps {
   networkState: NetworkStatusData | null;
   geoState: GeoState | null;
   submissions: Submission[];
+  queueReady?: boolean;
 }
 
-export default function MobileControlCenter({ networkState, geoState, submissions }: MobileControlCenterProps) {
+export default function MobileControlCenter({ networkState, geoState, submissions, queueReady = false }: MobileControlCenterProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'db' | 'net' | 'gps'>('db');
   const [language, setLanguage] = useState<'bn' | 'en'>('bn');
   const [copied, setCopied] = useState(false);
+  const [queueStats, setQueueStats] = useState<{ pending: number; syncing: number; synced: number; failed: number; total: number } | null>(null);
+  const [retrying, setRetrying] = useState(false);
 
   // Compute stats
   const totalLogs = submissions.length;
@@ -96,6 +102,41 @@ export default function MobileControlCenter({ networkState, geoState, submission
 
   const hasGpsError = !!geoState?.error;
   const isOnline = networkState ? networkState.isOnline : true;
+
+  // Poll queue stats when available
+  useEffect(() => {
+    if (!queueReady) return;
+    const poll = async () => {
+      try {
+        const stats = await getQueueStats();
+        setQueueStats(stats);
+      } catch (e) {
+        console.error('[MobileCC] Queue stats poll failed:', e);
+      }
+    };
+    poll();
+    const interval = setInterval(poll, 3000);
+    return () => clearInterval(interval);
+  }, [queueReady]);
+
+  // Retry failed submissions
+  const handleRetryFailed = async () => {
+    if (!queueReady || retrying) return;
+    setRetrying(true);
+    try {
+      const failed = await getFailedSubmissions();
+      for (const sub of failed) {
+        await markSyncing(sub.submissionId);
+        setQueueStats(prev => prev ? { ...prev, failed: prev.failed - 1, syncing: prev.syncing + 1 } : prev);
+        // Trigger a custom event that plantation.html or the sync engine can listen to
+        window.dispatchEvent(new CustomEvent('retry-sync', { detail: { submissionId: sub.submissionId } }));
+      }
+    } catch (e) {
+      console.error('[MobileCC] Retry failed:', e);
+    } finally {
+      setRetrying(false);
+    }
+  };
 
   // Programmatic manual launcher
   const handleOpenUserGuide = () => {
@@ -368,6 +409,37 @@ export default function MobileControlCenter({ networkState, geoState, submission
                   {/* SECTION 1: DATABASE CODES */}
                   {activeTab === 'db' && (
                     <div className="flex flex-col gap-3 animate-in" id="mobileControlCenterTabDB">
+
+                      {/* Queue Status Bar */}
+                      {queueReady && queueStats && (
+                        <div className="flex flex-wrap gap-2 items-center">
+                          {queueStats.pending > 0 && (
+                            <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                              ⏳ {toBnNum(queueStats.pending)} পেন্ডিং
+                            </span>
+                          )}
+                          {queueStats.syncing > 0 && (
+                            <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-blue-100 text-blue-800 border border-blue-200 animate-pulse">
+                              🔄 {toBnNum(queueStats.syncing)} সিঙ্কিং
+                            </span>
+                          )}
+                          {queueStats.synced > 0 && (
+                            <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-green-100 text-green-800 border border-green-200">
+                              ✅ {toBnNum(queueStats.synced)} সিঙ্কড
+                            </span>
+                          )}
+                          {queueStats.failed > 0 && (
+                            <button
+                              onClick={handleRetryFailed}
+                              disabled={retrying}
+                              className="text-[10px] font-bold px-2 py-1 rounded-full bg-red-100 text-red-800 border border-red-200 hover:bg-red-200 transition flex items-center gap-1"
+                            >
+                              <RefreshCw className={`w-3 h-3 ${retrying ? 'animate-spin' : ''}`} />
+                              ❌ {toBnNum(queueStats.failed)} ব্যর্থ — রিট্রাই
+                            </button>
+                          )}
+                        </div>
+                      )}
                       
                       {/* Grid Metrics */}
                       <div className="grid grid-cols-2 gap-2">
