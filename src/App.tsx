@@ -37,18 +37,18 @@ export default function App() {
       <NetworkStatus onStateChange={setNetworkState} />
       <GeolocationIndicator onStateChange={setGeoState} />
       <OfflinePlantationDashboard onStateChange={setSubmissions} />
-      <MobileControlCenter 
-        networkState={networkState} 
-        geoState={geoState} 
-        submissions={submissions} 
+      <MobileControlCenter
+        networkState={networkState}
+        geoState={geoState}
+        submissions={submissions}
       />
       <WelcomeModal />
       <PWAInstaller />
       <SyncToast />
-      <iframe 
-        src="/legacy/plantation.html" 
+      <iframe
+        src="/plantation.html"
         style={{ display: 'block', width: '100%', height: '100%', border: 'none' }}
-        title="Plantation Form" 
+        title="Plantation Form"
         allow="geolocation"
       />
 
