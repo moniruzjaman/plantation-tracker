@@ -2,7 +2,8 @@
   "buildCommand": "tsc --noEmit && vite build",
   "outputDirectory": "build",
   "redirects": [
-    { "source": "/legacy-nursery.html", "destination": "/plantation.html", "permanent": true }
+    { "source": "/legacy-nursery.html", "destination": "/legacy/plantation.html", "permanent": true },
+    { "source": "/plantation.html", "destination": "/legacy/plantation.html", "permanent": true }
   ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" }
