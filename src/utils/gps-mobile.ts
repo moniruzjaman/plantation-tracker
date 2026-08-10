@@ -22,7 +22,8 @@
 // }
 
 // Example for plain React Native using navigator.geolocation or react-native-geolocation-service:
-import { Platform } from 'react-native';
+// Avoid importing 'react-native' in web builds; detect web vs native at runtime
+const isWeb = typeof navigator !== 'undefined' && navigator.product !== 'ReactNative';
 
 export type MobileCoords7 = {
   lat: number;
@@ -38,7 +39,7 @@ export function to7DecimalsMobile(n: number): number {
 
 export function getCurrentPositionMobile(options?: PositionOptions): Promise<GeolocationPosition> {
   return new Promise((resolve, reject) => {
-    if (Platform.OS === 'web') {
+    if (isWeb) {
       if (!('geolocation' in navigator)) return reject(new Error('Geolocation not available'));
       navigator.geolocation.getCurrentPosition(resolve, reject, options);
       return;
