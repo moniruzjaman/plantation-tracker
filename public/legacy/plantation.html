@@ -328,6 +328,13 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <div class="flex gap-2">
 <input type="text" id="fGeo" placeholder="অক্ষাংশ, দ্রাঘিমাংশ" class="flex-1 border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db" onchange="if(window.onGeoLocationChange){window.onGeoLocationChange(this, 'fAddress')}">
 </div>
+<!-- GPS accuracy radius (metres) from position.coords.accuracy -- captured
+     alongside lat/lng so a low-confidence reading (weak signal, indoors,
+     under canopy) is visible before submission, not just the coordinate
+     string itself. Blank for manually-entered/map-tapped coordinates,
+     since those have no GPS accuracy figure to report. -->
+<input type="hidden" id="fGeoAccuracy" value="">
+<p id="geoAccuracyBadge" class="hidden mt-0.5" style="font-size:10px"></p>
 <p id="geoStatus" class="hidden mt-0.5" style="font-size:10px;color:#9ca3af"><span id="geoStatusText"></span></p>
 
 <!-- ===== Manual coordinate entry + OpenStreetMap + geofence walker ===== -->
@@ -2093,6 +2100,7 @@ function buildBaseSubmission(prefix){
     latitude:    lat,
     longitude:   lng,
     geoLocation: geoStr,
+    geoAccuracy: _val(prefix+"GeoAccuracy"), // metres, blank for manual/map-tapped coordinates -- see _setGeoAccuracy
     geoFencePoints:   prefix === "f" ? _val(prefix+"GeoFencePoints") : "",
     geoFenceAreaSqm:  prefix === "f" ? _val(prefix+"GeoFenceAreaSqm") : "",
     plantingDate:pDateVal,
@@ -2288,6 +2296,7 @@ window.onGeoLocationChange = function(inputEl, targetAddressId) {
   if (m) {
     var lat = parseFloat(m[1]).toFixed(6);
     var lng = parseFloat(m[2]).toFixed(6);
+    window._setGeoAccuracy(null); // manually typed -- no GPS accuracy figure applies
     window.reverseGeocode(lat, lng, targetAddressId);
   }
 };
@@ -2301,12 +2310,38 @@ geoStatusText.textContent="📡 লোকেশন খোঁজা হচ্ছ�
 navigator.geolocation.getCurrentPosition(function(pos){
 var lat=pos.coords.latitude.toFixed(6),lng=pos.coords.longitude.toFixed(6);
 geoField.value=lat+", "+lng;
+window._setGeoAccuracy(pos.coords.accuracy);
 geoStatusText.textContent="✅ লোকেশন সফলভাবে পাওয়া গেছে";geoStatus.style.color="#15803d";geoBtnText.textContent="আপডেট";
 setTimeout(function(){geoStatus.classList.add("hidden")},3000);
 window.reverseGeocode(lat, lng, "fAddress");
 window.autoFillNdvi && window.autoFillNdvi(lat, lng);
 },function(err){var msg="";switch(err.code){case 1:msg="❌ লোকেশন অনুমতি দেওয়া হয়নি। ব্রাউজার সেটিংস থেকে অনুমতি দিন।";break;case 2:msg="⚠️ লোকেশন পাওয়া যায়নি।";break;case 3:msg="⏱️ লোকেশন খোঁজার সময় শেষ হয়ে গেছে।";break;default:msg="⚠️ অজানা ত্রুটি হয়েছে।"}geoStatusText.textContent=msg;geoStatus.style.color="#dc2626";geoBtnText.textContent="আবার চেষ্টা"},{enableHighAccuracy:true,timeout:10000,maximumAge:300000});
 }catch(e){console.error("Geo error:",e)}
+};
+
+// Stores the GPS accuracy radius (metres) alongside the coordinates and
+// shows a color-coded badge so a low-confidence reading is visible before
+// submission -- green/amber/red thresholds are informational only, no
+// reading is blocked, since a poor fix can still be the officer's only
+// option in some field conditions (dense canopy, weak signal areas).
+window._setGeoAccuracy = function(accuracyMeters){
+  var field = document.getElementById("fGeoAccuracy");
+  var badge = document.getElementById("geoAccuracyBadge");
+  if(!field || !badge) return;
+  if(accuracyMeters === undefined || accuracyMeters === null || isNaN(accuracyMeters)){
+    field.value = "";
+    badge.classList.add("hidden");
+    return;
+  }
+  var rounded = Math.round(accuracyMeters);
+  field.value = String(rounded);
+  var color, label;
+  if(rounded <= 15){ color = "#15803d"; label = "ভালো"; }
+  else if(rounded <= 50){ color = "#b45309"; label = "মাঝারি"; }
+  else { color = "#dc2626"; label = "কম নির্ভুল"; }
+  badge.style.color = color;
+  badge.textContent = "🎯 নির্ভুলতা: ±" + rounded + " মিটার (" + label + ")";
+  badge.classList.remove("hidden");
 };
 
 // ── Manual coordinate entry + OpenStreetMap + geofence walker ──
@@ -2320,6 +2355,7 @@ function _setFGeoFromLatLng(lat, lng, exact){
   var lngStr = exact ? String(lng) : Number(lng).toFixed(6);
   var geoField = document.getElementById("fGeo");
   if(geoField) geoField.value = latStr + ", " + lngStr;
+  window._setGeoAccuracy(null); // map-tapped/dragged -- no GPS accuracy figure applies
   var latManual = document.getElementById("fGeoLatManual");
   var lngManual = document.getElementById("fGeoLngManual");
   if(latManual) latManual.value = latStr;
@@ -2877,6 +2913,7 @@ document.getElementById("fNursery").value=s.farmerName||s.nurseryName||"";
 document.getElementById("fMobile").value=s.farmerMobile||s.mobile||"";
 document.getElementById("fAddress").value=s.address||"";
 document.getElementById("fGeo").value=s.geoLocation||((s.latitude&&s.longitude)?(s.latitude+", "+s.longitude):"");
+window._setGeoAccuracy(s.geoAccuracy !== undefined && s.geoAccuracy !== "" ? Number(s.geoAccuracy) : null);
 document.getElementById("fUnion").value=s.union||"";
 document.getElementById("fVillage").value=s.village||"";
 document.getElementById("fLocationType").value=s.locationType||"";
