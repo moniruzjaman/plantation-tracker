@@ -209,6 +209,7 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <input type="hidden" id="editId" value="">
 <input type="hidden" id="fGeoFencePoints" value="">
 <input type="hidden" id="fGeoFenceAreaSqm" value="">
+<input type="hidden" id="fGeoAccuracy" value="">
 
 <!-- ===== 1. GENERAL INFO ===== -->
 <fieldset style="border-color:#86efac;background:#f9fafb" class="rounded-xl border-2 p-4 sm:p-5 mb-4">
@@ -327,6 +328,7 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 </label>
 <div class="flex gap-2">
 <input type="text" id="fGeo" placeholder="অক্ষাংশ, দ্রাঘিমাংশ" class="flex-1 border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db" onchange="if(window.onGeoLocationChange){window.onGeoLocationChange(this, 'fAddress')}">
+<span id="geoAccuracyDisplay" class="items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-full" style="color:#15803d;background:#f0fdf4;border:1px solid #bbf7d0;display:none"></span>
 </div>
 <p id="geoStatus" class="hidden mt-0.5" style="font-size:10px;color:#9ca3af"><span id="geoStatusText"></span></p>
 
@@ -2092,6 +2094,7 @@ function buildBaseSubmission(prefix){
     address:     _val(prefix+"Address"),
     latitude:    lat,
     longitude:   lng,
+    geoAccuracy: prefix === "f" ? _val(prefix+"GeoAccuracy") : "",
     geoLocation: geoStr,
     geoFencePoints:   prefix === "f" ? _val(prefix+"GeoFencePoints") : "",
     geoFenceAreaSqm:  prefix === "f" ? _val(prefix+"GeoFenceAreaSqm") : "",
@@ -2223,6 +2226,8 @@ document.getElementById("seedlingRows").innerHTML="";
 addSeedlingRow("seedlingRows");
 document.querySelectorAll("[data-error]").forEach(function(el){el.classList.add("hidden")});
 document.getElementById("fGeo").value="";
+var fGeoAccuracy=document.getElementById("fGeoAccuracy");if(fGeoAccuracy)fGeoAccuracy.value="";
+var geoAccuracyDisplay=document.getElementById("geoAccuracyDisplay");if(geoAccuracyDisplay)geoAccuracyDisplay.style.display="none";
 var pDateEl=document.getElementById("fPlantingDate"); if(pDateEl){pDateEl.value=new Date().toISOString().slice(0, 10);}
 window._photoBase64 = "";
 var photoWrap = document.getElementById("fPhotoPreviewWrap");
@@ -2299,8 +2304,10 @@ if(!navigator.geolocation){geoStatusText.textContent="⚠️ আপনার ব
 geoBtnText.textContent="অপেক্ষা...";
 geoStatusText.textContent="📡 লোকেশন খোঁজা হচ্ছে...";geoStatus.classList.remove("hidden");geoStatus.style.color="#2563eb";
 navigator.geolocation.getCurrentPosition(function(pos){
-var lat=pos.coords.latitude.toFixed(6),lng=pos.coords.longitude.toFixed(6);
+var lat=pos.coords.latitude.toFixed(6),lng=pos.coords.longitude.toFixed(6),accuracy=pos.coords.accuracy;
 geoField.value=lat+", "+lng;
+var accEl=document.getElementById("fGeoAccuracy");if(accEl)accEl.value=accuracy;
+var accDisplay=document.getElementById("geoAccuracyDisplay");if(accDisplay){accDisplay.textContent="±"+accuracy.toFixed(0)+"m";accDisplay.style.display=""}
 geoStatusText.textContent="✅ লোকেশন সফলভাবে পাওয়া গেছে";geoStatus.style.color="#15803d";geoBtnText.textContent="আপডেট";
 setTimeout(function(){geoStatus.classList.add("hidden")},3000);
 window.reverseGeocode(lat, lng, "fAddress");
@@ -2313,13 +2320,17 @@ window.autoFillNdvi && window.autoFillNdvi(lat, lng);
 var geoManualMap = null, geoManualMarker = null, geoFenceLayer = null;
 var geoFenceWatchId = null, geoFencePoints = [], geoFenceWalking = false;
 
-function _setFGeoFromLatLng(lat, lng, exact){
+function _setFGeoFromLatLng(lat, lng, exact, accuracy){
   // `exact` preserves whatever precision was typed/tapped rather than forcing
   // a fixed rounding, per the "bound to follow exact input" requirement.
   var latStr = exact ? String(lat) : Number(lat).toFixed(6);
   var lngStr = exact ? String(lng) : Number(lng).toFixed(6);
   var geoField = document.getElementById("fGeo");
   if(geoField) geoField.value = latStr + ", " + lngStr;
+  var accEl = document.getElementById("fGeoAccuracy");
+  if(accEl && typeof accuracy === "number") accEl.value = accuracy;
+  var accDisplay = document.getElementById("geoAccuracyDisplay");
+  if(accDisplay && typeof accuracy === "number"){accDisplay.textContent="±"+accuracy.toFixed(0)+"m";accDisplay.style.display=""}
   var latManual = document.getElementById("fGeoLatManual");
   var lngManual = document.getElementById("fGeoLngManual");
   if(latManual) latManual.value = latStr;
@@ -2361,7 +2372,7 @@ function _bindGeoManualMarkerEvents(){
   if(!geoManualMarker) return;
   geoManualMarker.on("dragend", function(){
     var ll = geoManualMarker.getLatLng();
-    _setFGeoFromLatLng(ll.lat.toFixed(6), ll.lng.toFixed(6), true);
+    _setFGeoFromLatLng(ll.lat.toFixed(6), ll.lng.toFixed(6), true, undefined);
     window.reverseGeocode && window.reverseGeocode(ll.lat.toFixed(6), ll.lng.toFixed(6), "fAddress");
     window.autoFillNdvi && window.autoFillNdvi(ll.lat.toFixed(6), ll.lng.toFixed(6));
   });
@@ -2378,7 +2389,7 @@ function _placeGeoManualMarker(lat, lng, exact){
     geoManualMarker.setLatLng(latlng);
   }
   map.setView(latlng, Math.max(map.getZoom(), 17));
-  _setFGeoFromLatLng(lat, lng, exact);
+  _setFGeoFromLatLng(lat, lng, exact, undefined);
   window.reverseGeocode && window.reverseGeocode(exact ? lat : Number(lat).toFixed(6), exact ? lng : Number(lng).toFixed(6), "fAddress");
   window.autoFillNdvi && window.autoFillNdvi(lat, lng);
 }
@@ -2492,12 +2503,12 @@ window.toggleGeoFenceWalk = function(){
     geoFencePoints = [];
     if(btn){ btn.textContent = "⏹ হাঁটা শেষ করুন"; btn.style.background = "#dc2626"; }
     geoFenceWatchId = navigator.geolocation.watchPosition(function(pos){
-      var lat = pos.coords.latitude, lng = pos.coords.longitude;
+      var lat = pos.coords.latitude, lng = pos.coords.longitude, accuracy = pos.coords.accuracy;
       var last = geoFencePoints[geoFencePoints.length - 1];
       // Ignore GPS jitter: only record a new vertex once the walker has
       // actually moved at least ~2 metres from the last recorded point.
       if(!last || _haversineMeters(last.lat, last.lng, lat, lng) >= 2){
-        geoFencePoints.push({ lat: lat, lng: lng });
+        geoFencePoints.push({ lat: lat, lng: lng, accuracy: accuracy });
         _redrawGeoFence();
         _updateGeoFenceInfo();
       }
@@ -2877,6 +2888,8 @@ document.getElementById("fNursery").value=s.farmerName||s.nurseryName||"";
 document.getElementById("fMobile").value=s.farmerMobile||s.mobile||"";
 document.getElementById("fAddress").value=s.address||"";
 document.getElementById("fGeo").value=s.geoLocation||((s.latitude&&s.longitude)?(s.latitude+", "+s.longitude):"");
+var accEl=document.getElementById("fGeoAccuracy");if(accEl)accEl.value=s.geoAccuracy||"";
+var accDisplay=document.getElementById("geoAccuracyDisplay");if(accDisplay){if(s.geoAccuracy){accDisplay.textContent="±"+parseFloat(s.geoAccuracy).toFixed(0)+"m";accDisplay.style.display=""}else{accDisplay.style.display="none"}}
 document.getElementById("fUnion").value=s.union||"";
 document.getElementById("fVillage").value=s.village||"";
 document.getElementById("fLocationType").value=s.locationType||"";
