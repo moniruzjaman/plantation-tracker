@@ -3,7 +3,8 @@
   "outputDirectory": "build",
   "redirects": [
     { "source": "/legacy-nursery.html", "destination": "/legacy/plantation.html", "permanent": true },
-    { "source": "/plantation.html", "destination": "/legacy/plantation.html", "permanent": true }
+    { "source": "/plantation.html", "destination": "/legacy/plantation.html", "permanent": true },
+    { "source": "/", "destination": "/legacy/plantation.html", "permanent": true }
   ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" }
@@ -25,3 +26,37 @@
     }
   ]
 }
+EOF && git add vercel.json && git commit -m "Update vercel.json with redirects" && git push
+
+q
+cat > vercel.json <<'EOF'
+{
+  "buildCommand": "tsc --noEmit && vite build",
+  "outputDirectory": "build",
+  "redirects": [
+    { "source": "/legacy-nursery.html", "destination": "/legacy/plantation.html", "permanent": true },
+    { "source": "/plantation.html", "destination": "/legacy/plantation.html", "permanent": true },
+    { "source": "/", "destination": "/legacy/plantation.html", "permanent": true }
+  ],
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/$1" }
+  ],
+  "headers": [
+    {
+      "source": "/og-share-large.png",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=3600, s-maxage=3600, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET,POST,DELETE,OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization" }
+      ]
+    }
+  ]
+}
+EOF && git add vercel.json && git commit -m "Update vercel.json with redirects" && git push
+
