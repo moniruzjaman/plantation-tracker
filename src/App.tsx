@@ -47,18 +47,17 @@ export default function App() {
     <div style={{ width: '100%', height: '100%', overflow: 'hidden', position: 'relative', backgroundColor: '#FCF9F8' }}>
       <NetworkStatus onStateChange={setNetworkState} />
       <GeolocationIndicator onStateChange={setGeoState} />
-      <OfflinePlantationDashboard onStateChange={setSubmissions} queueReady={queueReady} />
+      <OfflinePlantationDashboard onStateChange={setSubmissions} />
       <MobileControlCenter
         networkState={networkState}
         geoState={geoState}
         submissions={submissions}
-        queueReady={queueReady}
       />
       <WelcomeModal />
       <PWAInstaller />
       <SyncToast />
       <iframe
-        src="/legacy/plantation.html"
+        src="/plantation.html"
         style={{ display: 'block', width: '100%', height: '100%', border: 'none' }}
         title="Plantation Form"
         allow="geolocation"

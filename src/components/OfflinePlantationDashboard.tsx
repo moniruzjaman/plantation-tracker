@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useMapData } from '../utils/useMapData';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Database,
@@ -86,7 +87,8 @@ interface OfflinePlantationDashboardProps {
   queueReady?: boolean;
 }
 
-export default function OfflinePlantationDashboard({ onStateChange, queueReady = false }: OfflinePlantationDashboardProps = {}) {
+export default function OfflinePlantationDashboard({ onStateChange }: OfflinePlantationDashboardProps = {}) {
+  const { nationalEntries } = useMapData();
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
   const [language, setLanguage] = useState<'bn' | 'en'>('bn');
@@ -158,7 +160,23 @@ export default function OfflinePlantationDashboard({ onStateChange, queueReady =
   // Compute stats
   const totalLogs = submissions.length;
   
-  let totalSeedlings = 0;
+  // National seedling total: App_Entry column Q equivalent.
+  // Sum every seedlings[].quantity from the national AppScript entries.
+  const totalNationalSeedlings = nationalEntries.reduce((sum, entry) => {
+    if (!Array.isArray(entry.seedlings)) return sum;
+
+    return sum + entry.seedlings.reduce((entrySum, item) => {
+      if (!item || typeof item !== 'object') return entrySum;
+
+      const quantity = Number(
+        (item as { quantity?: unknown }).quantity
+      );
+
+      return Number.isFinite(quantity) ? entrySum + quantity : entrySum;
+    }, 0);
+  }, 0);
+
+  let totalSeedlings = totalNationalSeedlings;
   let fruitCount = 0;
   let forestCount = 0;
   let medicinalCount = 0;

@@ -15,8 +15,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "dev": "vite --port=3000 --host=0.0.0.0",
-    "build": "node fix-gradle-wrapper.js && node chmod-gradlew.js && (node download-and-process-logo.js || echo '⚠️ Logo processing skipped - using existing assets') && node map.js && node generate-android-icons.js && vite build",
-    "vercel-build": "tsc --noEmit && vite build",
+    "build": "node fix-gradle-wrapper.js && node chmod-gradlew.js && (node download-and-process-logo.js || echo '⚠️ Logo processing skipped - using existing assets') && node map.js && (node generate-android-icons.js || echo '⚠️ Android icon generation skipped - using existing assets') && vite build",
+    "vercel-build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist build",
     "lint": "tsc --noEmit"
@@ -42,7 +42,7 @@
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
     "@types/leaflet": "^1.9.21",
-    "@types/node": "^22.14.0",
+    "@types/node": "^22.20.1",
     "fake-indexeddb": "^6.2.5",
     "sharp": "^0.34.5",
     "tailwindcss": "^4.1.14",

@@ -32,6 +32,11 @@ export interface NationalEntry {
   division?: string;
   district?: string;
   upazila?: string;
+  seedlings?: {
+    speciesName?: string;
+    category?: string;
+    quantity?: number | string;
+  }[];
   _source?: 'appscript';
   [key: string]: unknown;
 }

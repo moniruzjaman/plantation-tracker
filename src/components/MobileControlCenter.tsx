@@ -1,27 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Database,
-  Wifi,
-  WifiOff,
-  MapPin,
-  HelpCircle,
-  X,
-  Globe,
-  Info,
-  ChevronRight,
-  ChevronDown,
-  Activity,
-  Award,
-  CircleDot,
-  Copy,
-  Check,
-  CheckCircle2,
-  HardDrive,
-  RefreshCw,
-  AlertTriangle
-} from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Activity } from 'lucide-react';
 
 import { GeoState } from './GeolocationIndicator';
 import { NetworkStatusData } from './NetworkStatus';
@@ -35,185 +15,9 @@ interface MobileControlCenterProps {
   queueReady?: boolean;
 }
 
-export default function MobileControlCenter({ networkState, geoState, submissions, queueReady = false }: MobileControlCenterProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'db' | 'net' | 'gps'>('db');
-  const [language, setLanguage] = useState<'bn' | 'en'>('bn');
-  const [copied, setCopied] = useState(false);
-  const [queueStats, setQueueStats] = useState<{ pending: number; syncing: number; synced: number; failed: number; total: number } | null>(null);
-  const [retrying, setRetrying] = useState(false);
-
-  // Compute stats
-  const totalLogs = submissions.length;
-  
-  let totalSeedlings = 0;
-  let fruitCount = 0;
-  let forestCount = 0;
-  let medicinalCount = 0;
-
-  const districtMap: { [key: string]: number } = {};
-
-  submissions.forEach(s => {
-    // v2 flat seedlings array (preferred), with v1 legacy fallback.
-    let f = 0, fo = 0, m = 0;
-    if (Array.isArray(s.seedlings) && s.seedlings.length) {
-      s.seedlings.forEach(item => {
-        const qty = parseInt(String(item.quantity)) || 0;
-        const cat = (item.category || '').trim();
-        if (cat.indexOf('ফল') === 0 || cat === 'fruit') f += qty;
-        else if (cat.indexOf('বন') === 0 || cat === 'forest') fo += qty;
-        else if (cat.indexOf('ঔষ') === 0 || cat === 'medicinal') m += qty;
-        else f += qty;
-      });
-    } else {
-      const countCategory = (list?: any[]) => {
-        let sum = 0;
-        if (list && Array.isArray(list)) {
-          list.forEach(item => {
-            sum += (parseInt(item.count) || 0) + (parseInt(item.graftingCount) || 0);
-          });
-        }
-        return sum;
-      };
-      f = countCategory(s.fruitSeedlings);
-      fo = countCategory(s.forestSeedlings);
-      m = countCategory(s.medicinalSeedlings);
-    }
-
-    fruitCount += f;
-    forestCount += fo;
-    medicinalCount += m;
-    totalSeedlings += (f + fo + m);
-
-    if (s.district) {
-      districtMap[s.district] = (districtMap[s.district] || 0) + 1;
-    }
-  });
-
-  const sortedDistricts = Object.entries(districtMap)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3);
-
-  const toBnNum = (num: number): string => {
-    if (language === 'en') return num.toLocaleString('en-US');
-    const bnDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
-    return num.toString().replace(/\d/g, d => bnDigits[parseInt(d)]);
-  };
-
-  const hasGpsError = !!geoState?.error;
-  const isOnline = networkState ? networkState.isOnline : true;
-
-  // Poll queue stats when available
-  useEffect(() => {
-    if (!queueReady) return;
-    const poll = async () => {
-      try {
-        const stats = await getQueueStats();
-        setQueueStats(stats);
-      } catch (e) {
-        console.error('[MobileCC] Queue stats poll failed:', e);
-      }
-    };
-    poll();
-    const interval = setInterval(poll, 3000);
-    return () => clearInterval(interval);
-  }, [queueReady]);
-
-  // Retry failed submissions
-  const handleRetryFailed = async () => {
-    if (!queueReady || retrying) return;
-    setRetrying(true);
-    try {
-      const failed = await getFailedSubmissions();
-      for (const sub of failed) {
-        await markSyncing(sub.submissionId);
-        setQueueStats(prev => prev ? { ...prev, failed: prev.failed - 1, syncing: prev.syncing + 1 } : prev);
-        // Trigger a custom event that plantation.html or the sync engine can listen to
-        window.dispatchEvent(new CustomEvent('retry-sync', { detail: { submissionId: sub.submissionId } }));
-      }
-    } catch (e) {
-      console.error('[MobileCC] Retry failed:', e);
-    } finally {
-      setRetrying(false);
-    }
-  };
-
-  // Programmatic manual launcher
-  const handleOpenUserGuide = () => {
-    setIsOpen(false);
-    setTimeout(() => {
-      const guideBtn = document.getElementById('btnShowWelcomeHelp');
-      if (guideBtn) {
-        guideBtn.setAttribute('class', 'flex absolute'); // Temporarily unhide to ensure layout trigger
-        guideBtn.click();
-        // Reset classes
-        setTimeout(() => {
-           guideBtn.setAttribute('class', 'hidden md:flex absolute top-[112px] right-4 z-45 items-center gap-1.5 px-3 py-1.5 rounded-full bg-container/95 border border-gray-150 hover:bg-surface shadow-md text-gray-600 font-medium text-xs cursor-pointer transition-all hover:scale-102 pointer-events-auto');
-        }, 100);
-      }
-    }, 200);
-  };
-
-  // Programmatic coordinates copier
-  const handleCopyCoords = () => {
-    if (geoState?.coords) {
-      const text = `${geoState.coords.latitude.toFixed(6)}, ${geoState.coords.longitude.toFixed(6)}`;
-      navigator.clipboard.writeText(text).then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      });
-    }
-  };
-
-  // GPS precision rating
-  const getGpsPrecisionBN = (meters: number) => {
-    if (meters < 30) return { label: 'অত্যন্ত নির্ভুল', color: 'text-primary-500 bg-primary-50 px-2 py-0.5 rounded border border-primary-100' };
-    if (meters < 100) return { label: 'সাধারণ সিগন্যাল', color: 'text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100' };
-    return { label: 'দুর্বল সিগন্যাল', color: 'text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-100' };
-  };
-
-  const getGpsPrecisionEN = (meters: number) => {
-    if (meters < 30) return { label: 'High Precision', color: 'text-primary-500 bg-primary-50 px-2 py-0.5 rounded border border-primary-100' };
-    if (meters < 100) return { label: 'Medium Signal', color: 'text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100' };
-    return { label: 'Weak Signal', color: 'text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-100' };
-  };
-
-  // Text resources
-  const t = {
-    title: language === 'bn' ? 'সিস্টেম ড্যাশবোর্ড' : 'System Hub',
-    db: language === 'bn' ? 'অফলাইন রেকর্ড' : 'Offline DB',
-    net: language === 'bn' ? 'নেট সংযোগ' : 'Network',
-    gps: language === 'bn' ? 'জিপিএস সিগন্যাল' : 'GPS Location',
-    guide: language === 'bn' ? 'ব্যবহার নির্দেশিকা' : 'Help Guide',
-    offlineSub: language === 'bn' ? 'মোট অফলাইন রেকর্ড' : 'Total Offline Batches',
-    totalPlanted: language === 'bn' ? 'মোট রোপণকৃত চারা' : 'Total Seedlings Planted',
-    fruit: language === 'bn' ? 'ফলদ চারা' : 'Fruit Seedlings',
-    forest: language === 'bn' ? 'বনজ চারা' : 'Forest Seedlings',
-    medicinal: language === 'bn' ? 'ঔষধি চারা' : 'Medicinal',
-    districts: language === 'bn' ? 'শীর্ষ অঞ্চলসমূহ' : 'Top Areas',
-    conStat: language === 'bn' ? 'ইন্টারনেট সংযোগ:' : 'Connection:',
-    syncEngine: language === 'bn' ? 'সিঙ্ক সিস্টেম:' : 'Sync Manager:',
-    activeSafe: language === 'bn' ? 'সক্রিয় ও সুরক্ষিত' : 'Active & Secured',
-    localEnv: language === 'bn' ? 'লোকাল স্টোরেজ' : 'Local Storage',
-    browserSupport: language === 'bn' ? 'ব্রাউজার মোড' : 'Web Fallback',
-    diskUsed: language === 'bn' ? 'ডিভাইস স্টোরেজ স্পেস:' : 'App Storage:',
-    coords: language === 'bn' ? 'ভৌগোলিক স্থানাঙ্ক:' : 'Coordinates:',
-    accuracy: language === 'bn' ? 'অবস্থানের নির্ভুলতা:' : 'Accuracy Margin:',
-    gpsPerm: language === 'bn' ? 'জিপিএস অনুমতি:' : 'GPS Permission:',
-    loading: language === 'bn' ? 'লোকেশন ট্র্যাক করা হচ্ছে...' : 'Tracking GPS position...',
-    okPerm: language === 'bn' ? 'অনুমোদিত' : 'Granted',
-    noPerm: language === 'bn' ? 'অনুমতি প্রয়োজন' : 'Action Required',
-    guideLaunchText: language === 'bn' ? 'অ্যাপ্লিকেশন ব্যবহার নির্দেশিকা' : 'Interactive Launch Guide',
-    guideDesc: language === 'bn' ? 'কিভাবে তথ্য অফলাইনে সংরক্ষণ ও সিঙ্ক করতে হবে তা বিস্তারিত জানুন।' : 'Learn step-by-step how to log plantations offline and sync manually.',
-    openGuideBtn: language === 'bn' ? 'ইউজার গাইড খুলুন' : 'Open Manual Guide',
-    warningOffline: language === 'bn' ? 'সংযোগ বিচ্ছিন্ন! কিন্তু কোনো ডাটা হারাবে না।' : 'You are offline! Data is secured.',
-    secureBg: language === 'bn' ? 'সকল তথ্য ফোনের লোকাল মেমোরিতে শতভাগ সুরক্ষিত আছে।' : '100% data remains securely encrypted in device sandbox cache.',
-    goalTitle: language === 'bn' ? '৫ বছরে ২৫ কোটি লক্ষ্যমাত্রা' : 'National 250 Million Tree Goal',
-    goalProgress: language === 'bn' ? 'আপনার রোপনকৃত বৃক্ষরোপণ রেকর্ড দেশের লক্ষ্য অর্জনে সাহায্য করছে।' : 'Your nursery logging acts directly towards satisfying the green targets.'
-  };
-
-  // Portal target: the placeholder div inside the iframe header
+export default function MobileControlCenter({ networkState, geoState, submissions }: MobileControlCenterProps) {
   const portalContainer = useRef<Element | null>(null);
+
   useEffect(() => {
     const tryFind = () => {
       const iframe = document.querySelector('iframe') as HTMLIFrameElement | null;
@@ -227,14 +31,19 @@ export default function MobileControlCenter({ networkState, geoState, submission
     return () => clearInterval(interval);
   }, []);
 
+  // Compute stats
+  const totalLogs = submissions.length;
+  const hasGpsError = !!geoState?.error;
+  const isOnline = networkState ? networkState.isOnline : true;
+
   // Compact header FAB for the slot (green, matches header theme)
   const headerFAB = (
     <motion.button
       id="mobileControlCenterFAB"
-      onClick={() => setIsOpen(!isOpen)}
       className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border transition-all text-[10px] font-bold cursor-pointer bg-primary-500/30 border-primary-300/40 text-white hover:bg-primary-500/50"
       whileHover={{ scale: 1.03 }}
       whileTap={{ scale: 0.97 }}
+      title="সিস্টেম স্ট্যাটাস"
     >
       <span className="flex items-center gap-1">
         {totalLogs > 0 ? (
@@ -256,7 +65,7 @@ export default function MobileControlCenter({ networkState, geoState, submission
         )}
       </span>
       <Activity className="w-3 h-3" />
-      <span>{language === 'bn' ? 'স্ট্যাটাস' : 'System'} <strong className="bg-white/20 px-1 py-0.5 rounded ml-0.5">{toBnNum(totalLogs)}</strong></span>
+      <span>স্ট্যাটাস <strong className="bg-white/20 px-1 py-0.5 rounded ml-0.5">{totalLogs}</strong></span>
     </motion.button>
   );
 
