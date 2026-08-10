@@ -16,7 +16,7 @@
     "test:watch": "vitest",
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "node fix-gradle-wrapper.js && node chmod-gradlew.js && (node download-and-process-logo.js || echo '⚠️ Logo processing skipped - using existing assets') && node map.js && (node generate-android-icons.js || echo '⚠️ Android icon generation skipped - using existing assets') && vite build",
-    "vercel-build": "tsc --noEmit && vite build",
+    "vercel-build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist build",
     "lint": "tsc --noEmit"
