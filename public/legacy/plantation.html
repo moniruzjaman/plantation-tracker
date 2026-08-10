@@ -2301,6 +2301,14 @@ window.fetchGeoLocation=function(){
 try{
 var geoField=document.getElementById("fGeo"),geoStatus=document.getElementById("geoStatus"),geoStatusText=document.getElementById("geoStatusText"),geoBtnText=document.getElementById("geoBtnText");
 if(!navigator.geolocation){geoStatusText.textContent="⚠️ আপনার ব্রাউজার লোকেশন সাপোর্ট করে না।";geoStatus.classList.remove("hidden");return}
+// If the React shell already sent us a fresh fix moments ago, reuse it
+// instead of firing a second geolocation request (which can degrade accuracy
+// in iframes on mobile).
+if(_lastDeviceLocationAt && (Date.now() - _lastDeviceLocationAt) < 3000){
+  geoStatusText.textContent="✅ লোকেশন সফলভাবে পাওয়া গেছে (সেল থেকে)";geoStatus.style.color="#15803d";geoBtnText.textContent="আপডেট";
+  setTimeout(function(){geoStatus.classList.add("hidden")},3000);
+  return;
+}
 geoBtnText.textContent="অপেক্ষা...";
 geoStatusText.textContent="📡 লোকেশন খোঁজা হচ্ছে...";geoStatus.classList.remove("hidden");geoStatus.style.color="#2563eb";
 navigator.geolocation.getCurrentPosition(function(pos){
@@ -2319,6 +2327,7 @@ window.autoFillNdvi && window.autoFillNdvi(lat, lng);
 // ── Manual coordinate entry + OpenStreetMap + geofence walker ──
 var geoManualMap = null, geoManualMarker = null, geoFenceLayer = null;
 var geoFenceWatchId = null, geoFencePoints = [], geoFenceWalking = false;
+var _lastDeviceLocationAt = 0;
 
 function _setFGeoFromLatLng(lat, lng, exact, accuracy){
   // `exact` preserves whatever precision was typed/tapped rather than forcing
@@ -2402,6 +2411,26 @@ function _updateGeoOfflineNotice(){
 }
 window.addEventListener("online", _updateGeoOfflineNotice);
 window.addEventListener("offline", _updateGeoOfflineNotice);
+
+// Accept GPS coordinates from the React shell (avoids duplicate geolocation
+// requests that can degrade accuracy in the iframe on mobile browsers).
+window.addEventListener("message", function(e){
+  if(!e.data || e.data.type !== "device-location") return;
+  var c = e.data.coords;
+  if(!c || typeof c.latitude !== "number" || typeof c.longitude !== "number") return;
+  _lastDeviceLocationAt = Date.now();
+  var lat = c.latitude.toFixed(7), lng = c.longitude.toFixed(7);
+  var geoField = document.getElementById("fGeo");
+  if(geoField) geoField.value = lat + ", " + lng;
+  if(typeof c.accuracy === "number"){
+    var accEl = document.getElementById("fGeoAccuracy");
+    if(accEl) accEl.value = c.accuracy;
+    var accDisplay = document.getElementById("geoAccuracyDisplay");
+    if(accDisplay){ accDisplay.textContent = "±" + c.accuracy.toFixed(0) + "m"; accDisplay.style.display = ""; }
+  }
+  window.reverseGeocode && window.reverseGeocode(lat, lng, "fAddress");
+  window.autoFillNdvi && window.autoFillNdvi(lat, lng);
+});
 
 window.toggleGeoManualPanel = function(){
   var panel = document.getElementById("geoManualPanel");
