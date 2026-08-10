@@ -2291,8 +2291,8 @@ window.onGeoLocationChange = function(inputEl, targetAddressId) {
   var val = inputEl.value.trim();
   var m = /^\s*(-?\d+(?:\.\d+)?)\s*[\s,;]\s*(-?\d+(?:\.\d+)?)\s*$/.exec(val);
   if (m) {
-    var lat = parseFloat(m[1]).toFixed(6);
-    var lng = parseFloat(m[2]).toFixed(6);
+    var lat = parseFloat(m[1]).toFixed(7);
+    var lng = parseFloat(m[2]).toFixed(7);
     window.reverseGeocode(lat, lng, targetAddressId);
   }
 };
@@ -2304,7 +2304,7 @@ if(!navigator.geolocation){geoStatusText.textContent="⚠️ আপনার ব
 geoBtnText.textContent="অপেক্ষা...";
 geoStatusText.textContent="📡 লোকেশন খোঁজা হচ্ছে...";geoStatus.classList.remove("hidden");geoStatus.style.color="#2563eb";
 navigator.geolocation.getCurrentPosition(function(pos){
-var lat=pos.coords.latitude.toFixed(6),lng=pos.coords.longitude.toFixed(6),accuracy=pos.coords.accuracy;
+var lat=pos.coords.latitude.toFixed(7),lng=pos.coords.longitude.toFixed(7),accuracy=pos.coords.accuracy;
 geoField.value=lat+", "+lng;
 var accEl=document.getElementById("fGeoAccuracy");if(accEl)accEl.value=accuracy;
 var accDisplay=document.getElementById("geoAccuracyDisplay");if(accDisplay){accDisplay.textContent="±"+accuracy.toFixed(0)+"m";accDisplay.style.display=""}
@@ -2323,8 +2323,8 @@ var geoFenceWatchId = null, geoFencePoints = [], geoFenceWalking = false;
 function _setFGeoFromLatLng(lat, lng, exact, accuracy){
   // `exact` preserves whatever precision was typed/tapped rather than forcing
   // a fixed rounding, per the "bound to follow exact input" requirement.
-  var latStr = exact ? String(lat) : Number(lat).toFixed(6);
-  var lngStr = exact ? String(lng) : Number(lng).toFixed(6);
+  var latStr = exact ? String(lat) : Number(lat).toFixed(7);
+  var lngStr = exact ? String(lng) : Number(lng).toFixed(7);
   var geoField = document.getElementById("fGeo");
   if(geoField) geoField.value = latStr + ", " + lngStr;
   var accEl = document.getElementById("fGeoAccuracy");
@@ -2372,9 +2372,9 @@ function _bindGeoManualMarkerEvents(){
   if(!geoManualMarker) return;
   geoManualMarker.on("dragend", function(){
     var ll = geoManualMarker.getLatLng();
-    _setFGeoFromLatLng(ll.lat.toFixed(6), ll.lng.toFixed(6), true, undefined);
-    window.reverseGeocode && window.reverseGeocode(ll.lat.toFixed(6), ll.lng.toFixed(6), "fAddress");
-    window.autoFillNdvi && window.autoFillNdvi(ll.lat.toFixed(6), ll.lng.toFixed(6));
+    _setFGeoFromLatLng(ll.lat.toFixed(7), ll.lng.toFixed(7), true, undefined);
+    window.reverseGeocode && window.reverseGeocode(ll.lat.toFixed(7), ll.lng.toFixed(7), "fAddress");
+    window.autoFillNdvi && window.autoFillNdvi(ll.lat.toFixed(7), ll.lng.toFixed(7));
   });
 }
 
@@ -2390,7 +2390,7 @@ function _placeGeoManualMarker(lat, lng, exact){
   }
   map.setView(latlng, Math.max(map.getZoom(), 17));
   _setFGeoFromLatLng(lat, lng, exact, undefined);
-  window.reverseGeocode && window.reverseGeocode(exact ? lat : Number(lat).toFixed(6), exact ? lng : Number(lng).toFixed(6), "fAddress");
+  window.reverseGeocode && window.reverseGeocode(exact ? lat : Number(lat).toFixed(7), exact ? lng : Number(lng).toFixed(7), "fAddress");
   window.autoFillNdvi && window.autoFillNdvi(lat, lng);
 }
 
@@ -4018,6 +4018,8 @@ document.getElementById("editModal").addEventListener("click",function(e){if(e.t
 // ── Leaflet Map Visualizer ──
 var mapInstance = null;
 var mapMarkers = [];
+var mapAccuracyCircles = [];
+var _meAccuracyCircle = null;
 
 // Bangladesh's real extent, with a generous buffer, used to reject clearly
 // bad/placeholder GPS coordinates (e.g. "0,0" null-island, a GPS glitch, or
@@ -4037,6 +4039,7 @@ window.zoomToMyGeoLocation = function() {
       if (mapInstance) {
         var lat = pos.coords.latitude;
         var lng = pos.coords.longitude;
+        var accuracy = pos.coords.accuracy;
         mapInstance.setView([lat, lng], 13);
         var pulseIcon = L.divIcon({
           html: '<span class="flex h-3 w-3 relative"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" style="position:absolute; background:#60a5fa; border-radius:9999px; width:12px; height:12px; display:inline-block;"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-blue-500" style="position:relative; background:#3b82f6; border-radius:9999px; width:12px; height:12px; display:inline-block;"></span></span>',
@@ -4044,6 +4047,18 @@ window.zoomToMyGeoLocation = function() {
           iconSize: [12, 12]
         });
         L.marker([lat, lng], { icon: pulseIcon }).addTo(mapInstance).bindPopup("<b>আপনার বর্তমান অবস্থান</b>").openPopup();
+        // Show GPS accuracy as a translucent circle (radius in metres)
+        if (_meAccuracyCircle) { mapInstance.removeLayer(_meAccuracyCircle); }
+        if (accuracy && accuracy > 0) {
+          _meAccuracyCircle = L.circle([lat, lng], {
+            radius: accuracy,
+            color: '#3b82f6',
+            fillColor: '#60a5fa',
+            fillOpacity: 0.15,
+            weight: 1,
+            interactive: false
+          }).addTo(mapInstance);
+        }
       }
     }, function() {
       alert("লোকেশন পাওয়া যায়নি বা পারমিশন নেই।");
@@ -4268,6 +4283,8 @@ window.renderMap = function() {
     // Clear old markers
     mapMarkers.forEach(function(m) { mapInstance.removeLayer(m); });
     mapMarkers = [];
+    mapAccuracyCircles.forEach(function(c) { mapInstance.removeLayer(c); });
+    mapAccuracyCircles = [];
     
     // Kick off (or reuse the cached) national App_Entry fetch. First paint
     // uses whatever is cached/local; once the fetch resolves we re-render
@@ -4360,6 +4377,21 @@ window.renderMap = function() {
       
       var marker = L.marker([lat, lng], { icon: customIcon }).addTo(mapInstance).bindPopup(detailsHtml);
       mapMarkers.push(marker);
+      // Accuracy radius circle (if GPS accuracy was captured)
+      if (s.geoAccuracy) {
+        var accRadius = parseFloat(s.geoAccuracy);
+        if (accRadius > 0) {
+          var accCircle = L.circle([lat, lng], {
+            radius: accRadius,
+            color: markerBg,
+            fillColor: markerBg,
+            fillOpacity: 0.12,
+            weight: 1,
+            interactive: false
+          }).addTo(mapInstance);
+          mapAccuracyCircles.push(accCircle);
+        }
+      }
     });
     
     // Build dynamic upazila color legend
