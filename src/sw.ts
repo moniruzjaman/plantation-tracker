@@ -15,8 +15,8 @@ registerRoute(
 );
 
 setCatchHandler(async ({ event }) => {
-  if (event.request.mode === 'navigate') {
+  if (event instanceof FetchEvent && event.request.mode === 'navigate') {
     return caches.match('/offline.html');
   }
   return Response.error();
-});
+})
