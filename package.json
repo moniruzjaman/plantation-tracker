@@ -19,7 +19,14 @@
     "vercel-build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist build",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "db:generate": "npx prisma generate",
+    "db:push": "npx prisma db push",
+    "db:seed": "npx prisma db seed",
+    "db:migrate": "npx prisma migrate dev --name init"
+  },
+  "prisma": {
+    "seed": "npx tsx prisma/seed.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.0",
@@ -34,7 +41,8 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-leaflet": "^5.0.0",
-    "vite": "^6.2.0"
+    "vite": "^6.2.0",
+    "@prisma/client": "^6.8.2"
   },
   "engines": {
     "node": ">=20.0.0"
@@ -50,6 +58,7 @@
     "typescript": "~5.8.2",
     "vercel": "^54.14.0",
     "vite-plugin-pwa": "^1.2.0",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "prisma": "^6.8.2"
   }
 }
