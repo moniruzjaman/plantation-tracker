@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useCallback, useRef, Suspense, lazy } from 'react';
+import { useState, useCallback, useRef, useEffect, Suspense, lazy } from 'react';
 import { Satellite, X, Loader2 } from 'lucide-react';
 import NetworkStatus, { NetworkStatusData } from './components/NetworkStatus';
 import GeolocationIndicator, { GeoState } from './components/GeolocationIndicator';
@@ -12,6 +12,7 @@ import PWAInstaller from './components/PWAInstaller';
 import SyncToast from './components/SyncToast';
 import OfflinePlantationDashboard, { Submission } from './components/OfflinePlantationDashboard';
 import MobileControlCenter from './components/MobileControlCenter';
+import { initOfflineQueue } from './lib/offlineQueue';
 
 const MapTab = lazy(() => import('./components/plantation/MapTab'));
 
@@ -20,7 +21,17 @@ export default function App() {
   const [geoState, setGeoState] = useState<GeoState | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [showSatelliteMap, setShowSatelliteMap] = useState(false);
+  const [queueReady, setQueueReady] = useState(false);
   const invalidateMapRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    initOfflineQueue()
+      .then(({ migrated }) => {
+        console.log(`[App] Offline queue initialized. Migrated ${migrated} entries from localStorage.`);
+        setQueueReady(true);
+      })
+      .catch((err) => console.error('[App] Offline queue init failed:', err));
+  }, []);
 
   // MapContainer only ever mounts while this overlay is visible, so it never
   // initializes against a display:none container — the class of bug fixed in

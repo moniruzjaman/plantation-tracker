@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useMapData } from '../utils/useMapData';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Database, 
-  Leaf, 
-  BarChart3, 
-  TrendingUp, 
-  MapPin, 
-  X, 
+import {
+  Database,
+  Leaf,
+  BarChart3,
+  TrendingUp,
+  MapPin,
+  X,
   Info,
   CheckCircle,
   Clock,
@@ -15,6 +15,7 @@ import {
   Flame,
   Globe2
 } from 'lucide-react';
+import { initOfflineQueue, getAllSubmissions, getQueueStats, QueuedSubmission } from '../lib/offlineQueue';
 
 // Legacy seedling shape (3 fixed category arrays). Kept for backward-compat
 // with submissions saved before the v2 upgrade.
@@ -75,10 +76,15 @@ export interface Submission {
   // Sync state
   synced?: boolean;
   syncedAt?: string;
+  // Queue state (Phase-1)
+  syncStatus?: 'pending' | 'syncing' | 'synced' | 'failed';
+  syncAttempts?: number;
+  lastSyncError?: string;
 }
 
 interface OfflinePlantationDashboardProps {
   onStateChange?: (submissions: Submission[]) => void;
+  queueReady?: boolean;
 }
 
 export default function OfflinePlantationDashboard({ onStateChange }: OfflinePlantationDashboardProps = {}) {
@@ -87,6 +93,7 @@ export default function OfflinePlantationDashboard({ onStateChange }: OfflinePla
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
   const [language, setLanguage] = useState<'bn' | 'en'>('bn');
   const [lastUpdated, setLastUpdated] = useState<string>('');
+  const [queueStats, setQueueStats] = useState<{ pending: number; syncing: number; synced: number; failed: number; total: number } | null>(null);
 
   // Invoke callback when submissions list updates
   useEffect(() => {
@@ -95,44 +102,60 @@ export default function OfflinePlantationDashboard({ onStateChange }: OfflinePla
     }
   }, [submissions, onStateChange]);
 
-  // Fetch submissions from localStorage
-  const fetchSubmissions = () => {
+  // Fetch submissions from IndexedDB (primary) with localStorage fallback
+  const fetchSubmissions = async () => {
     try {
-      const dataStr = localStorage.getItem('nursery_submissions');
-      if (dataStr) {
-        const parsed = JSON.parse(dataStr) as Submission[];
-        if (Array.isArray(parsed)) {
-          setSubmissions(parsed);
-        }
-      } else {
-        setSubmissions([]);
+      let data: Submission[] = [];
+      if (queueReady) {
+        const queued = await getAllSubmissions();
+        data = queued.map(q => ({ ...q } as unknown as Submission));
       }
+      if (!data.length) {
+        const dataStr = localStorage.getItem('nursery_submissions');
+        if (dataStr) {
+          const parsed = JSON.parse(dataStr) as Submission[];
+          if (Array.isArray(parsed)) {
+            data = parsed;
+          }
+        }
+      }
+      setSubmissions(data);
       setLastUpdated(new Date().toLocaleTimeString(language === 'bn' ? 'bn-BD' : 'en-US'));
     } catch (e) {
-      console.error('Error reading submissions from localStorage:', e);
+      console.error('Error reading submissions:', e);
     }
   };
 
   useEffect(() => {
-    // Initial load
     fetchSubmissions();
-
-    // Set up a periodic poller to catch changes made inside the iframe instantly
-    const interval = setInterval(fetchSubmissions, 1500);
-
-    // Listen to storage events from other tabs/frames
+    const interval = setInterval(fetchSubmissions, 2000);
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'nursery_submissions') {
         fetchSubmissions();
       }
     };
     window.addEventListener('storage', handleStorageChange);
-
     return () => {
       clearInterval(interval);
       window.removeEventListener('storage', handleStorageChange);
     };
-  }, [language]);
+  }, [language, queueReady]);
+
+  // Poll queue stats when IndexedDB is available
+  useEffect(() => {
+    if (!queueReady) return;
+    const pollStats = async () => {
+      try {
+        const stats = await getQueueStats();
+        setQueueStats(stats);
+      } catch (e) {
+        console.error('[Dashboard] Queue stats poll failed:', e);
+      }
+    };
+    pollStats();
+    const interval = setInterval(pollStats, 3000);
+    return () => clearInterval(interval);
+  }, [queueReady]);
 
   // Compute stats
   const totalLogs = submissions.length;
@@ -240,8 +263,8 @@ export default function OfflinePlantationDashboard({ onStateChange }: OfflinePla
           layout
           onClick={() => setIsExpanded(!isExpanded)}
           className={`flex items-center gap-2 px-4 py-2 rounded-full shadow-lg border backdrop-blur-sm transition-all text-xs font-semibold cursor-pointer ${
-            totalLogs > 0 
-              ? 'bg-primary-500 border-primary-400 text-white hover:bg-primary-600' 
+            totalLogs > 0
+              ? 'bg-primary-500 border-primary-400 text-white hover:bg-primary-600'
               : 'bg-container/95 border-gray-200 text-gray-700 hover:bg-surface'
           }`}
           whileHover={{ scale: 1.02 }}
@@ -253,10 +276,20 @@ export default function OfflinePlantationDashboard({ onStateChange }: OfflinePla
           </div>
 
           <Database className="w-4 h-4 shrink-0 transition-transform duration-300" />
-          
+
           <span>
             {t.title}: <strong className="font-bold">{toBnNum(totalLogs)}</strong> {language === 'bn' ? 'টি' : (totalLogs === 1 ? 'Batch' : 'Batches')}
           </span>
+          {queueReady && queueStats && queueStats.pending > 0 && (
+            <span className="bg-amber-400 text-amber-900 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+              {toBnNum(queueStats.pending)} পেন্ডিং
+            </span>
+          )}
+          {queueReady && queueStats && queueStats.failed > 0 && (
+            <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-pulse">
+              {toBnNum(queueStats.failed)} ব্যর্থ
+            </span>
+          )}
         </motion.button>
 
         {/* Detailed Information Dashboard Panel */}

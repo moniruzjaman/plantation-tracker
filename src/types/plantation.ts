@@ -69,3 +69,42 @@ export function countSeedlings(s: LocalSubmission): SeedlingCounts {
   });
   return r;
 }
+
+// ── Phase-2: Lifecycle Tracking ──
+
+export type LifecycleEventType = 'planting' | 'maintenance' | 'survival_check' | 'caretaker_handoff';
+
+export interface LifecyclePayload {
+  alive?: boolean;
+  healthStatus?: 'healthy' | 'stressed' | 'diseased' | 'dead';
+  heightCm?: number;
+  ndvi?: number;
+  note?: string;
+  fromCaretaker?: string;
+  toCaretaker?: string;
+  photoBase64?: string;
+  speciesName?: string;
+  quantity?: number;
+}
+
+export interface LifecycleEvent {
+  eventId: string;
+  formId: string;
+  plantId: string;
+  eventType: LifecycleEventType;
+  eventDate: string;       // ISO date (yyyy-mm-dd)
+  capturedAt: string;      // ISO datetime
+  capturedBy: string;
+  deviceId?: string;
+  payload: LifecyclePayload;
+  synced?: boolean;
+  syncedAt?: string;
+}
+
+export interface PlantIdInfo {
+  plantId: string;
+  speciesName: string;
+  category: string;
+  quantity: number;
+  formId: string;
+}
