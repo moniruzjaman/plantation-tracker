@@ -15,14 +15,8 @@ registerRoute(
 );
 
 setCatchHandler(async ({ event }) => {
-  // setCatchHandler's callback types `event` as the base ExtendableEvent,
-  // which has no `.request` -- but a catch handler reached via a fetch
-  // route (as this one is, registered against navigate requests above)
-  // is always actually invoked with a FetchEvent. Workbox's own type
-  // signature doesn't narrow this automatically, hence the assertion.
-  const fetchEvent = event as FetchEvent;
-  if (fetchEvent.request.mode === 'navigate') {
+  if (event instanceof FetchEvent && event.request.mode === 'navigate') {
     return caches.match('/offline.html');
   }
   return Response.error();
-});
+})
