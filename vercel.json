@@ -1,5 +1,5 @@
 {
-  "buildCommand": "vite build",
+  "buildCommand": "tsc --noEmit && vite build",
   "outputDirectory": "build",
   "redirects": [
     { "source": "/legacy-nursery.html", "destination": "/legacy/plantation.html", "permanent": true },
