@@ -434,6 +434,60 @@ tbody tr{border-bottom:1px solid #e5e7eb}
   <button onclick="refreshDashNationalData()" class="text-xs font-semibold px-3 py-1.5 rounded-md border cursor-pointer hover:bg-gray-50 transition" style="border-color:#15803d;color:#15803d" id="dashRefreshBtn">🔄 রিফ্রেশ</button>
 </div>
 
+<!-- ── Latest Official Weekly Report (verified checkpoint, reconciled from Tree_Plantation_Reporting_Workbook.xlsx) ── -->
+<div id="officialReportCard" class="rounded-xl shadow p-4 mb-6" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fde68a">
+  <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
+    <p class="font-bold text-sm flex items-center gap-1.5" style="color:#92400e">📑 সর্বশেষ যাচাইকৃত সাপ্তাহিক প্রতিবেদন <span id="officialReportDate" class="font-normal text-xs" style="color:#b45309">(11 August, 2026)</span></p>
+    <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a">✔ ডাটা মান যাচাইকৃত (উভয় উৎস একত্রীকৃত)</span>
+  </div>
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-3">
+    <div class="rounded-lg p-2.5 text-center" style="background:#fff7ed;border:1px solid #fed7aa">
+      <p class="text-[10px] text-amber-700 font-semibold uppercase tracking-wide">মোট এন্ট্রি</p>
+      <p class="text-lg font-bold" style="color:#9a3412">২,২৭৫ টি</p>
+    </div>
+    <div class="rounded-lg p-2.5 text-center" style="background:#fff7ed;border:1px solid #fed7aa">
+      <p class="text-[10px] text-amber-700 font-semibold uppercase tracking-wide">মোট রোপণকৃত বৃক্ষ</p>
+      <p class="text-lg font-bold" style="color:#9a3412">১৫,৪১২ টি</p>
+    </div>
+    <div class="rounded-lg p-2.5 text-center" style="background:#fff7ed;border:1px solid #fed7aa">
+      <p class="text-[10px] text-amber-700 font-semibold uppercase tracking-wide">উপজেলা কভারেজ</p>
+      <p class="text-lg font-bold" style="color:#9a3412">৯ / ৯</p>
+    </div>
+    <div class="rounded-lg p-2.5 text-center" style="background:#fff7ed;border:1px solid #fed7aa">
+      <p class="text-[10px] text-amber-700 font-semibold uppercase tracking-wide">যাচাই প্রয়োজন এন্ট্রি</p>
+      <p class="text-lg font-bold" style="color:#9a3412">৮৪৬ টি (৬৩.৭%)</p>
+    </div>
+  </div>
+  <div class="flex items-center justify-between flex-wrap gap-2 text-[11px]" style="color:#92400e">
+    <p>উৎস: মূল_ডাটা (ministry report, ৯৪৬ এন্ট্রি) + ১৭_কলাম_প্রতিবেদন (১,৩২৯ এন্ট্রি) — Tree_Plantation_Reporting_Workbook.xlsx থেকে ইউনিকোড-নরমালাইজড ও একত্রীকৃত।</p>
+    <button onclick="toggleOfficialReportDetail()" id="officialReportToggleBtn" class="text-[11px] font-semibold px-2.5 py-1 rounded-md cursor-pointer shrink-0" style="background:#fde68a;color:#78350f">বিস্তারিত দেখুন ▾</button>
+  </div>
+  <div id="officialReportDetail" class="hidden mt-3 pt-3 text-[11px]" style="border-top:1px solid #fde68a;color:#78350f">
+    <p class="font-semibold mb-1.5">উপজেলাভিত্তিক সম্মিলিত অগ্রগতি (গাছের সংখ্যা):</p>
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1 mb-2.5">
+      <span>ভুরুঙ্গামারী: <b>৪,৪৮৮</b></span>
+      <span>চর রাজিবপুর: <b>২,৬২৮</b></span>
+      <span>ফুলবাড়ী: <b>২,২৯৮</b></span>
+      <span>উলিপুর: <b>২,১২৩</b></span>
+      <span>রৌমারী: <b>৯৮৮</b></span>
+      <span>কুড়িগ্রাম সদর: <b>৬৮২</b></span>
+      <span>নাগেশ্বরী: <b>৫৯৮</b></span>
+      <span>রাজারহাট: <b>৫৫৩</b></span>
+      <span>চিলমারী: <b>১,০২৪</b></span>
+    </div>
+    <p class="font-semibold mb-1">ডাটা মান যাচাই (১৭_কলাম_প্রতিবেদন, মোট ১,৩২৯ এন্ট্রি):</p>
+    <ul class="list-disc pl-4 space-y-0.5">
+      <li>সিরিয়াল নম্বর অনুপস্থিত: ১৮টি (১.৩৫%)</li>
+      <li>উপজেলা ঘর খালি: ৪টি (০.৩০%)</li>
+      <li>কুড়িগ্রাম জেলার বাইরে: ২টি (০.১৫%)</li>
+      <li>জিও-কোঅর্ডিনেট ত্রুটিপূর্ণ: ১৬২টি (১২.১৯%)</li>
+      <li>রোপণের তারিখ খালি: ৬৬৪টি (৪৯.৯৬%)</li>
+      <li>মনিটরিং অফিসার খালি: ১৭১টি (১২.৮৭%)</li>
+    </ul>
+    <p class="mt-2 text-[10.5px] italic" style="color:#a16207">এই সংখ্যাগুলো সাপ্তাহিক অফিসিয়াল ইমেইল প্রতিবেদনের সাথে যাচাইকৃত একটি স্ন্যাপশট; নিচের লাইভ কার্ড, ফিল্টার ও চার্ট সরাসরি বর্তমান App_Entry ডাটা থেকে রিয়েল-টাইমে হিসাব করা হয়।</p>
+  </div>
+</div>
+
 <!-- ── Filters (MOVED TO TOP — applies to KPIs, charts, table and Excel exports) ── -->
 <div class="bg-white rounded-xl shadow p-4 mb-6" style="border:1px solid #bbf7d0">
   <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
@@ -3052,6 +3106,18 @@ function populateDashUpazilaDD(selected){
 window.refreshDashNationalData=function(){
   var btn=document.getElementById("dashRefreshBtn");if(btn){btn.disabled=true;btn.textContent="রিফ্রেশ হচ্ছে...";}
   fetchNationalEntries(true).then(function(){if(btn){btn.disabled=false;btn.textContent="🔄 রিফ্রেশ";}renderDashboard()});
+};
+// ── Latest Official Weekly Report card: simple expand/collapse for the
+// reconciled snapshot (মূল_ডাটা + ১৭_কলাম_প্রতিবেদন). Static checkpoint data
+// lives inline in the card markup and is refreshed by hand each week
+// alongside the official email/xlsx report; this toggle only handles UI state.
+window.toggleOfficialReportDetail=function(){
+  var panel=document.getElementById("officialReportDetail");
+  var btn=document.getElementById("officialReportToggleBtn");
+  if(!panel||!btn)return;
+  var hidden=panel.classList.contains("hidden");
+  if(hidden){panel.classList.remove("hidden");btn.textContent="বিস্তারিত লুকান ▴";}
+  else{panel.classList.add("hidden");btn.textContent="বিস্তারিত দেখুন ▾";}
 };
 window.setDashboardViewMode = function(mode) {
   window.currentDashboardViewMode = mode;
