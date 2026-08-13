@@ -440,6 +440,10 @@ tbody tr{border-bottom:1px solid #e5e7eb}
     <p class="font-bold text-sm flex items-center gap-1.5" style="color:#92400e">📑 সর্বশেষ যাচাইকৃত সাপ্তাহিক প্রতিবেদন <span id="officialReportDate" class="font-normal text-xs" style="color:#b45309">(11 August, 2026)</span></p>
     <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a">✔ ডাটা মান যাচাইকৃত (উভয় উৎস একত্রীকৃত)</span>
   </div>
+  <div class="flex flex-wrap gap-2 mb-3">
+    <a href="/reports/weekly-report-2026-08-11.xlsx" download="সাপ্তাহিক_বৃক্ষরোপণ_প্রতিবেদন_২০২৬-০৮-১১.xlsx" class="text-[11px] font-semibold px-2.5 py-1.5 rounded-md inline-flex items-center gap-1" style="background:#166534;color:#fff">⬇️ সম্পূর্ণ প্রতিবেদন ডাউনলোড (Excel)</a>
+    <a href="/reports/weekly-report-2026-08-11.html" target="_blank" rel="noopener" class="text-[11px] font-semibold px-2.5 py-1.5 rounded-md inline-flex items-center gap-1" style="background:#fde68a;color:#78350f">📧 ইমেইল প্রতিবেদন দেখুন</a>
+  </div>
   <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-3">
     <div class="rounded-lg p-2.5 text-center" style="background:#fff7ed;border:1px solid #fed7aa">
       <p class="text-[10px] text-amber-700 font-semibold uppercase tracking-wide">মোট এন্ট্রি</p>
@@ -474,6 +478,10 @@ tbody tr{border-bottom:1px solid #e5e7eb}
       <span>নাগেশ্বরী: <b>৫৯৮</b></span>
       <span>রাজারহাট: <b>৫৫৩</b></span>
       <span>চিলমারী: <b>১,০২৪</b></span>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3 bg-white rounded-lg p-2.5" style="border:1px solid #fde68a">
+      <div><canvas id="chartOfficialUpazila" height="200"></canvas></div>
+      <div><canvas id="chartOfficialCategory" height="200"></canvas></div>
     </div>
     <p class="font-semibold mb-1">ডাটা মান যাচাই (১৭_কলাম_প্রতিবেদন, মোট ১,৩২৯ এন্ট্রি):</p>
     <ul class="list-disc pl-4 space-y-0.5">
@@ -1715,19 +1723,22 @@ function hideBanner(id){var el=document.getElementById(id);if(el)el.classList.ad
 window.showBanner=showBanner;window.hideBanner=hideBanner;
 
 // ── Share modal ──
-var SHARE_TITLE="বৃক্ষরোপণ ট্র্যাকার | কৃষি সম্প্রসারণ অধিদপ্তর";
-var SHARE_TEXT="\"০৫ বছরে ২৫ কোটি বৃক্ষরোপণ\" কর্মসূচির তথ্য সংগ্রহের জন্য এই অ্যাপটি ব্যবহার করুন:";
-function getShareUrl(){try{return window.location.href.split("#")[0]}catch(e){return window.location.href}}
+var SHARE_TITLE="বৃক্ষরোপণ ট্র্যাকার | ০৫ বছরে ২৫ কোটি বৃক্ষরোপণ কর্মসূচি";
+var SHARE_TEXT="\" বৃক্ষরোপণে সাজাই দেশ, সবার আগে বাংলাদেশ\" বৃক্ষ রোপণের তথ্য দিন, সবুজ বিপ্লবে অংশ নিন।:";
+var SHARE_URLS=["https://plantation-tracker.vercel.app","https://plantation.krishiai.live"];
+function getShareUrl(){try{return window.location.href.split("#")[0]}catch(e){return SHARE_URLS[0]}}
+function getAllShareUrls(){return SHARE_URLS.join("%0A")}
 window.openShareModal=function(){
 try{
 var url=getShareUrl();
-var input=document.getElementById("shareLinkInput");if(input)input.value=url;
-var enc=encodeURIComponent(url),encText=encodeURIComponent(SHARE_TEXT);
-var wa=document.getElementById("shareWhatsapp");if(wa)wa.href="https://wa.me/?text="+encText+"%20"+enc;
+var allUrlsText=SHARE_URLS.join("\n");
+var input=document.getElementById("shareLinkInput");if(input)input.value=allUrlsText;
+var enc=encodeURIComponent(url),encText=encodeURIComponent(SHARE_TEXT),allUrls=encodeURIComponent(allUrlsText);
+var wa=document.getElementById("shareWhatsapp");if(wa)wa.href="https://wa.me/?text="+encText+"%0A%0A"+allUrls;
 var fb=document.getElementById("shareFacebook");if(fb)fb.href="https://www.facebook.com/sharer/sharer.php?u="+enc;
-var tg=document.getElementById("shareTelegram");if(tg)tg.href="https://t.me/share/url?url="+enc+"&text="+encText;
-var em=document.getElementById("shareEmail");if(em)em.href="mailto:?subject="+encodeURIComponent(SHARE_TITLE)+"&body="+encText+"%0A%0A"+enc;
-var sm=document.getElementById("shareSms");if(sm)sm.href="sms:?body="+encText+"%20"+enc;
+var tg=document.getElementById("shareTelegram");if(tg)tg.href="https://t.me/share/url?url="+enc+"&text="+encText+"%0A"+allUrls;
+var em=document.getElementById("shareEmail");if(em)em.href="mailto:?subject="+encodeURIComponent(SHARE_TITLE)+"&body="+encText+"%0A%0A"+allUrls;
+var sm=document.getElementById("shareSms");if(sm)sm.href="sms:?body="+encText+"%0A"+allUrls;
 document.getElementById("shareModal").classList.remove("hidden");
 }catch(err){console.error("Share modal error:",err)}
 };
@@ -3116,7 +3127,13 @@ window.toggleOfficialReportDetail=function(){
   var btn=document.getElementById("officialReportToggleBtn");
   if(!panel||!btn)return;
   var hidden=panel.classList.contains("hidden");
-  if(hidden){panel.classList.remove("hidden");btn.textContent="বিস্তারিত লুকান ▴";}
+  if(hidden){
+    panel.classList.remove("hidden");
+    btn.textContent="বিস্তারিত লুকান ▴";
+    // Charts live inside this panel; only init them once it's actually
+    // visible so Chart.js doesn't measure a 0x0 canvas.
+    setTimeout(renderOfficialReportCharts,0);
+  }
   else{panel.classList.add("hidden");btn.textContent="বিস্তারিত দেখুন ▾";}
 };
 window.setDashboardViewMode = function(mode) {
@@ -3135,6 +3152,26 @@ window.setDashboardViewMode = function(mode) {
   window.renderDashboard();
 };
 
+// ── Latest Official Weekly Report: static charts (Chart.js) for the
+// reconciled snapshot card. Data mirrors the numbers in the card markup
+// (part1.txt) and this week's Tree_Plantation_Reporting_Workbook.xlsx.
+// Renders once (guarded) since this is a hand-updated weekly snapshot,
+// not live data -- update both the markup numbers and the arrays below
+// together when a new weekly report goes out.
+var _officialChartsRendered=false;
+function renderOfficialReportCharts(){
+  if(_officialChartsRendered)return;
+  var upzCanvas=document.getElementById("chartOfficialUpazila");
+  var catCanvas=document.getElementById("chartOfficialCategory");
+  if(!upzCanvas||!catCanvas||typeof Chart==="undefined")return;
+  _officialChartsRendered=true;
+  var upzLabels=["ভুরুঙ্গামারী","চর রাজিবপুর","ফুলবাড়ী","উলিপুর","চিলমারী","রৌমারী","কুড়িগ্রাম সদর","নাগেশ্বরী","রাজারহাট"];
+  var upzTrees=[4488,2628,2298,2123,1024,988,682,598,553];
+  new Chart(upzCanvas,{type:"bar",data:{labels:upzLabels,datasets:[{label:"গাছের সংখ্যা",data:upzTrees,backgroundColor:"rgba(180,83,9,0.65)",borderRadius:4}]},options:{indexAxis:"y",responsive:true,plugins:{legend:{display:false},title:{display:true,text:"উপজেলাভিত্তিক মোট রোপণকৃত বৃক্ষ (সম্মিলিত)",font:{size:11}}},scales:{x:{beginAtZero:true,ticks:{precision:0}}}}});
+  var catLabels=["ফলদ","মিশ্র প্যাকেজ","একক প্রজাতি","ঔষধি","বনজ","অন্যান্য"];
+  var catTrees=[7320,7288,100,408,286,10];
+  new Chart(catCanvas,{type:"doughnut",data:{labels:catLabels,datasets:[{data:catTrees,backgroundColor:["#f97316","#16a34a","#84cc16","#0891b2","#78350f","#9ca3af"]}]},options:{responsive:true,plugins:{legend:{position:"bottom",labels:{font:{size:10},boxWidth:12}},title:{display:true,text:"চারার ক্যাটাগরি অনুযায়ী বিতরণ",font:{size:11}}}}});
+}
 window.renderDashboard=function(){
 try{
   if(!_nationalEntries&&!_nationalEntriesLoading){fetchNationalEntries().then(function(){renderDashboard()})}

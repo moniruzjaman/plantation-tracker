@@ -480,7 +480,13 @@ window.toggleOfficialReportDetail=function(){
   var btn=document.getElementById("officialReportToggleBtn");
   if(!panel||!btn)return;
   var hidden=panel.classList.contains("hidden");
-  if(hidden){panel.classList.remove("hidden");btn.textContent="বিস্তারিত লুকান ▴";}
+  if(hidden){
+    panel.classList.remove("hidden");
+    btn.textContent="বিস্তারিত লুকান ▴";
+    // Charts live inside this panel; only init them once it's actually
+    // visible so Chart.js doesn't measure a 0x0 canvas.
+    setTimeout(renderOfficialReportCharts,0);
+  }
   else{panel.classList.add("hidden");btn.textContent="বিস্তারিত দেখুন ▾";}
 };
 window.setDashboardViewMode = function(mode) {
@@ -499,6 +505,26 @@ window.setDashboardViewMode = function(mode) {
   window.renderDashboard();
 };
 
+// ── Latest Official Weekly Report: static charts (Chart.js) for the
+// reconciled snapshot card. Data mirrors the numbers in the card markup
+// (part1.txt) and this week's Tree_Plantation_Reporting_Workbook.xlsx.
+// Renders once (guarded) since this is a hand-updated weekly snapshot,
+// not live data -- update both the markup numbers and the arrays below
+// together when a new weekly report goes out.
+var _officialChartsRendered=false;
+function renderOfficialReportCharts(){
+  if(_officialChartsRendered)return;
+  var upzCanvas=document.getElementById("chartOfficialUpazila");
+  var catCanvas=document.getElementById("chartOfficialCategory");
+  if(!upzCanvas||!catCanvas||typeof Chart==="undefined")return;
+  _officialChartsRendered=true;
+  var upzLabels=["ভুরুঙ্গামারী","চর রাজিবপুর","ফুলবাড়ী","উলিপুর","চিলমারী","রৌমারী","কুড়িগ্রাম সদর","নাগেশ্বরী","রাজারহাট"];
+  var upzTrees=[4488,2628,2298,2123,1024,988,682,598,553];
+  new Chart(upzCanvas,{type:"bar",data:{labels:upzLabels,datasets:[{label:"গাছের সংখ্যা",data:upzTrees,backgroundColor:"rgba(180,83,9,0.65)",borderRadius:4}]},options:{indexAxis:"y",responsive:true,plugins:{legend:{display:false},title:{display:true,text:"উপজেলাভিত্তিক মোট রোপণকৃত বৃক্ষ (সম্মিলিত)",font:{size:11}}},scales:{x:{beginAtZero:true,ticks:{precision:0}}}}});
+  var catLabels=["ফলদ","মিশ্র প্যাকেজ","একক প্রজাতি","ঔষধি","বনজ","অন্যান্য"];
+  var catTrees=[7320,7288,100,408,286,10];
+  new Chart(catCanvas,{type:"doughnut",data:{labels:catLabels,datasets:[{data:catTrees,backgroundColor:["#f97316","#16a34a","#84cc16","#0891b2","#78350f","#9ca3af"]}]},options:{responsive:true,plugins:{legend:{position:"bottom",labels:{font:{size:10},boxWidth:12}},title:{display:true,text:"চারার ক্যাটাগরি অনুযায়ী বিতরণ",font:{size:11}}}}});
+}
 window.renderDashboard=function(){
 try{
   if(!_nationalEntries&&!_nationalEntriesLoading){fetchNationalEntries().then(function(){renderDashboard()})}
