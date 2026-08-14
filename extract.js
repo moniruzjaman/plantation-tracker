@@ -6,7 +6,7 @@ try {
   const end = content.lastIndexOf('</html>') + 7;
   if (start !== -1 && end !== -1 && end > start) {
     const html = content.substring(start, end);
-    fs.writeFileSync('public/legacy-nursery.html', html, 'utf-8');
+    fs.writeFileSync('public/plantation.html', html, 'utf-8');
     console.log('Success, length:', html.length);
   } else {
     console.log('Not found');

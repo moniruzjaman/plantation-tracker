@@ -37,17 +37,6 @@ export default function WelcomeModal() {
 
   return (
     <>
-      {/* Small subtle help button on screen to trigger the welcome screen again if needed */}
-      <button
-        onClick={handleOpenHelp}
-        id="btnShowWelcomeHelp"
-        className="hidden md:flex absolute top-[112px] right-4 z-45 items-center gap-1.5 px-3 py-1.5 rounded-full bg-container/95 border border-gray-150 hover:bg-surface shadow-md text-gray-600 font-medium text-xs cursor-pointer transition-all hover:scale-102 pointer-events-auto"
-        title="অ্যাপ্লিকেশন নির্দেশিকা"
-      >
-        <HelpCircle className="w-4 h-4 text-primary-500" />
-        <span className="font-sans">নির্দেশিকা</span>
-      </button>
-
       <AnimatePresence>
         {isOpen && (
           <div 

@@ -6,8 +6,8 @@
 <title>বৃক্ষ রোপণে সাজাই দেশ, সবার আগে বাংলাদেশ | কৃষি সম্প্রসারণ অধিদপ্তর</title>
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-<meta name="description" content="বৃক্ষ রোপণে সাজাই দেশ, সবার আগে বাংলাদেশ। কৃষি সম্প্রসারণ অধিদপ্তর।">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="description" content="৫ বছরে ২৫ কোটি বৃক্ষ রোপণের জাতীয় মহা উদ্দ্যোগ। বৃক্ষ রোপণের তথ্য ডিজিটাল নথিভূক্তকরণ, স্যাটেলাইট পর্যবেক্ষণ, অফিসিয়াল রিপোর্টিং।">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
 if(typeof tailwind!=='undefined'){
@@ -65,6 +65,22 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 #profileModal .overflow-y-auto{-webkit-overflow-scrolling:touch}
 @media(max-width:640px){#profileModal input,#profileModal select{font-size:16px}}
 </style>
+<!-- Open Graph tags for Messenger, WhatsApp and Facebook -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://plantation-tracker.vercel.app/">
+<meta property="og:title" content="বৃক্ষ রোপণে সাজাই দেশ, সবার আগে বাংলাদেশ">
+<meta property="og:description" content="৫ বছরে ২৫ কোটি বৃক্ষরোপণ কর্মসূচি।">
+
+<!-- Single Open Graph image -->
+<!-- NOTE: bump ?v=N whenever og-share-large.png's content changes.
+     Social platforms cache link-preview images independently of Vercel
+     and of each other, often for days-to-weeks -- a new query string is
+     the only reliable way to force a fresh fetch everywhere at once. -->
+<meta property="og:image" content="https://plantation-tracker.vercel.app/og-share-large.png?v=2">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:alt" content="বৃক্ষ রোপণে সাজাই দেশ, সবার আগে বাংলাদেশ">
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col">
 
@@ -308,6 +324,7 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <label class="block text-xs font-semibold text-gray-700 mb-1">জিও লোকেশন <button type="button" onclick="fetchGeoLocation()" id="geoBtn" class="ml-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full transition" style="font-size:10px;font-weight:500;color:#15803d;background:#f0fdf4;border:1px solid #bbf7d0" title="লোকেশন আপডেট করুন"><svg id="geoIcon" style="height:12px;width:12px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg><span id="geoBtnText">স্বয়ংক্রিয়</span></button></label>
 <div class="flex gap-2">
 <input type="text" id="fGeo" placeholder="অক্ষাংশ, দ্রাঘিমাংশ" class="flex-1 border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db" onchange="if(window.onGeoLocationChange){window.onGeoLocationChange(this, 'fAddress')}">
+<span id="geoAccuracyDisplay" class="items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-full" style="color:#15803d;background:#f0fdf4;border:1px solid #bbf7d0;display:none"></span>
 </div>
 <p id="geoStatus" class="hidden mt-0.5" style="font-size:10px;color:#9ca3af"><span id="geoStatusText"></span></p>
 </div>
@@ -446,6 +463,39 @@ tbody tr{border-bottom:1px solid #e5e7eb}
     <p class="font-semibold text-gray-700 mb-3 text-sm">🌿 শীর্ষ ১০ প্রজাতি</p>
     <canvas id="chartSpecies" height="220"></canvas>
   </div>
+</div>
+
+<!-- ── Charts Row 3: Upazila + SAAO ── -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+  <div class="bg-white rounded-xl shadow p-4">
+    <p class="font-semibold text-gray-700 mb-3 text-sm">📍 উপজেলা অনুযায়ী চারা সংখ্যা</p>
+    <canvas id="chartUpazila" height="220"></canvas>
+  </div>
+  <div class="bg-white rounded-xl shadow p-4">
+    <p class="font-semibold text-gray-700 mb-3 text-sm">👤 SAAO অনুযায়ী এন্ট্রি ও চারা</p>
+    <canvas id="chartSaao" height="220"></canvas>
+  </div>
+</div>
+
+<!-- ── Charts Row 4: Officer ── -->
+<div class="grid grid-cols-1 gap-4 mb-6">
+  <div class="bg-white rounded-xl shadow p-4">
+    <p class="font-semibold text-gray-700 mb-3 text-sm">🛡️ মনিটরিং অফিসার অনুযায়ী কর্মক্ষমতা</p>
+    <canvas id="chartOfficer" height="220"></canvas>
+  </div>
+</div>
+
+<!-- ── Charts Row 5: Daily/Weekly/Monthly Trend ── -->
+<div class="bg-white rounded-xl shadow p-4 mb-6">
+  <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+    <p class="font-semibold text-gray-700 text-sm">📈 দিন/সপ্তাহ/মাস অনুযায়ী এন্ট্রি ও চারা প্রবণতা</p>
+    <div class="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5" id="trendPeriodToggle">
+      <button onclick="setTrendPeriod('daily')" id="btnTrendDaily" class="px-3 py-1 text-xs font-semibold rounded-md bg-white text-green-700 shadow-sm transition-all focus:outline-none cursor-pointer">দৈনিক</button>
+      <button onclick="setTrendPeriod('weekly')" id="btnTrendWeekly" class="px-3 py-1 text-xs font-semibold rounded-md text-gray-600 hover:text-green-700 transition-all focus:outline-none cursor-pointer">সাপ্তাহিক</button>
+      <button onclick="setTrendPeriod('monthly')" id="btnTrendMonthly" class="px-3 py-1 text-xs font-semibold rounded-md text-gray-600 hover:text-green-700 transition-all focus:outline-none cursor-pointer">মাসিক</button>
+    </div>
+  </div>
+  <canvas id="chartTrend" height="220"></canvas>
 </div>
 
 <!-- ── Data Table ── -->
@@ -1270,7 +1320,22 @@ function syncProfileToSheet(p){
 // matches those names against our own BD/BD_UPAZILA/BD_DIVISIONS lists so
 // the four cascading dropdowns fill themselves instead of the SAAO tapping
 // through each one by hand.
-function _norm(s){return (s||"").toString().replace(/\s*(district|zila|division|উপজেলা|জেলা|বিভাগ)\s*/gi,"").trim().toLowerCase()}
+function _norm(s){
+  // .normalize('NFC') matters here: Nominatim's Bengali text and this
+  // file's own BD_UPAZILA constant can encode visually-identical
+  // characters (e.g. ড়) in different Unicode forms (precomposed vs
+  // decomposed+nukta) depending on which tool/source produced the text.
+  // Without normalizing both sides the same way, an exact string
+  // comparison silently fails even though the text is "the same" to a
+  // human reader -- this is what was leaving উপজেলা auto-fill blank for
+  // some upazilas (কুড়িগ্রাম সদর, নাগেশ্বরী, ফুলবাড়ী and others sharing
+  // that character) even when Nominatim's response was correct.
+  return (s||"").toString().normalize('NFC')
+    .replace(/\s*(district|zila|division|উপজেলা|জেলা|বিভাগ)\s*/gi,"")
+    .replace(/ী/g,"ি").replace(/ৌ/g,"ো").replace(/ূ/g,"ু") // common vowel-sign variants across Bengali data sources
+    .replace(/\s+/g,"")
+    .trim().toLowerCase();
+}
 function _findKeyMatch(candidates,keys){
   for(var i=0;i<candidates.length;i++){
     var c=_norm(candidates[i]); if(!c)continue;
@@ -1309,7 +1374,7 @@ window.autoSelectAdminFromGeo=function(addr){
     }
   }catch(e){console.error("Auto admin-select failed:",e)}
 };
-var chartDiv=null,chartCat=null,chartDist=null,chartSpec=null,isAdmin=false;
+var chartDiv=null,chartCat=null,chartDist=null,chartSpec=null,chartUpazila=null,chartSaao=null,chartOfficer=null,chartTrend=null,isAdmin=false;
 
 function getSubmissions(){try{return JSON.parse(localStorage.getItem(LS_KEY)||"[]")}catch(e){return[]}}
 function saveSubmissions(d){localStorage.setItem(LS_KEY,JSON.stringify(d))}
@@ -1339,19 +1404,22 @@ function hideBanner(id){var el=document.getElementById(id);if(el)el.classList.ad
 window.showBanner=showBanner;window.hideBanner=hideBanner;
 
 // ── Share modal ──
-var SHARE_TITLE="বৃক্ষরোপণ ট্র্যাকার | কৃষি সম্প্রসারণ অধিদপ্তর";
-var SHARE_TEXT="\"০৫ বছরে ২৫ কোটি বৃক্ষরোপণ\" কর্মসূচির তথ্য সংগ্রহের জন্য এই অ্যাপটি ব্যবহার করুন:";
-function getShareUrl(){try{return window.location.href.split("#")[0]}catch(e){return window.location.href}}
+var SHARE_TITLE="বৃক্ষরোপণ ট্র্যাকার | ০৫ বছরে ২৫ কোটি বৃক্ষরোপণ কর্মসূচি";
+var SHARE_TEXT="বৃক্ষ রোপণের তথ্য দিন, সবুজ বিপ্লবে অংশ নিন।";
+var SHARE_URLS=["https://plantation-tracker.vercel.app","https://plantation.krishiai.live"];
+function getShareUrl(){try{return window.location.href.split("#")[0]}catch(e){return SHARE_URLS[0]}}
+function getAllShareUrls(){return SHARE_URLS.join("%0A")}
 window.openShareModal=function(){
 try{
 var url=getShareUrl();
-var input=document.getElementById("shareLinkInput");if(input)input.value=url;
-var enc=encodeURIComponent(url),encText=encodeURIComponent(SHARE_TEXT);
-var wa=document.getElementById("shareWhatsapp");if(wa)wa.href="https://wa.me/?text="+encText+"%20"+enc;
+var allUrlsText=SHARE_URLS.join("\n");
+var input=document.getElementById("shareLinkInput");if(input)input.value=SHARE_URLS.join(" | ");
+var enc=encodeURIComponent(url),encText=encodeURIComponent(SHARE_TEXT),allUrls=encodeURIComponent(allUrlsText);
+var wa=document.getElementById("shareWhatsapp");if(wa)wa.href="https://wa.me/?text="+encText+"%0A%0A"+allUrls;
 var fb=document.getElementById("shareFacebook");if(fb)fb.href="https://www.facebook.com/sharer/sharer.php?u="+enc;
-var tg=document.getElementById("shareTelegram");if(tg)tg.href="https://t.me/share/url?url="+enc+"&text="+encText;
-var em=document.getElementById("shareEmail");if(em)em.href="mailto:?subject="+encodeURIComponent(SHARE_TITLE)+"&body="+encText+"%0A%0A"+enc;
-var sm=document.getElementById("shareSms");if(sm)sm.href="sms:?body="+encText+"%20"+enc;
+var tg=document.getElementById("shareTelegram");if(tg)tg.href="https://t.me/share/url?url="+enc+"&text="+encText+"%0A"+allUrls;
+var em=document.getElementById("shareEmail");if(em)em.href="mailto:?subject="+encodeURIComponent(SHARE_TITLE)+"&body="+encText+"%0A%0A"+allUrls;
+var sm=document.getElementById("shareSms");if(sm)sm.href="sms:?body="+encText+"%0A"+allUrls;
 document.getElementById("shareModal").classList.remove("hidden");
 }catch(err){console.error("Share modal error:",err)}
 };
@@ -1360,7 +1428,7 @@ window.copyShareLink=function(){
 var input=document.getElementById("shareLinkInput");if(!input)return;
 var finish=function(ok){var btn=document.getElementById("copyLinkBtn");if(!btn)return;var old=btn.textContent;btn.textContent=ok?"✅ কপি হয়েছে":"❌ ব্যর্থ";setTimeout(function(){btn.textContent=old},1800)};
 if(navigator.clipboard&&navigator.clipboard.writeText){
-navigator.clipboard.writeText(input.value).then(function(){finish(true)}).catch(function(){finish(false)});
+navigator.clipboard.writeText(SHARE_URLS.join("\n")).then(function(){finish(true)}).catch(function(){finish(false)});
 }else{try{input.select();document.execCommand("copy");finish(true)}catch(e){finish(false)}}
 };
 window.nativeShare=function(){
@@ -1517,8 +1585,26 @@ function populateMapUpazilaDD(selected){
 }
 
 // ── Per-upazila color palette ──
-// Deterministic hash → one of 24 visually distinct colors so the same
-// upazila always gets the same color across re-renders.
+// Fixed, curated colors for Kurigram's 9 upazilas — kept identical to the
+// palette in plantation-tracker-app (src/utils/upazilaColors.ts) so the
+// same upazila renders with the same color across both apps. Falls back
+// to a deterministic hash (old behavior) for any name outside this list,
+// e.g. if a submission ever comes in from a different district.
+// NOTE: plantation-tracker-app's list spells this upazila "রাজিবপুর";
+// this app's own BD_UPAZILA list spells it "চর রাজিবপুর" — mapped to the
+// same color value here since they're the same place.
+var UPAZILA_COLORS={
+  'কুড়িগ্রাম সদর':'#2d6a4f',
+  'নাগেশ্বরী':'#1d6fa4',
+  'ভুরুঙ্গামারী':'#b5651d',
+  'ফুলবাড়ী':'#7b2d8b',
+  'রাজারহাট':'#c0392b',
+  'চিলমারী':'#2980b9',
+  'উলিপুর':'#d68910',
+  'রৌমারী':'#117864',
+  'চর রাজিবপুর':'#8e44ad',
+  'রাজিবপুর':'#8e44ad'
+};
 var UPAZILA_PALETTE=[
   '#e11d48','#db2777','#c026d3','#9333ea','#7c3aed','#4f46e5',
   '#2563eb','#0284c7','#0891b2','#0d9488','#059669','#16a34a',
@@ -1528,6 +1614,7 @@ var UPAZILA_PALETTE=[
 var _upazilaColorCache={};
 function upazilaColor(name){
   if(!name)return'#6b7280';
+  if(UPAZILA_COLORS[name])return UPAZILA_COLORS[name];
   if(_upazilaColorCache[name])return _upazilaColorCache[name];
   var h=0;for(var i=0;i<name.length;i++)h=((h<<5)-h)+name.charCodeAt(i);
   var idx=Math.abs(h)%UPAZILA_PALETTE.length;
@@ -1733,6 +1820,7 @@ function buildBaseSubmission(prefix){
     address:     _val(prefix+"Address"),
     latitude:    lat,
     longitude:   lng,
+    geoAccuracy: prefix === "f" ? _val(prefix+"GeoAccuracy") : "",
     geoLocation: geoStr,
     plantingDate:pDateVal,
     farmerName:  _val(prefix+"Nursery"),
@@ -1843,6 +1931,8 @@ document.getElementById("seedlingRows").innerHTML="";
 addSeedlingRow("seedlingRows");
 document.querySelectorAll("[data-error]").forEach(function(el){el.classList.add("hidden")});
 document.getElementById("fGeo").value="";
+var fGeoAccuracy=document.getElementById("fGeoAccuracy");if(fGeoAccuracy)fGeoAccuracy.value="";
+var geoAccuracyDisplay=document.getElementById("geoAccuracyDisplay");if(geoAccuracyDisplay)geoAccuracyDisplay.style.display="none";
 var pDateEl=document.getElementById("fPlantingDate"); if(pDateEl){pDateEl.value=new Date().toISOString().slice(0, 10);}
 window._photoBase64 = "";
 var photoWrap = document.getElementById("fPhotoPreviewWrap");
@@ -1904,8 +1994,8 @@ window.onGeoLocationChange = function(inputEl, targetAddressId) {
   var val = inputEl.value.trim();
   var m = /^\s*(-?\d+(?:\.\d+)?)\s*[\s,;]\s*(-?\d+(?:\.\d+)?)\s*$/.exec(val);
   if (m) {
-    var lat = parseFloat(m[1]).toFixed(6);
-    var lng = parseFloat(m[2]).toFixed(6);
+    var lat = parseFloat(m[1]).toFixed(7);
+    var lng = parseFloat(m[2]).toFixed(7);
     window.reverseGeocode(lat, lng, targetAddressId);
   }
 };
@@ -1914,11 +2004,21 @@ window.fetchGeoLocation=function(){
 try{
 var geoField=document.getElementById("fGeo"),geoStatus=document.getElementById("geoStatus"),geoStatusText=document.getElementById("geoStatusText"),geoBtnText=document.getElementById("geoBtnText");
 if(!navigator.geolocation){geoStatusText.textContent="⚠️ আপনার ব্রাউজার লোকেশন সাপোর্ট করে না।";geoStatus.classList.remove("hidden");return}
+// If the React shell already sent us a fresh fix moments ago, reuse it
+// instead of firing a second geolocation request (which can degrade accuracy
+// in iframes on mobile).
+if(_lastDeviceLocationAt && (Date.now() - _lastDeviceLocationAt) < 3000){
+  geoStatusText.textContent="✅ লোকেশন সফলভাবে পাওয়া গেছে (সেল থেকে)";geoStatus.style.color="#15803d";geoBtnText.textContent="আপডেট";
+  setTimeout(function(){geoStatus.classList.add("hidden")},3000);
+  return;
+}
 geoBtnText.textContent="অপেক্ষা...";
 geoStatusText.textContent="📡 লোকেশন খোঁজা হচ্ছে...";geoStatus.classList.remove("hidden");geoStatus.style.color="#2563eb";
 navigator.geolocation.getCurrentPosition(function(pos){
-var lat=pos.coords.latitude.toFixed(6),lng=pos.coords.longitude.toFixed(6);
+var lat=pos.coords.latitude.toFixed(7),lng=pos.coords.longitude.toFixed(7),accuracy=pos.coords.accuracy;
 geoField.value=lat+", "+lng;
+var accEl=document.getElementById("fGeoAccuracy");if(accEl)accEl.value=accuracy;
+var accDisplay=document.getElementById("geoAccuracyDisplay");if(accDisplay){accDisplay.textContent="±"+accuracy.toFixed(0)+"m";accDisplay.style.display=""}
 geoStatusText.textContent="✅ লোকেশন সফলভাবে পাওয়া গেছে";geoStatus.style.color="#15803d";geoBtnText.textContent="আপডেট";
 setTimeout(function(){geoStatus.classList.add("hidden")},3000);
 window.reverseGeocode(lat, lng, "fAddress");
@@ -2205,6 +2305,8 @@ document.getElementById("fNursery").value=s.farmerName||s.nurseryName||"";
 document.getElementById("fMobile").value=s.farmerMobile||s.mobile||"";
 document.getElementById("fAddress").value=s.address||"";
 document.getElementById("fGeo").value=s.geoLocation||((s.latitude&&s.longitude)?(s.latitude+", "+s.longitude):"");
+var accEl=document.getElementById("fGeoAccuracy");if(accEl)accEl.value=s.geoAccuracy||"";
+var accDisplay=document.getElementById("geoAccuracyDisplay");if(accDisplay){if(s.geoAccuracy){accDisplay.textContent="±"+parseFloat(s.geoAccuracy).toFixed(0)+"m";accDisplay.style.display=""}else{accDisplay.style.display="none"}}
 document.getElementById("fUnion").value=s.union||"";
 document.getElementById("fVillage").value=s.village||"";
 document.getElementById("fLocationType").value=s.locationType||"";
@@ -2249,6 +2351,7 @@ var d=document.getElementById(prefix+"District")&&document.getElementById(prefix
 return getSubmissions().filter(function(s){if(r&&s.region!==r)return false;if(d&&s.district!==d)return false;return true});
 }
 window.currentDashboardViewMode = "gov";
+window.dashTrendPeriod = "daily";
 window.onDashFilterChange=function(){populateDistrictDD(document.getElementById("dashDistrict"),document.getElementById("dashRegion").value);populateDashUpazilaDD();renderDashboard()};
 window.onDashDistrictChange=function(){populateDashUpazilaDD();renderDashboard()};
 function populateDashUpazilaDD(selected){
@@ -2263,6 +2366,24 @@ function populateDashUpazilaDD(selected){
 window.refreshDashNationalData=function(){
   var btn=document.getElementById("dashRefreshBtn");if(btn){btn.disabled=true;btn.textContent="রিফ্রেশ হচ্ছে...";}
   fetchNationalEntries(true).then(function(){if(btn){btn.disabled=false;btn.textContent="🔄 রিফ্রেশ";}renderDashboard()});
+};
+// ── Latest Official Weekly Report card: simple expand/collapse for the
+// reconciled snapshot (মূল_ডাটা + ১৭_কলাম_প্রতিবেদন). Static checkpoint data
+// lives inline in the card markup and is refreshed by hand each week
+// alongside the official email/xlsx report; this toggle only handles UI state.
+window.toggleOfficialReportDetail=function(){
+  var panel=document.getElementById("officialReportDetail");
+  var btn=document.getElementById("officialReportToggleBtn");
+  if(!panel||!btn)return;
+  var hidden=panel.classList.contains("hidden");
+  if(hidden){
+    panel.classList.remove("hidden");
+    btn.textContent="বিস্তারিত লুকান ▴";
+    // Charts live inside this panel; only init them once it's actually
+    // visible so Chart.js doesn't measure a 0x0 canvas.
+    setTimeout(renderOfficialReportCharts,0);
+  }
+  else{panel.classList.add("hidden");btn.textContent="বিস্তারিত দেখুন ▾";}
 };
 window.setDashboardViewMode = function(mode) {
   window.currentDashboardViewMode = mode;
@@ -2280,6 +2401,26 @@ window.setDashboardViewMode = function(mode) {
   window.renderDashboard();
 };
 
+// ── Latest Official Weekly Report: static charts (Chart.js) for the
+// reconciled snapshot card. Data mirrors the numbers in the card markup
+// (part1.txt) and this week's Tree_Plantation_Reporting_Workbook.xlsx.
+// Renders once (guarded) since this is a hand-updated weekly snapshot,
+// not live data -- update both the markup numbers and the arrays below
+// together when a new weekly report goes out.
+var _officialChartsRendered=false;
+function renderOfficialReportCharts(){
+  if(_officialChartsRendered)return;
+  var upzCanvas=document.getElementById("chartOfficialUpazila");
+  var catCanvas=document.getElementById("chartOfficialCategory");
+  if(!upzCanvas||!catCanvas||typeof Chart==="undefined")return;
+  _officialChartsRendered=true;
+  var upzLabels=["ভুরুঙ্গামারী","চর রাজিবপুর","ফুলবাড়ী","উলিপুর","চিলমারী","রৌমারী","কুড়িগ্রাম সদর","নাগেশ্বরী","রাজারহাট"];
+  var upzTrees=[4488,2628,2298,2123,1024,988,682,598,553];
+  new Chart(upzCanvas,{type:"bar",data:{labels:upzLabels,datasets:[{label:"গাছের সংখ্যা",data:upzTrees,backgroundColor:"rgba(180,83,9,0.65)",borderRadius:4}]},options:{indexAxis:"y",responsive:true,plugins:{legend:{display:false},title:{display:true,text:"উপজেলাভিত্তিক মোট রোপণকৃত বৃক্ষ (সম্মিলিত)",font:{size:11}}},scales:{x:{beginAtZero:true,ticks:{precision:0}}}}});
+  var catLabels=["ফলদ","মিশ্র প্যাকেজ","একক প্রজাতি","ঔষধি","বনজ","অন্যান্য"];
+  var catTrees=[7320,7288,100,408,286,10];
+  new Chart(catCanvas,{type:"doughnut",data:{labels:catLabels,datasets:[{data:catTrees,backgroundColor:["#f97316","#16a34a","#84cc16","#0891b2","#78350f","#9ca3af"]}]},options:{responsive:true,plugins:{legend:{position:"bottom",labels:{font:{size:10},boxWidth:12}},title:{display:true,text:"চারার ক্যাটাগরি অনুযায়ী বিতরণ",font:{size:11}}}}});
+}
 window.renderDashboard=function(){
 try{
   if(!_nationalEntries&&!_nationalEntriesLoading){fetchNationalEntries().then(function(){renderDashboard()})}
@@ -2387,6 +2528,11 @@ try{
     if(specCanvas){
       chartSpec=new Chart(specCanvas,{type:"bar",data:{labels:top10,datasets:[{label:"সংখ্যা",data:top10.map(function(n){return speciesMap[n]}),backgroundColor:"rgba(5,150,105,0.6)",borderRadius:4}]},options:{indexAxis:"y",responsive:true,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{precision:0}}}}});
     }
+
+    renderUpazilaChart(subs);
+    renderSaaoChart(subs);
+    renderOfficerChart(subs);
+    renderTrendChart(subs);
   }
 
   var th=el("dashTableHead"),tb=el("dashTableBody"),nd=el("dashNoData");
@@ -2464,6 +2610,90 @@ try{
   }
 }catch(err){console.error("Dashboard error:",err)}
 };
+
+// ── Additional Charts: Upazila, SAAO, Officer, Trend ──
+function renderUpazilaChart(subs){
+  if(typeof Chart==="undefined") return;
+  var el=function(id){return document.getElementById(id)};
+  var map={};
+  subs.forEach(function(s){var u=s.upazila;if(!u) return;if(!map[u]) map[u]={entries:0,seedlings:0};map[u].entries++;var c=countSeedlings(s);map[u].seedlings+=c.fruit+c.forest+c.medicinal});
+  var items=Object.keys(map).map(function(k){return {label:k,entries:map[k].entries,seedlings:map[k].seedlings}});
+  items.sort(function(a,b){return b.seedlings-a.seedlings});
+  var top=items.slice(0,15);
+  if(chartUpazila) chartUpazila.destroy();
+  var canvas=el("chartUpazila");
+  if(canvas){
+    chartUpazila=new Chart(canvas,{type:"bar",data:{labels:top.map(function(i){return i.label}),datasets:[{label:"চারা সংখ্যা",data:top.map(function(i){return i.seedlings}),backgroundColor:"rgba(37,99,235,0.6)",borderRadius:4}]},options:{indexAxis:"y",responsive:true,plugins:{legend:{display:false},title:{display:true,text:"উপজেলা (শীর্ষ ১৫)",font:{size:11}}},scales:{x:{beginAtZero:true,ticks:{precision:0}}},onClick:function(_,elements){
+      if(elements.length){
+        var idx=elements[0].index;
+        var label=top[idx].label;
+        var dd=document.getElementById("dashUpazila");
+        if(dd){dd.value=label;renderDashboard();}
+      }
+    }}});
+  }
+}
+
+function renderSaaoChart(subs){
+  if(typeof Chart==="undefined") return;
+  var el=function(id){return document.getElementById(id)};
+  var map={};
+  subs.forEach(function(s){var n=s.saaoName;if(!n) return;if(!map[n]) map[n]={entries:0,seedlings:0};map[n].entries++;var c=countSeedlings(s);map[n].seedlings+=c.fruit+c.forest+c.medicinal});
+  var items=Object.keys(map).map(function(k){return {label:k,entries:map[k].entries,seedlings:map[k].seedlings}});
+  items.sort(function(a,b){return b.entries-a.entries});
+  var top=items.slice(0,10);
+  if(chartSaao) chartSaao.destroy();
+  var canvas=el("chartSaao");
+  if(canvas){
+    chartSaao=new Chart(canvas,{type:"bar",data:{labels:top.map(function(i){return i.label}),datasets:[{label:"এন্ট্রি",data:top.map(function(i){return i.entries}),backgroundColor:"rgba(234,88,12,0.6)",borderRadius:4},{label:"চারা",data:top.map(function(i){return i.seedlings}),backgroundColor:"rgba(5,150,105,0.6)",borderRadius:4}]},options:{indexAxis:"y",responsive:true,plugins:{legend:{position:"bottom",labels:{font:{size:10}}}},scales:{x:{beginAtZero:true,ticks:{precision:0}}}}});
+  }
+}
+
+function renderOfficerChart(subs){
+  if(typeof Chart==="undefined") return;
+  var el=function(id){return document.getElementById(id)};
+  var map={};
+  subs.forEach(function(s){var n=s.officerName||s.caretakerName;if(!n) return;if(!map[n]) map[n]={entries:0,seedlings:0};map[n].entries++;var c=countSeedlings(s);map[n].seedlings+=c.fruit+c.forest+c.medicinal});
+  var items=Object.keys(map).map(function(k){return {label:k,entries:map[k].entries,seedlings:map[k].seedlings}});
+  items.sort(function(a,b){return b.entries-a.entries});
+  var top=items.slice(0,10);
+  if(chartOfficer) chartOfficer.destroy();
+  var canvas=el("chartOfficer");
+  if(canvas){
+    chartOfficer=new Chart(canvas,{type:"bar",data:{labels:top.map(function(i){return i.label}),datasets:[{label:"এন্ট্রি",data:top.map(function(i){return i.entries}),backgroundColor:"rgba(124,58,237,0.6)",borderRadius:4},{label:"চারা",data:top.map(function(i){return i.seedlings}),backgroundColor:"rgba(8,145,178,0.6)",borderRadius:4}]},options:{indexAxis:"y",responsive:true,plugins:{legend:{position:"bottom",labels:{font:{size:10}}}},scales:{x:{beginAtZero:true,ticks:{precision:0}}}}});
+  }
+}
+
+function renderTrendChart(subs){
+  if(typeof Chart==="undefined") return;
+  var el=function(id){return document.getElementById(id)};
+  var period=window.dashTrendPeriod||"daily";
+  var map={};
+  subs.forEach(function(s){
+    var d=s.plantingDate||(s.submittedAt?s.submittedAt.slice(0,10):"");
+    if(!d) return;
+    var key="";
+    if(period==="daily"){key=d;}
+    else if(period==="weekly"){
+      var dt=new Date(d+"T00:00:00");
+      var oneJan=new Date(dt.getFullYear(),0,1);
+      var week=Math.ceil((((dt.getTime()-oneJan.getTime())/(86400000))+oneJan.getDay()+1)/7);
+      key=dt.getFullYear()+"-W"+String(week).padStart(2,"0");
+    }else if(period==="monthly"){key=d.slice(0,7);}
+    if(!key) return;
+    if(!map[key]) map[key]={entries:0,seedlings:0};
+    map[key].entries++;
+    var c=countSeedlings(s);map[key].seedlings+=c.fruit+c.forest+c.medicinal;
+  });
+  var items=Object.keys(map).map(function(k){return {key:k,entries:map[k].entries,seedlings:map[k].seedlings}});
+  items.sort(function(a,b){return a.key<b.key?-1:1});
+  if(items.length>60 && period==="daily") items=items.slice(-30);
+  if(chartTrend) chartTrend.destroy();
+  var canvas=el("chartTrend");
+  if(canvas){
+    chartTrend=new Chart(canvas,{type:"line",data:{labels:items.map(function(i){return i.key}),datasets:[{label:"এন্ট্রি",data:items.map(function(i){return i.entries}),borderColor:"rgba(21,128,61,1)",backgroundColor:"rgba(21,128,61,0.1)",fill:true,tension:0.3,pointRadius:period==="daily"?2:4,borderWidth:2},{label:"চারা সংখ্যা",data:items.map(function(i){return i.seedlings}),borderColor:"rgba(234,88,12,1)",backgroundColor:"rgba(234,88,12,0.1)",fill:true,tension:0.3,pointRadius:period==="daily"?2:4,borderWidth:2}]},options:{responsive:true,interaction:{mode:"index",intersect:false},plugins:{legend:{position:"bottom",labels:{font:{size:11}}}},scales:{y:{beginAtZero:true,ticks:{precision:0}},x:{ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:period==="daily"?10:20}}}}});
+  }
+}
 
 // ── Excel Export ──
 window.exportToExcel=function(prefix){
@@ -3146,6 +3376,8 @@ document.getElementById("editModal").addEventListener("click",function(e){if(e.t
 // ── Leaflet Map Visualizer ──
 var mapInstance = null;
 var mapMarkers = [];
+var mapAccuracyCircles = [];
+var _meAccuracyCircle = null;
 
 // Bangladesh's real extent, with a generous buffer, used to reject clearly
 // bad/placeholder GPS coordinates (e.g. "0,0" null-island, a GPS glitch, or
@@ -3165,6 +3397,7 @@ window.zoomToMyGeoLocation = function() {
       if (mapInstance) {
         var lat = pos.coords.latitude;
         var lng = pos.coords.longitude;
+        var accuracy = pos.coords.accuracy;
         mapInstance.setView([lat, lng], 13);
         var pulseIcon = L.divIcon({
           html: '<span class="flex h-3 w-3 relative"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" style="position:absolute; background:#60a5fa; border-radius:9999px; width:12px; height:12px; display:inline-block;"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-blue-500" style="position:relative; background:#3b82f6; border-radius:9999px; width:12px; height:12px; display:inline-block;"></span></span>',
@@ -3172,6 +3405,18 @@ window.zoomToMyGeoLocation = function() {
           iconSize: [12, 12]
         });
         L.marker([lat, lng], { icon: pulseIcon }).addTo(mapInstance).bindPopup("<b>আপনার বর্তমান অবস্থান</b>").openPopup();
+        // Show GPS accuracy as a translucent circle (radius in metres)
+        if (_meAccuracyCircle) { mapInstance.removeLayer(_meAccuracyCircle); }
+        if (accuracy && accuracy > 0) {
+          _meAccuracyCircle = L.circle([lat, lng], {
+            radius: accuracy,
+            color: '#3b82f6',
+            fillColor: '#60a5fa',
+            fillOpacity: 0.15,
+            weight: 1,
+            interactive: false
+          }).addTo(mapInstance);
+        }
       }
     }, function() {
       alert("লোকেশন পাওয়া যায়নি বা পারমিশন নেই।");
@@ -3355,6 +3600,8 @@ window.renderMap = function() {
     // Clear old markers
     mapMarkers.forEach(function(m) { mapInstance.removeLayer(m); });
     mapMarkers = [];
+    mapAccuracyCircles.forEach(function(c) { mapInstance.removeLayer(c); });
+    mapAccuracyCircles = [];
     
     // Kick off (or reuse the cached) national App_Entry fetch. First paint
     // uses whatever is cached/local; once the fetch resolves we re-render
@@ -3414,8 +3661,10 @@ window.renderMap = function() {
       detailsHtml += '<button onclick="parent.window.editMySubmission ? parent.window.editMySubmission(\''+_sid+'\') : editMySubmission(\''+_sid+'\')" style="width:100%; margin-top:8px; background:#dbeafe; color:#1d4ed8; border:none; padding:5px; border-radius:6px; font-weight:700; cursor:pointer; font-size:11px;">✏️ তথ্য সম্পাদনা</button>';
       detailsHtml += '</div>';
       
-      // Marker color logic: each upazila gets a distinct color from the
-      // palette — this makes it easy to visually cluster by upazila on the map.
+      // Marker color logic: each upazila gets a distinct, curated color
+      // (same palette as plantation-tracker-app, see UPAZILA_COLORS above)
+      // — this makes it easy to visually cluster by upazila on the map,
+      // and keeps the two apps visually consistent for anyone using both.
       // Special overrides: local-unsynced = gray, current user's own entry = purple.
       var markerBg = upazilaColor(s.upazila);
       if (s._source === "local") markerBg = '#9ca3af'; // Gray — not yet synced
@@ -3431,15 +3680,35 @@ window.renderMap = function() {
         _mapUpazilaLegend[s.upazila] = markerBg;
       }
 
-      var customIcon = L.divIcon({
-        html: '<div style="background-color: ' + markerBg + '; width: 28px; height: 28px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); transform: scale(1);" title="' + (s.upazila||'') + '">🌳</div>',
-        className: 'custom-tree-icon',
-        iconSize: [28, 28],
-        iconAnchor: [14, 14]
-      });
-      
-      var marker = L.marker([lat, lng], { icon: customIcon }).addTo(mapInstance).bindPopup(detailsHtml);
+      // Plain colored circle marker — matches plantation-tracker-app's
+      // CircleMarker styling exactly (radius 6, weight 2, fillOpacity 0.75)
+      // instead of the old emoji pin, so markers look the same in both apps.
+      var marker = L.circleMarker([lat, lng], {
+        radius: 6,
+        color: markerBg,
+        fillColor: markerBg,
+        fillOpacity: 0.75,
+        weight: 2
+      }).addTo(mapInstance).bindPopup(detailsHtml);
+      if (s.upazila) {
+        marker.bindTooltip(s.upazila, { direction: 'top', offset: [0, -6] });
+      }
       mapMarkers.push(marker);
+      // Accuracy radius circle (if GPS accuracy was captured)
+      if (s.geoAccuracy) {
+        var accRadius = parseFloat(s.geoAccuracy);
+        if (accRadius > 0) {
+          var accCircle = L.circle([lat, lng], {
+            radius: accRadius,
+            color: markerBg,
+            fillColor: markerBg,
+            fillOpacity: 0.12,
+            weight: 1,
+            interactive: false
+          }).addTo(mapInstance);
+          mapAccuracyCircles.push(accCircle);
+        }
+      }
     });
     
     // Build dynamic upazila color legend

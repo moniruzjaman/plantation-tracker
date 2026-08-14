@@ -12,43 +12,37 @@ export default defineConfig(({mode}) => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
+        strategies: 'injectManifest',
+        srcDir: 'src',
+        filename: 'sw.ts',
+        minify: false,
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest,txt}'],
+          globIgnores: ['**/og-image-large.png', '**/og-share-large.png', 'assets/districts/**'],
           runtimeCaching: [
             {
               urlPattern: /^https:\/\/unpkg\.com\/leaflet@[\d\.]+\/dist\/leaflet\.(js|css)/,
               handler: 'CacheFirst',
-              options: {
-                cacheName: 'leaflet-assets',
-                expiration: {
-                  maxEntries: 10,
-                  maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
-                },
-                cacheableResponse: {
-                  statuses: [0, 200]
-                }
-              }
+              options: { cacheName: 'leaflet-assets', expiration: { maxEntries: 10, maxAgeSeconds: 31536000 }, cacheableResponse: { statuses: [0,200] } }
             },
             {
               urlPattern: /^https:\/\/[a-c]\.tile\.openstreetmap\.org\/\d+\/\d+\/\d+\.png/,
               handler: 'StaleWhileRevalidate',
-              options: {
-                cacheName: 'openstreetmap-tiles',
-                expiration: {
-                  maxEntries: 500, // cache up to 500 tiles
-                  maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
-                },
-                cacheableResponse: {
-                  statuses: [0, 200]
-                }
-              }
+              options: { cacheName: 'openstreetmap-tiles', expiration: { maxEntries: 500, maxAgeSeconds: 2592000 }, cacheableResponse: { statuses: [0,200] } }
+            },
+            {
+              urlPattern: /\/assets\/districts\/.*\.js$/,
+              handler: 'CacheFirst',
+              options: { cacheName: 'district-polygon-chunks', expiration: { maxEntries: 64, maxAgeSeconds: 31536000 }, cacheableResponse: { statuses: [0,200] } }
             }
           ]
         },
         manifest: {
           name: 'plantation-tracker',
           short_name: 'বৃক্ষরোপণ ট্র্যাকার',
-          description: '“০৫ বছরে ২৫ কোটি বৃক্ষরোপণ” কর্মসূচী - অ্যাপ | স্বয়ংক্রিয় জিও-কোঅর্ডিনেট, স্বয়ংক্রিয় ফর্ম পূরণ, লোকাল স্টোরেজ, অটো সিঙ্ক, সার্ভার/Kobo/ODK সিঙ্ক (আসন্ন)',
+          start_url: '/',
+          scope: '/',
+          description: '“০৫ বছরে ২৫ কোটি বৃক্ষরোপণ” কর্মসূচী',
           theme_color: '#006A4E',
           background_color: '#006A4E',
           display: 'standalone',
@@ -94,16 +88,19 @@ export default defineConfig(({mode}) => {
     },
     build: {
       outDir: 'build',
-    },
-    resolve: {
-      alias: {
-        '@': path.resolve(__dirname, '.'),
+      rollupOptions: {
+        output: {
+          chunkFileNames: (chunkInfo) => {
+            const id = chunkInfo.facadeModuleId || '';
+            if (id.includes(`${path.sep}data${path.sep}districts${path.sep}`) || id.includes('/data/districts/')) {
+              return 'assets/districts/[name]-[hash].js';
+            }
+            return 'assets/[name]-[hash].js';
+          },
+        },
       },
     },
-    server: {
-      // HMR is disabled in AI Studio via DISABLE_HMR env var.
-      // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
-      hmr: process.env.DISABLE_HMR !== 'true',
-    },
+    resolve: { alias: { '@': path.resolve(__dirname, '.') } },
+    server: { hmr: process.env.DISABLE_HMR !== 'true' },
   };
 });
