@@ -1724,7 +1724,7 @@ window.showBanner=showBanner;window.hideBanner=hideBanner;
 
 // ── Share modal ──
 var SHARE_TITLE="বৃক্ষরোপণ ট্র্যাকার | ০৫ বছরে ২৫ কোটি বৃক্ষরোপণ কর্মসূচি";
-var SHARE_TEXT="\" বৃক্ষরোপণে সাজাই দেশ, সবার আগে বাংলাদেশ\" বৃক্ষ রোপণের তথ্য দিন, সবুজ বিপ্লবে অংশ নিন।:";
+var SHARE_TEXT="বৃক্ষ রোপণের তথ্য দিন, সবুজ বিপ্লবে অংশ নিন।";
 var SHARE_URLS=["https://plantation-tracker.vercel.app","https://plantation.krishiai.live"];
 function getShareUrl(){try{return window.location.href.split("#")[0]}catch(e){return SHARE_URLS[0]}}
 function getAllShareUrls(){return SHARE_URLS.join("%0A")}
@@ -1732,7 +1732,7 @@ window.openShareModal=function(){
 try{
 var url=getShareUrl();
 var allUrlsText=SHARE_URLS.join("\n");
-var input=document.getElementById("shareLinkInput");if(input)input.value=allUrlsText;
+var input=document.getElementById("shareLinkInput");if(input)input.value=SHARE_URLS.join(" | ");
 var enc=encodeURIComponent(url),encText=encodeURIComponent(SHARE_TEXT),allUrls=encodeURIComponent(allUrlsText);
 var wa=document.getElementById("shareWhatsapp");if(wa)wa.href="https://wa.me/?text="+encText+"%0A%0A"+allUrls;
 var fb=document.getElementById("shareFacebook");if(fb)fb.href="https://www.facebook.com/sharer/sharer.php?u="+enc;
@@ -1747,7 +1747,7 @@ window.copyShareLink=function(){
 var input=document.getElementById("shareLinkInput");if(!input)return;
 var finish=function(ok){var btn=document.getElementById("copyLinkBtn");if(!btn)return;var old=btn.textContent;btn.textContent=ok?"✅ কপি হয়েছে":"❌ ব্যর্থ";setTimeout(function(){btn.textContent=old},1800)};
 if(navigator.clipboard&&navigator.clipboard.writeText){
-navigator.clipboard.writeText(input.value).then(function(){finish(true)}).catch(function(){finish(false)});
+navigator.clipboard.writeText(SHARE_URLS.join("\n")).then(function(){finish(true)}).catch(function(){finish(false)});
 }else{try{input.select();document.execCommand("copy");finish(true)}catch(e){finish(false)}}
 };
 window.nativeShare=function(){
