@@ -10,6 +10,7 @@ import GeolocationIndicator, { GeoState } from './components/GeolocationIndicato
 import WelcomeModal from './components/WelcomeModal';
 import PWAInstaller from './components/PWAInstaller';
 import SyncToast from './components/SyncToast';
+import Copilot from './components/Copilot';
 import OfflinePlantationDashboard, { Submission } from './components/OfflinePlantationDashboard';
 import MobileControlCenter from './components/MobileControlCenter';
 import AppHeader from './components/plantation/AppHeader';
@@ -353,6 +354,7 @@ export default function App() {
       <WelcomeModal />
       <PWAInstaller />
       <SyncToast />
+      <Copilot />
 
       {/* ── Welcome Guide (first-launch overlay) ───────────────────── */}
       {showWelcomeGuide && <WelcomeGuide open={showWelcomeGuide} onClose={handleGuideClose} />}
