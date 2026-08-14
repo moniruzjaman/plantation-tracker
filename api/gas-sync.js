@@ -84,29 +84,31 @@ export default async function handler(req, res) {
   const results = [];
   for (const raw of incoming) {
     try {
-      // Compute authenticity hash over the immutable identity fields.
-      // The photo's SHA-256 is included so a swapped photo invalidates the signature.
-      const photoHash = raw.photoBase64
-        ? crypto.createHash('sha256').update(raw.photoBase64).digest('hex').slice(0, 16)
-        : '';
-      const message = [
-        raw.submissionId || '',
-        raw.farmerMobile || '',
-        raw.plantingDate || '',
-        raw.latitude || '',
-        raw.longitude || '',
-        raw.speciesName || '',
-        raw.quantity || '',
-        photoHash
-      ].join('|');
-      const authHash = AUTH_SECRET
-        ? crypto.createHmac('sha256', AUTH_SECRET).update(message).digest('hex').slice(0, 32)
-        : '';
-
-      const row = Object.assign({}, raw, {
-        authHash,
-        photoSha256: photoHash
-      });
+      let row = raw;
+      if (raw.entryType !== 'validation_task') {
+        // Compute authenticity hash over the immutable identity fields.
+        // The photo's SHA-256 is included so a swapped photo invalidates the signature.
+        const photoHash = raw.photoBase64
+          ? crypto.createHash('sha256').update(raw.photoBase64).digest('hex').slice(0, 16)
+          : '';
+        const message = [
+          raw.submissionId || '',
+          raw.farmerMobile || '',
+          raw.plantingDate || '',
+          raw.latitude || '',
+          raw.longitude || '',
+          raw.speciesName || '',
+          raw.quantity || '',
+          photoHash
+        ].join('|');
+        const authHash = AUTH_SECRET
+          ? crypto.createHmac('sha256', AUTH_SECRET).update(message).digest('hex').slice(0, 32)
+          : '';
+        row = Object.assign({}, raw, {
+          authHash,
+          photoSha256: photoHash
+        });
+      }
 
       const r = await fetch(GAS_URL, {
         method: 'POST',

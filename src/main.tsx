@@ -6,10 +6,8 @@ import { registerSW } from 'virtual:pwa-register';
 
 const updateSW = registerSW({
   onNeedRefresh() {
-    // Auto-activate the new service worker and reload, so users always get
-    // the latest deployed version on their next visit. Without this, the SW
-    // detects the new version but never swaps it in — users get stuck on
-    // the old precached legacy-nursery.html forever.
+    // Auto-activate the new service worker and reload so users always
+    // receive the latest deployed application version.
     console.log('[PWA] New version detected — activating & reloading.');
     updateSW(true);
   },

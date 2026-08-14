@@ -1,4 +1,4 @@
-/** Local device submission, matching legacy-nursery.html's localStorage shape (LS_KEY = "nursery_submissions"). */
+/** Local device submission, matching plantation.html's localStorage shape (LS_KEY = "nursery_submissions"). */
 export interface LocalSubmission {
   id?: string;
   submissionId?: string;
@@ -32,6 +32,11 @@ export interface NationalEntry {
   division?: string;
   district?: string;
   upazila?: string;
+  seedlings?: {
+    speciesName?: string;
+    category?: string;
+    quantity?: number | string;
+  }[];
   _source?: 'appscript';
   [key: string]: unknown;
 }
@@ -42,7 +47,7 @@ export interface SeedlingCounts {
   medicinal: number;
 }
 
-/** Mirrors legacy-nursery.html's countSeedlings() so popups show consistent numbers. */
+/** Mirrors plantation.html's countSeedlings() so popups show consistent numbers. */
 export function countSeedlings(s: LocalSubmission): SeedlingCounts {
   const r: SeedlingCounts = { fruit: 0, forest: 0, medicinal: 0 };
   if (Array.isArray(s.seedlings)) {
