@@ -1904,8 +1904,26 @@ function populateMapUpazilaDD(selected){
 }
 
 // ── Per-upazila color palette ──
-// Deterministic hash → one of 24 visually distinct colors so the same
-// upazila always gets the same color across re-renders.
+// Fixed, curated colors for Kurigram's 9 upazilas — kept identical to the
+// palette in plantation-tracker-app (src/utils/upazilaColors.ts) so the
+// same upazila renders with the same color across both apps. Falls back
+// to a deterministic hash (old behavior) for any name outside this list,
+// e.g. if a submission ever comes in from a different district.
+// NOTE: plantation-tracker-app's list spells this upazila "রাজিবপুর";
+// this app's own BD_UPAZILA list spells it "চর রাজিবপুর" — mapped to the
+// same color value here since they're the same place.
+var UPAZILA_COLORS={
+  'কুড়িগ্রাম সদর':'#2d6a4f',
+  'নাগেশ্বরী':'#1d6fa4',
+  'ভুরুঙ্গামারী':'#b5651d',
+  'ফুলবাড়ী':'#7b2d8b',
+  'রাজারহাট':'#c0392b',
+  'চিলমারী':'#2980b9',
+  'উলিপুর':'#d68910',
+  'রৌমারী':'#117864',
+  'চর রাজিবপুর':'#8e44ad',
+  'রাজিবপুর':'#8e44ad'
+};
 var UPAZILA_PALETTE=[
   '#e11d48','#db2777','#c026d3','#9333ea','#7c3aed','#4f46e5',
   '#2563eb','#0284c7','#0891b2','#0d9488','#059669','#16a34a',
@@ -1915,6 +1933,7 @@ var UPAZILA_PALETTE=[
 var _upazilaColorCache={};
 function upazilaColor(name){
   if(!name)return'#6b7280';
+  if(UPAZILA_COLORS[name])return UPAZILA_COLORS[name];
   if(_upazilaColorCache[name])return _upazilaColorCache[name];
   var h=0;for(var i=0;i<name.length;i++)h=((h<<5)-h)+name.charCodeAt(i);
   var idx=Math.abs(h)%UPAZILA_PALETTE.length;
@@ -4488,8 +4507,10 @@ window.renderMap = function() {
       }
       detailsHtml += '</div>';
       
-      // Marker color logic: each upazila gets a distinct color from the
-      // palette — this makes it easy to visually cluster by upazila on the map.
+      // Marker color logic: each upazila gets a distinct, curated color
+      // (same palette as plantation-tracker-app, see UPAZILA_COLORS above)
+      // — this makes it easy to visually cluster by upazila on the map,
+      // and keeps the two apps visually consistent for anyone using both.
       // Special overrides: local-unsynced = gray, current user's own entry = purple.
       var markerBg = upazilaColor(s.upazila);
       if (s._source === "local") markerBg = '#9ca3af'; // Gray — not yet synced
@@ -4500,14 +4521,19 @@ window.renderMap = function() {
         _mapUpazilaLegend[s.upazila] = markerBg;
       }
 
-      var customIcon = L.divIcon({
-        html: '<div style="background-color: ' + markerBg + '; width: 28px; height: 28px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); transform: scale(1);" title="' + (s.upazila||'') + '">🌳</div>',
-        className: 'custom-tree-icon',
-        iconSize: [28, 28],
-        iconAnchor: [14, 14]
-      });
-      
-      var marker = L.marker([lat, lng], { icon: customIcon }).addTo(mapInstance).bindPopup(detailsHtml);
+      // Plain colored circle marker — matches plantation-tracker-app's
+      // CircleMarker styling exactly (radius 6, weight 2, fillOpacity 0.75)
+      // instead of the old emoji pin, so markers look the same in both apps.
+      var marker = L.circleMarker([lat, lng], {
+        radius: 6,
+        color: markerBg,
+        fillColor: markerBg,
+        fillOpacity: 0.75,
+        weight: 2
+      }).addTo(mapInstance).bindPopup(detailsHtml);
+      if (s.upazila) {
+        marker.bindTooltip(s.upazila, { direction: 'top', offset: [0, -6] });
+      }
       mapMarkers.push(marker);
       // Accuracy radius circle (if GPS accuracy was captured)
       if (s.geoAccuracy) {

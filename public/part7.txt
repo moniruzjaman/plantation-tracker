@@ -497,8 +497,10 @@ window.renderMap = function() {
       }
       detailsHtml += '</div>';
       
-      // Marker color logic: each upazila gets a distinct color from the
-      // palette — this makes it easy to visually cluster by upazila on the map.
+      // Marker color logic: each upazila gets a distinct, curated color
+      // (same palette as plantation-tracker-app, see UPAZILA_COLORS above)
+      // — this makes it easy to visually cluster by upazila on the map,
+      // and keeps the two apps visually consistent for anyone using both.
       // Special overrides: local-unsynced = gray, current user's own entry = purple.
       var markerBg = upazilaColor(s.upazila);
       if (s._source === "local") markerBg = '#9ca3af'; // Gray — not yet synced
@@ -509,14 +511,19 @@ window.renderMap = function() {
         _mapUpazilaLegend[s.upazila] = markerBg;
       }
 
-      var customIcon = L.divIcon({
-        html: '<div style="background-color: ' + markerBg + '; width: 28px; height: 28px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); transform: scale(1);" title="' + (s.upazila||'') + '">🌳</div>',
-        className: 'custom-tree-icon',
-        iconSize: [28, 28],
-        iconAnchor: [14, 14]
-      });
-      
-      var marker = L.marker([lat, lng], { icon: customIcon }).addTo(mapInstance).bindPopup(detailsHtml);
+      // Plain colored circle marker — matches plantation-tracker-app's
+      // CircleMarker styling exactly (radius 6, weight 2, fillOpacity 0.75)
+      // instead of the old emoji pin, so markers look the same in both apps.
+      var marker = L.circleMarker([lat, lng], {
+        radius: 6,
+        color: markerBg,
+        fillColor: markerBg,
+        fillOpacity: 0.75,
+        weight: 2
+      }).addTo(mapInstance).bindPopup(detailsHtml);
+      if (s.upazila) {
+        marker.bindTooltip(s.upazila, { direction: 'top', offset: [0, -6] });
+      }
       mapMarkers.push(marker);
       // Accuracy radius circle (if GPS accuracy was captured)
       if (s.geoAccuracy) {
