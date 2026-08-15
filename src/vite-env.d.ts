@@ -6,3 +6,7 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+interface Window {
+  __GEMINI_API_KEY__?: string;
+}

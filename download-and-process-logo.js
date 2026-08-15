@@ -17,8 +17,6 @@ function allFilesExist() {
     'logo.svg',
     'logo.png',
     'apple-touch-icon.png',
-    'og-image.png',
-    'og-share-v3.png',
     'favicon-32x32.png',
     'favicon-16x16.png',
     'favicon.ico',
@@ -184,6 +182,20 @@ async function run() {
   } catch (error) {
     console.error('❌ Error downloading logo:', error.message);
     
+    // Prefer the committed logo when the remote source is unavailable. This
+    // keeps production builds deterministic and prevents a transient 403 from
+    // replacing the campaign branding with a placeholder.
+    if (fs.existsSync(path.join(PUBLIC_DIR, 'logo.svg'))) {
+      console.log('🔄 Reusing committed logo from public/logo.svg');
+      try {
+        const existingSvg = fs.readFileSync(path.join(PUBLIC_DIR, 'logo.svg'), 'utf8');
+        await processIcons(existingSvg);
+        return;
+      } catch (existingErr) {
+        console.error('❌ Existing logo could not be processed:', existingErr.message);
+      }
+    }
+
     // Try fallback directory
     if (fs.existsSync(path.join(FALLBACK_DIR, 'logo.svg'))) {
       console.log('🔄 Using fallback logo from assets/fallback-logos/');
