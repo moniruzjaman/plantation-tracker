@@ -218,6 +218,57 @@ async function sendToGAS(rows){
   }
 }
 
+// Re-attempt sync for every locally-queued (synced:false) submission. Used by
+// the "Sync Now" button in the React shell's persistent sync-status chip, so
+// officers with patchy connectivity can retry the moment they get a bar of
+// signal instead of having to re-open and re-save each record individually.
+async function retryAllUnsynced(){
+  var subs = getSubmissions();
+  var unsynced = subs.filter(function(s){ return s.synced === false; });
+  if(unsynced.length === 0){
+    try{ window.parent.postMessage({ type:"sync-retry-result", ok:true, synced:0, failed:0, total:0 }, "*"); }catch(_){}
+    return;
+  }
+  var syncedCount = 0, failedCount = 0;
+  for (var i = 0; i < unsynced.length; i++){
+    var s = unsynced[i];
+    // v2 flat seedlings array is required to rebuild GAS rows; legacy v1
+    // 3-array records aren't retried here (user can re-open/edit to resync).
+    var seedlings = Array.isArray(s.seedlings) && s.seedlings.length ? s.seedlings : null;
+    if(!seedlings){ failedCount++; continue; }
+    var base = Object.assign({}, s);
+    delete base.seedlings;
+    var rows = toGASRows(base, seedlings);
+    var result = await sendToGAS(rows);
+    if(result && result.ok){
+      var current = getSubmissions();
+      var idx = current.findIndex(function(x){ return x.id === s.id || x.submissionId === s.submissionId; });
+      if(idx > -1){
+        current[idx].synced = true;
+        current[idx].syncedAt = new Date().toISOString();
+        saveSubmissions(current);
+      }
+      syncedCount++;
+    } else {
+      failedCount++;
+    }
+  }
+  try{
+    window.parent.postMessage({ type:"sync-retry-result", ok: failedCount===0, synced: syncedCount, failed: failedCount, total: unsynced.length }, "*");
+    if(syncedCount > 0){
+      window.parent.postMessage({ type:"offline-synced-success", count: syncedCount }, "*");
+    }
+  }catch(_){}
+}
+window.retryAllUnsynced = retryAllUnsynced;
+
+// Let the React shell trigger a retry pass (e.g. from the sync-status chip's
+// "Sync Now" button) without duplicating this logic on the outside.
+window.addEventListener("message", function(e){
+  if(!e.data || e.data.type !== "trigger-sync") return;
+  retryAllUnsynced();
+});
+
 document.getElementById("nurseryForm").addEventListener("submit",async function(e){
 e.preventDefault();hideBanner("successBanner");hideBanner("errorBanner");
 if(!requireProfileOrPrompt())return;
@@ -256,6 +307,7 @@ try{
       console.warn("GAS sync failed (edit):", editResult && editResult.error);
       showBanner("errorBanner","সিঙ্ক ব্যর্থ — তথ্য অফলাইনে সংরক্ষিত আছে। ড্যাশবোর্ড থেকে পরে আবার সিঙ্ক করুন।");
       setTimeout(function(){hideBanner("errorBanner");},5000);
+      try{ window.parent.postMessage({ type:"offline-submission-queued" }, "*"); }catch(_){}
     }
     document.getElementById("editId").value="";
     resetForm();
@@ -283,6 +335,7 @@ try{
       console.warn("GAS sync failed:", result && result.error);
       showBanner("errorBanner","সিঙ্ক ব্যর্থ — তথ্য অফলাইনে সংরক্ষিত আছে। ড্যাশবোর্ড থেকে পরে আবার সিঙ্ক করুন।");
       setTimeout(function(){hideBanner("errorBanner");},5000);
+      try{ window.parent.postMessage({ type:"offline-submission-queued" }, "*"); }catch(_){}
     }
     resetForm();
   }
