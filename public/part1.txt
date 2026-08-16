@@ -65,10 +65,54 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 #profileModal input,#profileModal select,#profileModal button{min-height:46px}
 #profileModal .overflow-y-auto{-webkit-overflow-scrolling:touch}
 @media(max-width:640px){#profileModal input,#profileModal select{font-size:16px}}
+
+/* ===== Outdoor / field readability pass =====
+   DAE field officers use this app in direct sunlight, often with gloves or
+   dusty/wet screens. Two concrete problems this fixes:
+   1) A lot of labels and the bottom-nav tab text were set at 10px, and
+      several used text-gray-400 (~2.6:1 contrast on white) or text-gray-500
+      (~4.0:1, borderline) -- both fail comfortably-readable-in-sunlight in
+      practice even where they technically scrape WCAG AA for large text.
+   2) Header icon buttons (নির্দেশিকা/শেয়ার) and the two banner dismiss
+      buttons had little to no padding, well under the ~44x44px minimum
+      recommended touch target -- easy to mis-tap with a fingertip in the
+      field, especially one-handed while holding a seedling or a clipboard.
+   Scoped to existing classes/ids so it can't regress unrelated layout. */
+.text-\[10px\]{font-size:12px!important}
+.nav-btn span[style*="font-size:10px"]{font-size:12px!important}
+.text-gray-400{color:#6b7280!important}
+.text-gray-500{color:#4b5563!important}
+.nav-btn{min-height:52px;min-width:44px}
+.nav-btn.text-gray-400{color:#4b5563!important}
+.nav-btn.active{color:#15803d!important}
+.header-icon-plain{min-height:40px;min-width:40px;padding:8px 10px!important}
+#pwaIframeBanner button,#pwaInstallBanner button{min-height:40px;padding:8px 14px!important}
+
+/* ===== Tab-transition animation =====
+   Tabs were an instant classList.add/remove("hidden") swap -- jarring on a
+   small screen. CSS animation on .tab-content replays automatically each
+   time the element goes from display:none back to visible (browsers restart
+   CSS animations on re-render), so no JS change is needed in switchTab().
+   Respects prefers-reduced-motion for users who've asked for less motion. */
+@media(prefers-reduced-motion:no-preference){
+.tab-content{animation:tabFadeIn .32s cubic-bezier(0.22,1,0.36,1)}
+}
+@keyframes tabFadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* ===== Onboarding coach-marks (first-visit tab tour) ===== */
+#coachmarkOverlay{position:fixed;inset:0;z-index:9999}
+#coachmarkScrim{position:fixed;inset:0;background:rgba(15,23,25,.55);opacity:0;transition:opacity .25s ease}
+#coachmarkScrim.visible{opacity:1}
+#coachmarkRing{position:fixed;border-radius:16px;box-shadow:0 0 0 4px #fff,0 0 0 8px #15803d,0 0 24px 4px rgba(0,0,0,.35);transition:top .3s cubic-bezier(0.22,1,0.36,1),left .3s cubic-bezier(0.22,1,0.36,1),width .3s cubic-bezier(0.22,1,0.36,1),height .3s cubic-bezier(0.22,1,0.36,1);pointer-events:none}
+#coachmarkTooltip{position:fixed;max-width:270px;background:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 10px 30px rgba(0,0,0,.3);transition:top .3s cubic-bezier(0.22,1,0.36,1),left .3s cubic-bezier(0.22,1,0.36,1);z-index:10000;font-family:inherit}
+@media(prefers-reduced-motion:reduce){
+#coachmarkRing,#coachmarkTooltip{transition:none}
+}
+
 </style>
 <!-- Open Graph tags for Messenger, WhatsApp and Facebook -->
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://plantation-tracker.vercel.app/">
+<meta property="og:url" content="https://plantation.krishiai.live/">
 <meta property="og:title" content="বৃক্ষ রোপণে সাজাই দেশ, সবার আগে বাংলাদেশ">
 <meta property="og:description" content="৫ বছরে ২৫ কোটি বৃক্ষরোপণ কর্মসূচি।">
 
@@ -77,7 +121,7 @@ tbody tr{border-bottom:1px solid #e5e7eb}
      Social platforms cache link-preview images independently of Vercel
      and of each other, often for days-to-weeks -- a new query string is
      the only reliable way to force a fresh fetch everywhere at once. -->
-<meta property="og:image" content="https://plantation-tracker.vercel.app/og-share-large.png?v=2">
+<meta property="og:image" content="https://plantation.krishiai.live/og-share-large.png?v=3">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:type" content="image/png">
