@@ -88,6 +88,27 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 .header-icon-plain{min-height:40px;min-width:40px;padding:8px 10px!important}
 #pwaIframeBanner button,#pwaInstallBanner button{min-height:40px;padding:8px 14px!important}
 
+/* ===== Tab-transition animation =====
+   Tabs were an instant classList.add/remove("hidden") swap -- jarring on a
+   small screen. CSS animation on .tab-content replays automatically each
+   time the element goes from display:none back to visible (browsers restart
+   CSS animations on re-render), so no JS change is needed in switchTab().
+   Respects prefers-reduced-motion for users who've asked for less motion. */
+@media(prefers-reduced-motion:no-preference){
+.tab-content{animation:tabFadeIn .32s cubic-bezier(0.22,1,0.36,1)}
+}
+@keyframes tabFadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* ===== Onboarding coach-marks (first-visit tab tour) ===== */
+#coachmarkOverlay{position:fixed;inset:0;z-index:9999}
+#coachmarkScrim{position:fixed;inset:0;background:rgba(15,23,25,.55);opacity:0;transition:opacity .25s ease}
+#coachmarkScrim.visible{opacity:1}
+#coachmarkRing{position:fixed;border-radius:16px;box-shadow:0 0 0 4px #fff,0 0 0 8px #15803d,0 0 24px 4px rgba(0,0,0,.35);transition:top .3s cubic-bezier(0.22,1,0.36,1),left .3s cubic-bezier(0.22,1,0.36,1),width .3s cubic-bezier(0.22,1,0.36,1),height .3s cubic-bezier(0.22,1,0.36,1);pointer-events:none}
+#coachmarkTooltip{position:fixed;max-width:270px;background:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 10px 30px rgba(0,0,0,.3);transition:top .3s cubic-bezier(0.22,1,0.36,1),left .3s cubic-bezier(0.22,1,0.36,1);z-index:10000;font-family:inherit}
+@media(prefers-reduced-motion:reduce){
+#coachmarkRing,#coachmarkTooltip{transition:none}
+}
+
 </style>
 <!-- Open Graph tags for Messenger, WhatsApp and Facebook -->
 <meta property="og:type" content="website">
@@ -1705,6 +1726,10 @@ function setAdminPw(p){localStorage.setItem(PW_KEY,p)}
 // ── Tab switching ──
 window.switchTab=function(tab){
 try{
+// If the onboarding tour is mid-flight and the user taps a real tab
+// directly, they've clearly got the idea -- end the tour instead of
+// fighting the content switch underneath it.
+if(document.getElementById("coachmarkOverlay") && typeof coachmarkFinish==="function") coachmarkFinish();
 document.querySelectorAll(".tab-content").forEach(function(el){el.classList.add("hidden")});
 document.querySelectorAll(".nav-btn").forEach(function(b){b.classList.remove("active")});
 var sec=document.getElementById("tab-"+tab);
@@ -1717,6 +1742,123 @@ if(tab==="storedData")switchMyDataSubTab(window.currentMyDataSubTab||"mine");
 window.scrollTo({top:0,behavior:"smooth"});
 }catch(err){console.error("Tab switch error:",err)}
 };
+
+// ── Onboarding coach-marks (first-visit tab tour) ──
+// WelcomeModal (the React shell's branding modal) never explains what the
+// 4 bottom-nav tabs actually do. This is a lightweight, self-contained
+// spotlight tour over the real nav buttons -- runs once per device, works
+// whether this page is loaded standalone or inside the shell's iframe (in
+// the shell case it simply starts "underneath" WelcomeModal's overlay and
+// becomes visible the moment that modal closes, no cross-frame messaging
+// needed, since the iframe is just pixels within the parent page).
+var COACHMARK_KEY="coachmark_tabs_v1";
+var COACHMARK_STEPS=[
+  {tab:"form",title:"📝 ফর্ম",text:"এখানে নতুন বৃক্ষরোপণের তথ্য যোগ করুন — ধাপে ধাপে ঠিকানা, GPS ও চারার তথ্য দিয়ে।"},
+  {tab:"dashboard",title:"📊 ড্যাশবোর্ড",text:"সারাদেশ বা আপনার এলাকার রোপণের পরিসংখ্যান, চার্ট ও তথ্যের মান-স্কোর এখানে দেখুন।"},
+  {tab:"map",title:"🗺️ ম্যাপ",text:"সব কর্মকর্তার জমাকৃত বৃক্ষরোপণের অবস্থান মানচিত্রে দেখুন, নিজের এন্ট্রি আলাদা রঙে চিহ্নিত।"},
+  {tab:"storedData",title:"👤 প্রোফাইল",text:"আপনার জমাকৃত সব তথ্য দেখুন, সম্পাদনা করুন এবং সিঙ্ক না হওয়া তথ্য এখানে যাচাই করুন।"}
+];
+var coachmarkStepIndex=0;
+
+function coachmarkGetVisibleNavBtn(tab){
+  var btns=document.querySelectorAll('.nav-btn[data-tab="'+tab+'"]');
+  for(var i=0;i<btns.length;i++){
+    var r=btns[i].getBoundingClientRect();
+    if(r.width>0 && r.height>0) return btns[i];
+  }
+  return null;
+}
+
+function coachmarkPosition(step){
+  var target=coachmarkGetVisibleNavBtn(step.tab);
+  if(!target) return false;
+  var r=target.getBoundingClientRect();
+  var pad=8;
+  var ring=document.getElementById("coachmarkRing");
+  ring.style.top=(r.top-pad)+"px";
+  ring.style.left=(r.left-pad)+"px";
+  ring.style.width=(r.width+pad*2)+"px";
+  ring.style.height=(r.height+pad*2)+"px";
+
+  var tip=document.getElementById("coachmarkTooltip");
+  var tipRect=tip.getBoundingClientRect();
+  var spaceBelow=window.innerHeight-r.bottom;
+  var top=(spaceBelow>tipRect.height+24) ? (r.bottom+16) : Math.max(12,r.top-tipRect.height-16);
+  var left=Math.min(Math.max(12,r.left+r.width/2-tipRect.width/2),window.innerWidth-tipRect.width-12);
+  tip.style.top=top+"px";
+  tip.style.left=left+"px";
+  return true;
+}
+
+function coachmarkRender(){
+  var step=COACHMARK_STEPS[coachmarkStepIndex];
+  var isLast=coachmarkStepIndex===COACHMARK_STEPS.length-1;
+  var tip=document.getElementById("coachmarkTooltip");
+  if(!tip) return;
+  tip.setAttribute("role","dialog");
+  tip.setAttribute("aria-live","polite");
+  tip.innerHTML=
+    '<div style="font-weight:700;font-size:13px;margin-bottom:4px;color:#14532d">'+step.title+'</div>'+
+    '<div style="font-size:12px;color:#374151;line-height:1.5;margin-bottom:10px">'+step.text+'</div>'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">'+
+      '<button onclick="coachmarkSkip()" style="background:transparent;border:none;color:#9ca3af;font-size:11px;font-weight:600;cursor:pointer;padding:8px 4px;min-height:36px">এড়িয়ে যান</button>'+
+      '<div style="display:flex;align-items:center;gap:8px">'+
+        '<span style="font-size:10.5px;color:#9ca3af;font-weight:600">'+(coachmarkStepIndex+1)+'/'+COACHMARK_STEPS.length+'</span>'+
+        '<button onclick="coachmarkNext()" style="background:#15803d;border:none;color:#fff;font-size:12px;font-weight:700;cursor:pointer;padding:8px 14px;border-radius:8px;min-height:36px">'+(isLast?"বুঝেছি ✓":"পরবর্তী →")+'</button>'+
+      '</div>'+
+    '</div>';
+  var ok=coachmarkPosition(step);
+  if(!ok){ coachmarkFinish(); return; }
+}
+
+window.coachmarkNext=function(){
+  coachmarkStepIndex++;
+  if(coachmarkStepIndex>=COACHMARK_STEPS.length){ coachmarkFinish(); return; }
+  coachmarkRender();
+};
+window.coachmarkSkip=function(){ coachmarkFinish(); };
+
+function coachmarkFinish(){
+  try{ localStorage.setItem(COACHMARK_KEY,"1"); }catch(e){}
+  var overlay=document.getElementById("coachmarkOverlay");
+  if(overlay) overlay.remove();
+  window.removeEventListener("resize",coachmarkReposition);
+  document.removeEventListener("keydown",coachmarkKeyHandler);
+}
+function coachmarkReposition(){
+  if(!document.getElementById("coachmarkOverlay")) return;
+  coachmarkPosition(COACHMARK_STEPS[coachmarkStepIndex]);
+}
+function coachmarkKeyHandler(e){
+  if(!document.getElementById("coachmarkOverlay")) return;
+  if(e.key==="Escape") coachmarkSkip();
+  if(e.key==="Enter"||e.key===" ") coachmarkNext();
+}
+
+function initTabCoachmarks(){
+  try{ if(localStorage.getItem(COACHMARK_KEY)) return; }catch(e){ return; }
+  if(document.getElementById("coachmarkOverlay")) return;
+  var overlay=document.createElement("div");
+  overlay.id="coachmarkOverlay";
+  overlay.innerHTML='<div id="coachmarkScrim"></div><div id="coachmarkRing"></div><div id="coachmarkTooltip"></div>';
+  document.body.appendChild(overlay);
+  requestAnimationFrame(function(){
+    var scrim=document.getElementById("coachmarkScrim");
+    if(scrim) scrim.classList.add("visible");
+  });
+  var scrimEl=document.getElementById("coachmarkScrim");
+  if(scrimEl) scrimEl.addEventListener("click",function(){ coachmarkNext(); });
+  coachmarkStepIndex=0;
+  coachmarkRender();
+  window.addEventListener("resize",coachmarkReposition);
+  document.addEventListener("keydown",coachmarkKeyHandler);
+}
+document.addEventListener("DOMContentLoaded",function(){
+  // Small delay so the tour starts after initial layout/banners settle,
+  // and (when embedded in the shell) roughly lines up with WelcomeModal
+  // having already had a moment to render on top of it.
+  setTimeout(initTabCoachmarks,900);
+});
 
 // এডমিন এখন আলাদা টপ-লেভেল ট্যাব নয় — "আমার তথ্য" ট্যাবের ভেতরে একটি সাব-ট্যাব।
 // sub === "mine" | "admin"
