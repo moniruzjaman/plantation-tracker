@@ -17,11 +17,36 @@ export default function WelcomeModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(false);
 
+  const notifyShellReady = () => {
+    try {
+      const iframe = document.querySelector('iframe');
+      iframe?.contentWindow?.postMessage({ type: 'shell-ready' }, '*');
+    } catch {
+      // ignore -- iframe not ready
+    }
+  };
+
   useEffect(() => {
     const hasSeenWelcome = localStorage.getItem('hasSeenWelcome_v1');
     if (!hasSeenWelcome) {
       setIsOpen(true);
     }
+
+    // See maybeOpenProfileModalAfterShell() in plantation.html -- the
+    // legacy form's profile modal waits for a "shell-ready" signal from
+    // here before auto-opening, so it never appears at the same time as
+    // this welcome screen. Reply the instant the iframe announces itself,
+    // but only if this modal isn't going to show (returning user); if it
+    // IS going to show, stay quiet here and let handleClose() send the
+    // signal once the user actually dismisses it.
+    const handleIframeMessage = (event: MessageEvent) => {
+      if (event.data?.type !== 'iframe-ready') return;
+      if (localStorage.getItem('hasSeenWelcome_v1')) {
+        notifyShellReady();
+      }
+    };
+    window.addEventListener('message', handleIframeMessage);
+    return () => window.removeEventListener('message', handleIframeMessage);
   }, []);
 
   const handleClose = () => {
@@ -29,6 +54,7 @@ export default function WelcomeModal() {
       localStorage.setItem('hasSeenWelcome_v1', 'true');
     }
     setIsOpen(false);
+    notifyShellReady();
   };
 
   const handleOpenHelp = () => {

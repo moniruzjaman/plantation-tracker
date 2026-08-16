@@ -254,12 +254,50 @@ function applyProfileToForm(){
 }
 function initProfile(){
   var p=getProfile();
-  if(!p){ if(!isGuestMode()) openProfileModal(false); } else { applyProfileToForm(); }
+  if(!p){ if(!isGuestMode()) maybeOpenProfileModalAfterShell(); } else { applyProfileToForm(); }
   upgradeDeviceIdAsync();
   setTimeout(function(){
     initGoogleAuth();
     if(!p) attemptSilentVisitorPing(); // covers both guests and anyone who dismissed the modal
   }, 300);
+}
+
+// The profile modal used to auto-open the instant this form loaded if no
+// profile was saved yet -- with zero coordination with the React shell's
+// WelcomeModal (the app's first-run intro screen, sometimes referred to as
+// the "user guide"). That meant a first-time user could see the profile
+// modal appear to open at the same moment as -- or immediately snap into
+// view the instant they dismissed -- the welcome screen, with no visual
+// hand-off between the two, which read as "two things opening at once."
+// This now waits for an explicit "shell-ready" signal from the parent
+// before opening, so the two are always strictly sequential: welcome
+// screen first, profile modal only after. Loaded standalone (no parent
+// shell, e.g. direct /legacy/plantation.html access) has nothing to wait
+// for, so it keeps the original immediate behavior.
+function maybeOpenProfileModalAfterShell(){
+  if(window.self === window.top){
+    openProfileModal(false);
+    return;
+  }
+  var opened = false;
+  var onShellReady = function(e){
+    if(e.data && e.data.type === "shell-ready") openOnce();
+  };
+  var openOnce = function(){
+    if(opened) return;
+    opened = true;
+    window.removeEventListener("message", onShellReady);
+    // Re-check on arrival: time has passed since this was queued, and a
+    // profile could now exist (or guest mode could now be active) from
+    // something the user did while the welcome screen was still up.
+    if(!getProfile() && !isGuestMode()) openProfileModal(false);
+  };
+  window.addEventListener("message", onShellReady);
+  try{ window.parent.postMessage({ type:"iframe-ready" }, "*"); }catch(_){}
+  // Safety net: an older/cached parent bundle (from before this fix) or
+  // any other reason "shell-ready" never arrives should never permanently
+  // block the profile modal from opening at all.
+  setTimeout(openOnce, 2500);
 }
 function syncProfileToSheet(p){
   try{
