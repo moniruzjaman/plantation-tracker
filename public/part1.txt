@@ -476,6 +476,7 @@ tbody tr{border-bottom:1px solid #e5e7eb}
     <span id="dashDataSourceNote" class="text-xs text-gray-400">লোকাল + জাতীয় ডাটা মার্জ করা হয়েছে</span>
   </div>
   <button onclick="refreshDashNationalData()" class="text-xs font-semibold px-3 py-1.5 rounded-md border cursor-pointer hover:bg-gray-50 transition" style="border-color:#15803d;color:#15803d" id="dashRefreshBtn">🔄 রিফ্রেশ</button>
+  <span id="dashLiveBadge" class="hidden inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full" style="background:#dcfce7;color:#15803d" title="ড্যাশবোর্ড খোলা থাকা অবস্থায় প্রতি ৫ মিনিটে স্বয়ংক্রিয়ভাবে হালনাগাদ হয়"><span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> লাইভ</span>
 </div>
 
 <!-- ── Latest Official Weekly Report (verified checkpoint, reconciled from Tree_Plantation_Reporting_Workbook.xlsx) ── -->
