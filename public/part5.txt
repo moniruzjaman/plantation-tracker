@@ -583,9 +583,11 @@ try{
 
   if(el("dashDataSourceNote")){
     if(_nationalEntries){
-      var t=_nationalEntriesAt?_nationalEntriesAt.toLocaleTimeString("bn-BD"):"";
-      el("dashDataSourceNote").textContent=_nationalEntries.length.toLocaleString("bn-BD")+" জাতীয় + "+localCount+" লোকাল এন্ট্রি"+(t?" (সর্বশেষ: "+t+")":"");
+      var baseTxt=_nationalEntries.length.toLocaleString("bn-BD")+" জাতীয় + "+localCount+" লোকাল এন্ট্রি";
+      el("dashDataSourceNote").setAttribute("data-base-text",baseTxt);
+      el("dashDataSourceNote").textContent=baseTxt+(_nationalEntriesAt?" (সর্বশেষ: "+dashRelativeFreshness()+")":"");
     } else {
+      el("dashDataSourceNote").removeAttribute("data-base-text");
       el("dashDataSourceNote").textContent="জাতীয় ডাটা লোড হচ্ছে...";
     }
   }

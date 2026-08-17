@@ -404,7 +404,13 @@ var sec=document.getElementById("tab-"+tab);
 if(sec)sec.classList.remove("hidden");
 document.querySelectorAll('.nav-btn[data-tab="'+tab+'"]').forEach(function(b){b.classList.add("active")});
 hideBanner("successBanner");hideBanner("errorBanner");
-if(tab==="dashboard")renderDashboard();
+if(tab==="dashboard"){
+  renderDashboard();
+  startDashboardAutoRefresh();
+  maybeRefreshStaleDashboardData();
+} else {
+  stopDashboardAutoRefresh();
+}
 if(tab==="map")renderMap();
 if(tab==="storedData")switchMyDataSubTab(window.currentMyDataSubTab||"mine");
 window.scrollTo({top:0,behavior:"smooth"});
