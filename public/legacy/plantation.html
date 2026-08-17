@@ -1788,6 +1788,103 @@ window.scrollTo({top:0,behavior:"smooth"});
 }catch(err){console.error("Tab switch error:",err)}
 };
 
+// ── Dashboard auto-refresh ──
+// The dashboard used to fetch national entries exactly once per session
+// (or on a manual "🔄 রিফ্রেশ" tap) and then sit frozen -- if an officer
+// left it open during a review meeting, or just came back to it later in
+// the day, the numbers never moved even as new entries kept arriving from
+// other officers nationwide. This adds three ways the dashboard now keeps
+// itself current: periodic polling while it's the actual visible tab (not
+// wasting data/battery when it's backgrounded or another tab is open),
+// an immediate refresh the moment connectivity comes back, and a
+// background refresh when switching back onto the tab if the data has
+// gone stale (reusing the same 30-minute threshold fetchNationalEntries
+// already uses for its own cache, so the two stay consistent). A live
+// relative "X মিনিট আগে" ticker also keeps the freshness label honest
+// between refreshes, not just frozen at the last fetch's clock time.
+//
+// IMPORTANT: every async .then() below re-checks dashboardIsActiveTab()
+// AFTER the fetch resolves, not just before starting it. A fetch can take
+// a second or more, and the user may have already switched to another tab
+// (e.g. Map) while it was in flight -- calling renderDashboard() at that
+// point would draw Chart.js charts into a hidden, zero-size container,
+// which is exactly the kind of "chart sometimes fails to display" bug
+// this guard exists to prevent.
+var DASH_AUTO_REFRESH_INTERVAL_MS=5*60*1000; // 5 minutes
+var _dashAutoRefreshTimer=null;
+var _dashFreshnessTickTimer=null;
+
+function dashboardIsActiveTab(){
+  var sec=document.getElementById("tab-dashboard");
+  return !!(sec && !sec.classList.contains("hidden"));
+}
+
+window.startDashboardAutoRefresh=function(){
+  stopDashboardAutoRefresh();
+  var badge=document.getElementById("dashLiveBadge");
+  if(badge) badge.classList.remove("hidden");
+  _dashAutoRefreshTimer=setInterval(function(){
+    if(!dashboardIsActiveTab() || document.visibilityState!=="visible") return;
+    fetchNationalEntries(true).then(function(){
+      if(dashboardIsActiveTab()) renderDashboard();
+    });
+  }, DASH_AUTO_REFRESH_INTERVAL_MS);
+  _dashFreshnessTickTimer=setInterval(function(){
+    if(dashboardIsActiveTab()) updateDashFreshnessNote();
+  }, 30000);
+};
+window.stopDashboardAutoRefresh=function(){
+  var badge=document.getElementById("dashLiveBadge");
+  if(badge) badge.classList.add("hidden");
+  if(_dashAutoRefreshTimer){ clearInterval(_dashAutoRefreshTimer); _dashAutoRefreshTimer=null; }
+  if(_dashFreshnessTickTimer){ clearInterval(_dashFreshnessTickTimer); _dashFreshnessTickTimer=null; }
+};
+
+window.maybeRefreshStaleDashboardData=function(){
+  if(!_nationalEntriesAt) return; // still loading the initial fetch, nothing to check yet
+  var age=Date.now()-_nationalEntriesAt.getTime();
+  if(age>NATIONAL_ENTRIES_CACHE_MAX_AGE_MS){
+    fetchNationalEntries(true).then(function(){
+      if(dashboardIsActiveTab()) renderDashboard();
+    });
+  }
+};
+
+function dashRelativeFreshness(){
+  if(!_nationalEntriesAt) return "";
+  var mins=Math.floor((Date.now()-_nationalEntriesAt.getTime())/60000);
+  if(mins<1) return "এইমাত্র";
+  if(mins<60) return mins.toLocaleString("bn-BD")+" মিনিট আগে";
+  var hrs=Math.floor(mins/60);
+  return hrs.toLocaleString("bn-BD")+" ঘণ্টা আগে";
+}
+function updateDashFreshnessNote(){
+  var el=document.getElementById("dashDataSourceNote");
+  if(!el) return;
+  var base=el.getAttribute("data-base-text");
+  if(!base || !_nationalEntriesAt) return;
+  el.textContent=base+" (সর্বশেষ: "+dashRelativeFreshness()+")";
+}
+
+// Regaining connectivity while parked on the dashboard is exactly the
+// moment stale data is most likely (the device was probably offline for a
+// while) -- refresh immediately rather than waiting for the next poll.
+window.addEventListener("online", function(){
+  if(dashboardIsActiveTab()){
+    fetchNationalEntries(true).then(function(){
+      if(dashboardIsActiveTab()) renderDashboard();
+    });
+  }
+});
+// Coming back to a backgrounded/minimized tab is the other common "this
+// data could be stale" moment -- check against the same 30-minute
+// threshold used everywhere else rather than blindly refetching.
+document.addEventListener("visibilitychange", function(){
+  if(document.visibilityState==="visible" && dashboardIsActiveTab()){
+    maybeRefreshStaleDashboardData();
+  }
+});
+
 // ── Onboarding coach-marks (first-visit tab tour) ──
 // WelcomeModal (the React shell's branding modal) never explains what the
 // 4 bottom-nav tabs actually do. This is a lightweight, self-contained
