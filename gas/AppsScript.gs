@@ -53,6 +53,11 @@ var PROFILE_SHEET_NAME = 'User_Profile';
 var GROWTH_SHEET_NAME = 'Growth_Log';
 var CUSTOM_UPAZILA_SHEET_NAME = 'Custom_Upazila';
 var VISITOR_SHEET_NAME = 'Visitor_Log';
+var MINISTRY_REPORT_SHEET_NAME = 'মূল_ডাটা';
+var SEVENTEEN_COL_REPORT_SHEET_NAME = '১ৗ_কলাম_প্রতিবেদন';
+var REPORT_UPAZILAS = ['ভুরুঙ্গামারী','চর রাজিবপুর','ফুলবাড়ী','উলিপুর','চিলমারী','রৌমারী','কুড়িগ্রাম সদর','নাগেশ্বরী','রাজারহাট'];
+var REPORT_CATEGORIES = ['ফলদ','মিশ্র প্যাকেজ','একক প্রজাতি','ঔষধি','বনজ','অন্যান্য'];
+var OFFICIAL_REPORT_CACHE_SECONDS = 300;
 
 var VISITOR_COLUMNS = [
   'সময়', 'ইমেইল', 'ধরন', 'ডিভাইস আইডি'
@@ -470,7 +475,8 @@ function doGet(e) {
     if (params.mobile) return jsonOut_(lookupByMobile_(params.mobile));
     if (params.directory) return jsonOut_(getDirectory_(params.role, params.upazila));
     if (params.customUpazila) return jsonOut_(getCustomUpazilas_(params.district));
-    return jsonOut_({ ok: false, error: 'mobile, list, directory, or customUpazila query param required' });
+    if (params.officialSummary) return jsonOut_(getOfficialReportSummary_());
+    return jsonOut_({ ok: false, error: 'mobile, list, directory, customUpazila, or officialSummary query param required' });
   } catch (err) {
     return jsonOut_({ ok: false, error: String(err) });
   }
