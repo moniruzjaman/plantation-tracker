@@ -1,43 +1,14 @@
-  _upazilaColorCache[name]=UPAZILA_PALETTE[idx];
-  return _upazilaColorCache[name];
-}
-window.onDashFilterChange=function(){/* defined near renderDashboard */};
-window.onFormDivisionChange=function(){/* placeholder for future division→region cascade */};
-window.onFormRegionChange=function(){populateDistrictDD(document.getElementById("fDistrict"),document.getElementById("fRegion").value);document.getElementById("fUpazila").innerHTML='<option value="">উপজেলা নির্বাচন করুন</option>'};
-window.onFormDistrictChange=function(){populateUpazilaDD(document.getElementById("fUpazila"),document.getElementById("fDistrict").value)};
-window.onAdminRegionChange=function(){populateDistrictDD(document.getElementById("adminDistrict"),document.getElementById("adminRegion").value);renderAdminTable()};
-window.onAdminDistrictChange=function(){renderAdminTable()};
-window.onEditDivisionChange=function(){/* placeholder */};
-window.onEditRegionChange=function(){populateDistrictDD(document.getElementById("eDistrict"),document.getElementById("eRegion").value);document.getElementById("eUpazila").innerHTML='<option value="">উপজেলা নির্বাচন করুন</option>'};
-window.onEditDistrictChange=function(){populateUpazilaDD(document.getElementById("eUpazila"),document.getElementById("eDistrict").value)};
+      setTimeout(function(){ el.classList.remove("shake"); el.style.borderColor = "#d1d5db"; }, 350);
+    });
+    return;
+  }
 
-// ── Flat seedling repeater (one row per species) ──
-// Replaces the old 3-fixed-category fieldset. Each row produces ONE GAS row.
-function addSeedlingRow(containerId, data){
-  containerId = containerId || "seedlingRows";
-  data = data || {};
-  var container = document.getElementById(containerId);
-  if(!container) return;
-  var idx = container.querySelectorAll(".seedling-row").length;
-  var nameVal = (data.speciesName || data.name || "").replace(/"/g,"&quot;");
-  var catVal = data.category || "";
-  var qtyVal = data.quantity || data.count || "";
-  var catOpts = CATEGORY_OPTS.map(function(c){
-    return '<option value="'+c+'"'+(c===catVal?' selected':'')+'>'+c+'</option>';
-  }).join("");
-  var html = '<div class="seedling-row bg-white rounded-lg p-3 grid grid-cols-12 gap-2 items-end" data-idx="'+idx+'">'
-    + '<div class="col-span-12 sm:col-span-5"><label class="block text-[10px] font-bold text-gray-500 mb-0.5">প্রজাতি/নাম</label>'
-    + '<input type="text" list="speciesList" placeholder="যেমন: আম" value="'+nameVal+'" class="seedling-name w-full border rounded px-2 py-1.5 text-sm" style="border-color:#d1d5db"></div>'
-    + '<div class="col-span-6 sm:col-span-3"><label class="block text-[10px] font-bold text-gray-500 mb-0.5">শ্রেণী</label>'
-    + '<select class="seedling-category w-full border rounded px-2 py-1.5 text-sm bg-white" style="border-color:#d1d5db">'+catOpts+'</select></div>'
-    + '<div class="col-span-4 sm:col-span-2"><label class="block text-[10px] font-bold text-gray-500 mb-0.5">সংখ্যা</label>'
-    + '<input type="number" min="1" placeholder="০" value="'+qtyVal+'" class="seedling-quantity w-full border rounded px-2 py-1.5 text-sm" style="border-color:#d1d5db"></div>'
-    + '<div class="col-span-2 sm:col-span-2 flex justify-end">'
-    + '<button type="button" onclick="this.closest(\'.seedling-row\').remove()" class="text-red-500 text-xs px-2 py-1.5 hover:bg-red-50 rounded">✕</button></div>'
-    + '</div>';
-  container.insertAdjacentHTML("beforeend", html);
-}
-window.addSeedlingRow = addSeedlingRow;
+  row.classList.add("seedling-saved");
+  row.style.background = "#f0fdf4";
+  [nameEl, catEl, qtyEl].forEach(function(el){ if(el) el.disabled = true; });
+  btn.textContent = "✅ সংরক্ষিত (সম্পাদনা)";
+  btn.style.background = "#047857";
+};
 
 function collectSeedlings(containerId){
   containerId = containerId || "seedlingRows";
@@ -200,7 +171,10 @@ function buildBaseSubmission(prefix){
     address:     _val(prefix+"Address"),
     latitude:    lat,
     longitude:   lng,
+    geoAccuracy: prefix === "f" ? _val(prefix+"GeoAccuracy") : "",
     geoLocation: geoStr,
+    geoFencePoints:   prefix === "f" ? _val(prefix+"GeoFencePoints") : "",
+    geoFenceAreaSqm:  prefix === "f" ? _val(prefix+"GeoFenceAreaSqm") : "",
     plantingDate:pDateVal,
     farmerName:  _val(prefix+"Nursery"),
     farmerMobile:_val(prefix+"Mobile"),
@@ -244,30 +218,101 @@ async function sendToGAS(rows){
   }
 }
 
+// Re-attempt sync for every locally-queued (synced:false) submission. Used by
+// the "Sync Now" button in the React shell's persistent sync-status chip, so
+// officers with patchy connectivity can retry the moment they get a bar of
+// signal instead of having to re-open and re-save each record individually.
+async function retryAllUnsynced(){
+  var subs = getSubmissions();
+  var unsynced = subs.filter(function(s){ return s.synced === false; });
+  if(unsynced.length === 0){
+    try{ window.parent.postMessage({ type:"sync-retry-result", ok:true, synced:0, failed:0, total:0 }, "*"); }catch(_){}
+    return;
+  }
+  var syncedCount = 0, failedCount = 0;
+  for (var i = 0; i < unsynced.length; i++){
+    var s = unsynced[i];
+    // v2 flat seedlings array is required to rebuild GAS rows; legacy v1
+    // 3-array records aren't retried here (user can re-open/edit to resync).
+    var seedlings = Array.isArray(s.seedlings) && s.seedlings.length ? s.seedlings : null;
+    if(!seedlings){ failedCount++; continue; }
+    var base = Object.assign({}, s);
+    delete base.seedlings;
+    var rows = toGASRows(base, seedlings);
+    var result = await sendToGAS(rows);
+    if(result && result.ok){
+      var current = getSubmissions();
+      var idx = current.findIndex(function(x){ return x.id === s.id || x.submissionId === s.submissionId; });
+      if(idx > -1){
+        current[idx].synced = true;
+        current[idx].syncedAt = new Date().toISOString();
+        saveSubmissions(current);
+      }
+      syncedCount++;
+    } else {
+      failedCount++;
+    }
+  }
+  try{
+    window.parent.postMessage({ type:"sync-retry-result", ok: failedCount===0, synced: syncedCount, failed: failedCount, total: unsynced.length }, "*");
+    if(syncedCount > 0){
+      window.parent.postMessage({ type:"offline-synced-success", count: syncedCount }, "*");
+    }
+  }catch(_){}
+}
+window.retryAllUnsynced = retryAllUnsynced;
+
+// Let the React shell trigger a retry pass (e.g. from the sync-status chip's
+// "Sync Now" button) without duplicating this logic on the outside.
+window.addEventListener("message", function(e){
+  if(!e.data || e.data.type !== "trigger-sync") return;
+  retryAllUnsynced();
+});
+
 document.getElementById("nurseryForm").addEventListener("submit",async function(e){
 e.preventDefault();hideBanner("successBanner");hideBanner("errorBanner");
+if(!requireProfileOrPrompt())return;
 if(!validateForm("f"))return;
 var seedlings=collectSeedlings("seedlingRows");
 if(seedlings.length===0){showBanner("errorBanner","অন্তত একটি চারা যোগ করুন (প্রজাতির নাম ও সংখ্যা দিন)।");return}
 var btn=document.getElementById("submitBtn");btn.disabled=true;btn.textContent="জমা হচ্ছে...";
 try{
   var base = buildBaseSubmission("f");
-  var rows = toGASRows(base, seedlings);
   var editId = document.getElementById("editId").value;
   var subs = getSubmissions();
 
   if(editId){
     var idx = subs.findIndex(function(s){return s.id===editId || s.submissionId===editId;});
-    if(idx > -1){
-      base.submissionId = subs[idx].submissionId || subs[idx].id || base.submissionId;
-      base.id = subs[idx].id;
-      subs[idx] = Object.assign({}, subs[idx], base, { seedlings: seedlings, synced: false, syncedAt: null });
-      saveSubmissions(subs);
+    var existing = idx > -1 ? subs[idx] : findEntryById(editId);
+    base.submissionId = (existing && (existing.submissionId||existing.id)) || base.submissionId;
+    base.id = (existing && existing.id) || base.submissionId;
+    var rows = toGASRows(base, seedlings);
+    // Was previously mine-but-national-only (no local record) -- this
+    // creates the local shadow record now so it can sync/re-sync normally.
+    var updatedRecord = Object.assign({}, existing||{}, base, { seedlings: seedlings, synced: false, syncedAt: null, _source: "local" });
+    if(idx > -1){ subs[idx] = updatedRecord; } else { subs.push(updatedRecord); }
+    saveSubmissions(subs);
+
+    var editResult = await sendToGAS(rows);
+    if(editResult && editResult.ok){
+      var updatedSubs = getSubmissions();
+      var newIdx = updatedSubs.findIndex(function(s){return s.id===updatedRecord.id || s.submissionId===updatedRecord.submissionId;});
+      if(newIdx > -1){
+        updatedSubs[newIdx].synced = true;
+        updatedSubs[newIdx].syncedAt = new Date().toISOString();
+        saveSubmissions(updatedSubs);
+      }
+      showBanner("successBanner");
+    } else {
+      console.warn("GAS sync failed (edit):", editResult && editResult.error);
+      showBanner("errorBanner","সিঙ্ক ব্যর্থ — তথ্য অফলাইনে সংরক্ষিত আছে। ড্যাশবোর্ড থেকে পরে আবার সিঙ্ক করুন।");
+      setTimeout(function(){hideBanner("errorBanner");},5000);
+      try{ window.parent.postMessage({ type:"offline-submission-queued" }, "*"); }catch(_){}
     }
     document.getElementById("editId").value="";
-    showBanner("successBanner");
     resetForm();
   } else {
+    var rows = toGASRows(base, seedlings);
     base.id = base.submissionId;
     base.seedlings = seedlings;
     base.synced = false;
@@ -290,6 +335,7 @@ try{
       console.warn("GAS sync failed:", result && result.error);
       showBanner("errorBanner","সিঙ্ক ব্যর্থ — তথ্য অফলাইনে সংরক্ষিত আছে। ড্যাশবোর্ড থেকে পরে আবার সিঙ্ক করুন।");
       setTimeout(function(){hideBanner("errorBanner");},5000);
+      try{ window.parent.postMessage({ type:"offline-submission-queued" }, "*"); }catch(_){}
     }
     resetForm();
   }
@@ -310,6 +356,8 @@ document.getElementById("seedlingRows").innerHTML="";
 addSeedlingRow("seedlingRows");
 document.querySelectorAll("[data-error]").forEach(function(el){el.classList.add("hidden")});
 document.getElementById("fGeo").value="";
+var fGeoAccuracy=document.getElementById("fGeoAccuracy");if(fGeoAccuracy)fGeoAccuracy.value="";
+var geoAccuracyDisplay=document.getElementById("geoAccuracyDisplay");if(geoAccuracyDisplay)geoAccuracyDisplay.style.display="none";
 var pDateEl=document.getElementById("fPlantingDate"); if(pDateEl){pDateEl.value=new Date().toISOString().slice(0, 10);}
 window._photoBase64 = "";
 var photoWrap = document.getElementById("fPhotoPreviewWrap");
@@ -317,6 +365,8 @@ if(photoWrap) photoWrap.classList.add("hidden");
 var ndviEl = document.getElementById("fNdvi");
 if(ndviEl) ndviEl.value = "";
 document.getElementById("fSourceTypeCustom").classList.add("hidden");
+if(window.clearGeoFence) window.clearGeoFence();
+if(geoManualMarker && geoManualMap){ geoManualMap.removeLayer(geoManualMarker); geoManualMarker = null; }
 applyProfileToForm();
 fetchGeoLocation();
 };
@@ -371,8 +421,8 @@ window.onGeoLocationChange = function(inputEl, targetAddressId) {
   var val = inputEl.value.trim();
   var m = /^\s*(-?\d+(?:\.\d+)?)\s*[\s,;]\s*(-?\d+(?:\.\d+)?)\s*$/.exec(val);
   if (m) {
-    var lat = parseFloat(m[1]).toFixed(6);
-    var lng = parseFloat(m[2]).toFixed(6);
+    var lat = parseFloat(m[1]).toFixed(7);
+    var lng = parseFloat(m[2]).toFixed(7);
     window.reverseGeocode(lat, lng, targetAddressId);
   }
 };
@@ -381,17 +431,270 @@ window.fetchGeoLocation=function(){
 try{
 var geoField=document.getElementById("fGeo"),geoStatus=document.getElementById("geoStatus"),geoStatusText=document.getElementById("geoStatusText"),geoBtnText=document.getElementById("geoBtnText");
 if(!navigator.geolocation){geoStatusText.textContent="⚠️ আপনার ব্রাউজার লোকেশন সাপোর্ট করে না।";geoStatus.classList.remove("hidden");return}
+// If the React shell already sent us a fresh fix moments ago, reuse it
+// instead of firing a second geolocation request (which can degrade accuracy
+// in iframes on mobile).
+if(_lastDeviceLocationAt && (Date.now() - _lastDeviceLocationAt) < 3000){
+  geoStatusText.textContent="✅ লোকেশন সফলভাবে পাওয়া গেছে (সেল থেকে)";geoStatus.style.color="#15803d";geoBtnText.textContent="আপডেট";
+  setTimeout(function(){geoStatus.classList.add("hidden")},3000);
+  return;
+}
 geoBtnText.textContent="অপেক্ষা...";
 geoStatusText.textContent="📡 লোকেশন খোঁজা হচ্ছে...";geoStatus.classList.remove("hidden");geoStatus.style.color="#2563eb";
 navigator.geolocation.getCurrentPosition(function(pos){
-var lat=pos.coords.latitude.toFixed(6),lng=pos.coords.longitude.toFixed(6);
+var lat=pos.coords.latitude.toFixed(7),lng=pos.coords.longitude.toFixed(7),accuracy=pos.coords.accuracy;
 geoField.value=lat+", "+lng;
+var accEl=document.getElementById("fGeoAccuracy");if(accEl)accEl.value=accuracy;
+var accDisplay=document.getElementById("geoAccuracyDisplay");if(accDisplay){accDisplay.textContent="±"+accuracy.toFixed(0)+"m";accDisplay.style.display=""}
 geoStatusText.textContent="✅ লোকেশন সফলভাবে পাওয়া গেছে";geoStatus.style.color="#15803d";geoBtnText.textContent="আপডেট";
 setTimeout(function(){geoStatus.classList.add("hidden")},3000);
 window.reverseGeocode(lat, lng, "fAddress");
 window.autoFillNdvi && window.autoFillNdvi(lat, lng);
 },function(err){var msg="";switch(err.code){case 1:msg="❌ লোকেশন অনুমতি দেওয়া হয়নি। ব্রাউজার সেটিংস থেকে অনুমতি দিন।";break;case 2:msg="⚠️ লোকেশন পাওয়া যায়নি।";break;case 3:msg="⏱️ লোকেশন খোঁজার সময় শেষ হয়ে গেছে।";break;default:msg="⚠️ অজানা ত্রুটি হয়েছে।"}geoStatusText.textContent=msg;geoStatus.style.color="#dc2626";geoBtnText.textContent="আবার চেষ্টা"},{enableHighAccuracy:true,timeout:10000,maximumAge:300000});
 }catch(e){console.error("Geo error:",e)}
+};
+
+// ── Manual coordinate entry + OpenStreetMap + geofence walker ──
+var geoManualMap = null, geoManualMarker = null, geoFenceLayer = null;
+var geoFenceWatchId = null, geoFencePoints = [], geoFenceWalking = false;
+var _lastDeviceLocationAt = 0;
+
+function _setFGeoFromLatLng(lat, lng, exact, accuracy){
+  // `exact` preserves whatever precision was typed/tapped rather than forcing
+  // a fixed rounding, per the "bound to follow exact input" requirement.
+  var latStr = exact ? String(lat) : Number(lat).toFixed(7);
+  var lngStr = exact ? String(lng) : Number(lng).toFixed(7);
+  var geoField = document.getElementById("fGeo");
+  if(geoField) geoField.value = latStr + ", " + lngStr;
+  var accEl = document.getElementById("fGeoAccuracy");
+  if(accEl && typeof accuracy === "number") accEl.value = accuracy;
+  var accDisplay = document.getElementById("geoAccuracyDisplay");
+  if(accDisplay && typeof accuracy === "number"){accDisplay.textContent="±"+accuracy.toFixed(0)+"m";accDisplay.style.display=""}
+  var latManual = document.getElementById("fGeoLatManual");
+  var lngManual = document.getElementById("fGeoLngManual");
+  if(latManual) latManual.value = latStr;
+  if(lngManual) lngManual.value = lngStr;
+}
+
+function _ensureGeoManualMap(){
+  if(geoManualMap) return geoManualMap;
+  var el = document.getElementById("fGeoMap");
+  if(!el || typeof L === "undefined") return null;
+
+  var startLat = 23.8103, startLng = 90.4125, startZoom = 7;
+  var existing = (_val("fGeo") || "").split(",");
+  var eLat = parseFloat(existing[0]), eLng = parseFloat(existing[1]);
+  if(!isNaN(eLat) && !isNaN(eLng)){ startLat = eLat; startLng = eLng; startZoom = 17; }
+
+  geoManualMap = L.map("fGeoMap").setView([startLat, startLng], startZoom);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+  }).addTo(geoManualMap);
+
+  if(startZoom === 17){
+    geoManualMarker = L.marker([startLat, startLng], {draggable:true}).addTo(geoManualMap);
+    _bindGeoManualMarkerEvents();
+  }
+
+  geoManualMap.on("click", function(e){
+    _placeGeoManualMarker(e.latlng.lat, e.latlng.lng, false);
+  });
+
+  // Geofence walking must draw on this same map instance.
+  if(geoFencePoints.length){ _redrawGeoFence(); }
+
+  return geoManualMap;
+}
+
+function _bindGeoManualMarkerEvents(){
+  if(!geoManualMarker) return;
+  geoManualMarker.on("dragend", function(){
+    var ll = geoManualMarker.getLatLng();
+    _setFGeoFromLatLng(ll.lat.toFixed(7), ll.lng.toFixed(7), true, undefined);
+    window.reverseGeocode && window.reverseGeocode(ll.lat.toFixed(7), ll.lng.toFixed(7), "fAddress");
+    window.autoFillNdvi && window.autoFillNdvi(ll.lat.toFixed(7), ll.lng.toFixed(7));
+  });
+}
+
+function _placeGeoManualMarker(lat, lng, exact){
+  var map = _ensureGeoManualMap();
+  if(!map) return;
+  var latlng = [lat, lng];
+  if(!geoManualMarker){
+    geoManualMarker = L.marker(latlng, {draggable:true}).addTo(map);
+    _bindGeoManualMarkerEvents();
+  } else {
+    geoManualMarker.setLatLng(latlng);
+  }
+  map.setView(latlng, Math.max(map.getZoom(), 17));
+  _setFGeoFromLatLng(lat, lng, exact, undefined);
+  window.reverseGeocode && window.reverseGeocode(exact ? lat : Number(lat).toFixed(7), exact ? lng : Number(lng).toFixed(7), "fAddress");
+  window.autoFillNdvi && window.autoFillNdvi(lat, lng);
+}
+
+function _updateGeoOfflineNotice(){
+  var el = document.getElementById("geoOfflineNotice");
+  if(!el) return;
+  if(navigator.onLine === false){ el.classList.remove("hidden"); }
+  else { el.classList.add("hidden"); }
+}
+window.addEventListener("online", _updateGeoOfflineNotice);
+window.addEventListener("offline", _updateGeoOfflineNotice);
+
+// Accept GPS coordinates from the React shell (avoids duplicate geolocation
+// requests that can degrade accuracy in the iframe on mobile browsers).
+window.addEventListener("message", function(e){
+  if(!e.data || e.data.type !== "device-location") return;
+  var c = e.data.coords;
+  if(!c || typeof c.latitude !== "number" || typeof c.longitude !== "number") return;
+  _lastDeviceLocationAt = Date.now();
+  var lat = c.latitude.toFixed(7), lng = c.longitude.toFixed(7);
+  var geoField = document.getElementById("fGeo");
+  if(geoField) geoField.value = lat + ", " + lng;
+  if(typeof c.accuracy === "number"){
+    var accEl = document.getElementById("fGeoAccuracy");
+    if(accEl) accEl.value = c.accuracy;
+    var accDisplay = document.getElementById("geoAccuracyDisplay");
+    if(accDisplay){ accDisplay.textContent = "±" + c.accuracy.toFixed(0) + "m"; accDisplay.style.display = ""; }
+  }
+  window.reverseGeocode && window.reverseGeocode(lat, lng, "fAddress");
+  window.autoFillNdvi && window.autoFillNdvi(lat, lng);
+});
+
+window.toggleGeoManualPanel = function(){
+  var panel = document.getElementById("geoManualPanel");
+  if(!panel) return;
+  var isHidden = panel.classList.contains("hidden");
+  panel.classList.toggle("hidden");
+  if(isHidden){
+    // Leaflet needs a visible, sized container — init/measure after the
+    // panel becomes visible, same fix already used for the satellite map.
+    _updateGeoOfflineNotice();
+    setTimeout(function(){
+      var map = _ensureGeoManualMap();
+      if(map){ map.invalidateSize(); }
+    }, 50);
+  }
+};
+
+window.showManualGeoOnMap = function(){
+  var latRaw = _val("fGeoLatManual"), lngRaw = _val("fGeoLngManual");
+  var statusEl = document.getElementById("geoManualStatus");
+  var lat = parseFloat(latRaw), lng = parseFloat(lngRaw);
+  if(latRaw === "" || lngRaw === "" || isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180){
+    if(statusEl){ statusEl.textContent = "⚠️ সঠিক অক্ষাংশ (-90 থেকে 90) ও দ্রাঘিমাংশ (-180 থেকে 180) লিখুন।"; statusEl.style.color = "#dc2626"; statusEl.classList.remove("hidden"); }
+    return;
+  }
+  // Pass through the raw typed strings (trimmed) so the marker — and the
+  // saved geo field — reflect exactly what the user entered, not a rounded copy.
+  _placeGeoManualMarker(latRaw.trim(), lngRaw.trim(), true);
+  if(statusEl){ statusEl.textContent = "✅ মার্কার নির্ধারিত কোঅর্ডিনেটে বসানো হয়েছে।"; statusEl.style.color = "#15803d"; statusEl.classList.remove("hidden"); setTimeout(function(){statusEl.classList.add("hidden")}, 3000); }
+};
+
+// Haversine distance in meters — used to filter GPS noise while walking.
+function _haversineMeters(lat1, lng1, lat2, lng2){
+  var R = 6371000;
+  var dLat = (lat2 - lat1) * Math.PI / 180;
+  var dLng = (lng2 - lng1) * Math.PI / 180;
+  var a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// Polygon area via the shoelace formula on a local equirectangular
+// projection (metres) — accurate enough for small plantation plots.
+function _polygonAreaSqm(points){
+  if(points.length < 3) return 0;
+  var lat0 = points[0].lat * Math.PI / 180;
+  var mPerDegLat = 111320;
+  var mPerDegLng = 111320 * Math.cos(lat0);
+  var pts = points.map(function(p){ return { x: p.lng * mPerDegLng, y: p.lat * mPerDegLat }; });
+  var area = 0;
+  for(var i=0;i<pts.length;i++){
+    var j = (i+1) % pts.length;
+    area += pts[i].x * pts[j].y - pts[j].x * pts[i].y;
+  }
+  return Math.abs(area / 2);
+}
+
+function _redrawGeoFence(){
+  var map = _ensureGeoManualMap();
+  if(!map) return;
+  if(geoFenceLayer){ map.removeLayer(geoFenceLayer); geoFenceLayer = null; }
+  if(geoFencePoints.length < 2) return;
+  var latlngs = geoFencePoints.map(function(p){ return [p.lat, p.lng]; });
+  if(geoFenceWalking){
+    geoFenceLayer = L.polyline(latlngs, { color: "#ea580c", weight: 3 }).addTo(map);
+  } else {
+    geoFenceLayer = L.polygon(latlngs, { color: "#15803d", weight: 3, fillOpacity: 0.15 }).addTo(map);
+    map.fitBounds(geoFenceLayer.getBounds(), { maxZoom: 19, padding: [20,20] });
+  }
+}
+
+function _updateGeoFenceInfo(){
+  var infoEl = document.getElementById("geoFenceInfo");
+  if(!infoEl) return;
+  if(!geoFencePoints.length){
+    infoEl.textContent = "এখনও কোনো সীমানা রেকর্ড করা হয়নি। হাঁটা শুরু করুন এবং ক্লাস্টারের চারপাশ ঘুরে আসুন।";
+    return;
+  }
+  var areaSqm = _polygonAreaSqm(geoFencePoints);
+  var areaDecimal = areaSqm / 40.4686; // 1 decimal (শতক) ≈ 40.4686 sqm — familiar local land unit
+  var txt = geoFencePoints.length + "টি পয়েন্ট রেকর্ড হয়েছে।";
+  if(geoFencePoints.length >= 3 && !geoFenceWalking){
+    txt += " আনুমানিক আয়তন: " + areaSqm.toFixed(1) + " বর্গমিটার (≈ " + areaDecimal.toFixed(2) + " শতক)।";
+  } else if(geoFenceWalking){
+    txt += " হাঁটা চলছে...";
+  }
+  infoEl.textContent = txt;
+}
+
+window.toggleGeoFenceWalk = function(){
+  var btn = document.getElementById("geoFenceWalkBtn");
+  if(!geoFenceWalking){
+    if(!navigator.geolocation){
+      var infoEl = document.getElementById("geoFenceInfo");
+      if(infoEl){ infoEl.textContent = "⚠️ আপনার ব্রাউজার লোকেশন সাপোর্ট করে না।"; }
+      return;
+    }
+    _ensureGeoManualMap();
+    geoFenceWalking = true;
+    geoFencePoints = [];
+    if(btn){ btn.textContent = "⏹ হাঁটা শেষ করুন"; btn.style.background = "#dc2626"; }
+    geoFenceWatchId = navigator.geolocation.watchPosition(function(pos){
+      var lat = pos.coords.latitude, lng = pos.coords.longitude, accuracy = pos.coords.accuracy;
+      var last = geoFencePoints[geoFencePoints.length - 1];
+      // Ignore GPS jitter: only record a new vertex once the walker has
+      // actually moved at least ~2 metres from the last recorded point.
+      if(!last || _haversineMeters(last.lat, last.lng, lat, lng) >= 2){
+        geoFencePoints.push({ lat: lat, lng: lng, accuracy: accuracy });
+        _redrawGeoFence();
+        _updateGeoFenceInfo();
+      }
+    }, function(err){
+      var infoEl = document.getElementById("geoFenceInfo");
+      if(infoEl){ infoEl.textContent = "⚠️ লোকেশন ট্র্যাক করতে সমস্যা হয়েছে (কোড " + err.code + ")।"; }
+    }, { enableHighAccuracy: true, maximumAge: 1000, timeout: 15000 });
+  } else {
+    geoFenceWalking = false;
+    if(geoFenceWatchId !== null){ navigator.geolocation.clearWatch(geoFenceWatchId); geoFenceWatchId = null; }
+    if(btn){ btn.textContent = "🚶 হাঁটা শুরু করুন"; btn.style.background = "#15803d"; }
+    if(geoFencePoints.length >= 3){
+      document.getElementById("fGeoFencePoints").value = JSON.stringify(geoFencePoints);
+      document.getElementById("fGeoFenceAreaSqm").value = _polygonAreaSqm(geoFencePoints).toFixed(1);
+    }
+    _redrawGeoFence();
+    _updateGeoFenceInfo();
+  }
+};
+
+window.clearGeoFence = function(){
+  if(geoFenceWalking){ window.toggleGeoFenceWalk(); }
+  geoFencePoints = [];
+  if(geoFenceLayer && geoManualMap){ geoManualMap.removeLayer(geoFenceLayer); geoFenceLayer = null; }
+  document.getElementById("fGeoFencePoints").value = "";
+  document.getElementById("fGeoFenceAreaSqm").value = "";
+  _updateGeoFenceInfo();
 };
 
 // ── NDVI auto-fill ──
@@ -407,105 +710,3 @@ window.autoFillNdvi = function(lat, lng){
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      bounds: { west: parseFloat(lng)-dLng, south: parseFloat(lat)-dLat, east: parseFloat(lng)+dLng, north: parseFloat(lat)+dLat },
-      year: new Date().getFullYear()
-    })
-  })
-  .then(function(r){ return r.json(); })
-  .then(function(data){
-    if(data && typeof data.ndvi === "number"){
-      ndviEl.value = data.ndvi.toFixed(3);
-    } else {
-      ndviEl.value = "";
-    }
-  })
-  .catch(function(){
-    ndviEl.value = "";
-  });
-};
-
-// ── Lookup ──
-window.lookupSubmissions=function(){
-var mob=document.getElementById("lookupMobile").value.trim();
-if(!mob){showBanner("errorBanner","মোবাইল নম্বর দিন");return}
-var subs=getSubmissions().filter(function(s){return (s.farmerMobile||s.mobile)===mob});
-var container=document.getElementById("mySubmissionsList");
-if(!subs.length){container.innerHTML='<div style="background:#fefce8;border:1px solid #fde047;border-radius:12px;padding:16px;text-align:center"><p style="color:#a16207;font-size:14px;font-weight:600">এই মোবাইল নম্বরে কোনো তথ্য পাওয়া যায়নি।</p></div>';return}
-container.innerHTML=subs.map(function(s){var t=countSeedlings(s);var total=t.fruit+t.forest+t.medicinal;var nm=s.farmerName||s.nurseryName||"";return '<div class="bg-white rounded-xl shadow p-4 anim-in"><div style="display:flex;align-items:start;justify-content:space-between;gap:8px;margin-bottom:8px"><div><p class="font-semibold text-green-700 text-sm">'+nm+'</p><p class="text-xs text-gray-500">'+(s.region||s.division||"")+" > "+s.district+" > "+s.upazila+'</p><p class="text-xs text-gray-400">'+(s.submittedAt?new Date(s.submittedAt).toLocaleDateString("bn-BD"):"")+'</p></div><div style="display:flex;gap:4px"><button onclick="editMySubmission(\''+(s.id||s.submissionId)+'\')" style="background:#dbeafe;color:#1d4ed8;font-size:12px;padding:4px 10px;border-radius:8px;font-weight:600;border:none;cursor:pointer">✏️ সম্পাদনা</button><button onclick="deleteMySubmission(\''+(s.id||s.submissionId)+'\')" style="background:#fee2e2;color:#b91c1c;font-size:12px;padding:4px 10px;border-radius:8px;font-weight:600;border:none;cursor:pointer">🗑️ মুছুন</button></div></div><div class="grid grid-cols-3 gap-2 text-xs"><div style="background:#fff7ed;border-radius:8px;padding:8px;text-align:center"><p class="font-bold" style="color:#ea580c">'+t.fruit+'</p><p style="color:#6b7280">ফলদ</p></div><div style="background:#ecfdf5;border-radius:8px;padding:8px;text-align:center"><p class="font-bold" style="color:#047857">'+t.forest+'</p><p style="color:#6b7280">বনজ</p></div><div style="background:#eff6ff;border-radius:8px;padding:8px;text-align:center"><p class="font-bold" style="color:#1d4ed8">'+t.medicinal+'</p><p style="color:#6b7280">ঔষধি</p></div></div>'+(total>0?'<p class="text-xs text-gray-500 mt-2">মোট: <b>'+total.toLocaleString("bn-BD")+'</b> চারা</p>':'')+'</div>'}).join("");
-};
-// countSeedlings — supports BOTH the new flat `seedlings` array shape and
-// the legacy fruitSeedlings/forestSeedlings/medicinalSeedlings shape.
-function countSeedlings(s){
-  var r={fruit:0,forest:0,medicinal:0};
-  if(s && Array.isArray(s.seedlings)){
-    s.seedlings.forEach(function(e){
-      var qty=parseInt(e.quantity)||0;
-      var cat=(e.category||"").trim();
-      if(cat.indexOf("ফল")===0||cat==="fruit") r.fruit+=qty;
-      else if(cat.indexOf("বন")===0||cat==="forest") r.forest+=qty;
-      else if(cat.indexOf("ঔষ")===0||cat==="medicinal") r.medicinal+=qty;
-      else r.fruit+=qty;
-    });
-    return r;
-  }
-  ["fruitSeedlings","forestSeedlings","medicinalSeedlings"].forEach(function(k,i){
-    (s[k]||[]).forEach(function(e){
-      r[["fruit","forest","medicinal"][i]]+=(parseInt(e.count)||0)+(parseInt(e.graftingCount)||0);
-    });
-  });
-  return r;
-}
-
-// ══════════════════ MY TAB (Profile + Contribution + Report) ══════════════════
-function getMySubmissionsBase(){
-  var p=getProfile();
-  var mob=p&&p.mobile?p.mobile:"";
-  if(!mob){var el=document.getElementById("lookupMobile");mob=el?el.value.trim():""}
-  if(!mob) return [];
-  return getSubmissions().filter(function(s){return (s.farmerMobile||s.mobile)===mob});
-}
-
-function populateMyFilterDropdowns(subs){
-  var srcSel=document.getElementById("myFilterSource");
-  var distSel=document.getElementById("myFilterDistrict");
-  var upzSel=document.getElementById("myFilterUpazila");
-  if(!srcSel||!distSel||!upzSel) return;
-  var sources={},districts={},upazilas={};
-  subs.forEach(function(s){
-    if(s.sourceType) sources[s.sourceType]=1;
-    if(s.district) districts[s.district]=1;
-    if(s.upazila) upazilas[s.upazila]=1;
-  });
-  var keepSrc=srcSel.value,keepDist=distSel.value,keepUpz=upzSel.value;
-  var mkOpts=function(obj,allLabel){
-    return '<option value="">'+allLabel+'</option>'+Object.keys(obj).sort().map(function(v){return '<option value="'+v+'">'+v+'</option>'}).join("");
-  };
-  srcSel.innerHTML=mkOpts(sources,"সব উৎস");
-  distSel.innerHTML=mkOpts(districts,"সব জেলা");
-  upzSel.innerHTML=mkOpts(upazilas,"সব উপজেলা");
-  srcSel.value=keepSrc;distSel.value=keepDist;upzSel.value=keepUpz;
-}
-window.onMyFilterDistrictChange=function(){
-  var baseSubs=getMySubmissionsBase();
-  var dist=document.getElementById("myFilterDistrict").value;
-  var upzSel=document.getElementById("myFilterUpazila");
-  if(!upzSel) return;
-  var upazilas={};
-  baseSubs.forEach(function(s){if(s.upazila&&(!dist||s.district===dist)) upazilas[s.upazila]=1});
-  upzSel.innerHTML='<option value="">সব উপজেলা</option>'+Object.keys(upazilas).sort().map(function(v){return '<option value="'+v+'">'+v+'</option>'}).join("");
-};
-
-function applyMyFilterSet(subs){
-  var from=document.getElementById("myFilterFrom")?document.getElementById("myFilterFrom").value:"";
-  var to=document.getElementById("myFilterTo")?document.getElementById("myFilterTo").value:"";
-  var src=document.getElementById("myFilterSource")?document.getElementById("myFilterSource").value:"";
-  var dist=document.getElementById("myFilterDistrict")?document.getElementById("myFilterDistrict").value:"";
-  var upz=document.getElementById("myFilterUpazila")?document.getElementById("myFilterUpazila").value:"";
-  return subs.filter(function(s){
-    var d=s.plantingDate||(s.submittedAt?s.submittedAt.slice(0,10):"");
-    if(from&&d&&d<from) return false;
-    if(to&&d&&d>to) return false;
-    if(src&&s.sourceType!==src) return false;
-    if(dist&&s.district!==dist) return false;
-    if(upz&&s.upazila!==upz) return false;
-    return true;
