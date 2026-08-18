@@ -492,28 +492,28 @@ tbody tr{border-bottom:1px solid #e5e7eb}
   <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-3">
     <div class="rounded-lg p-2.5 text-center" style="background:#fff7ed;border:1px solid #fed7aa">
       <p class="text-[10px] text-amber-700 font-semibold uppercase tracking-wide">মোট এন্ট্রি</p>
-      <p class="text-lg font-bold" style="color:#9a3412">২,২৭৫ টি</p>
+      <p class="text-lg font-bold" style="color:#9a3412" id="repTotalEntries">২,২৭৫ টি</p>
     </div>
     <div class="rounded-lg p-2.5 text-center" style="background:#fff7ed;border:1px solid #fed7aa">
       <p class="text-[10px] text-amber-700 font-semibold uppercase tracking-wide">মোট রোপণকৃত বৃক্ষ</p>
-      <p class="text-lg font-bold" style="color:#9a3412">১৫,৪১২ টি</p>
+      <p class="text-lg font-bold" style="color:#9a3412" id="repTotalTrees">১৫,৪১২ টি</p>
     </div>
     <div class="rounded-lg p-2.5 text-center" style="background:#fff7ed;border:1px solid #fed7aa">
       <p class="text-[10px] text-amber-700 font-semibold uppercase tracking-wide">উপজেলা কভারেজ</p>
-      <p class="text-lg font-bold" style="color:#9a3412">৯ / ৯</p>
+      <p class="text-lg font-bold" style="color:#9a3412" id="repUpazilaCoverage">৯ / ৯</p>
     </div>
     <div class="rounded-lg p-2.5 text-center" style="background:#fff7ed;border:1px solid #fed7aa">
       <p class="text-[10px] text-amber-700 font-semibold uppercase tracking-wide">যাচাই প্রয়োজন এন্ট্রি</p>
-      <p class="text-lg font-bold" style="color:#9a3412">৮৪৬ টি (৬৩.৭%)</p>
+      <p class="text-lg font-bold" style="color:#9a3412" id="repNeedsVerify">৮৪৬ টি (৬৩.৭%)</p>
     </div>
   </div>
   <div class="flex items-center justify-between flex-wrap gap-2 text-[11px]" style="color:#92400e">
-    <p>উৎস: মূল_ডাটা (ministry report, ৯৪৬ এন্ট্রি) + ১৭_কলাম_প্রতিবেদন (১,৩২৯ এন্ট্রি) — Tree_Plantation_Reporting_Workbook.xlsx থেকে ইউনিকোড-নরমালাইজড ও একত্রীকৃত।</p>
+    <p>উৎস: মূল_ডাটা (<span id="repMainDataEntries"></span>) + ১৭_কলাম_প্রতিবেদন (<span id="rep17ColEntries"></span>) — Tree_Plantation_Reporting_Workbook.xlsx থেকে ইউনিকোড-নরমালাইজড ও একত্রীকৃত।</p>
     <button onclick="toggleOfficialReportDetail()" id="officialReportToggleBtn" class="text-[11px] font-semibold px-2.5 py-1 rounded-md cursor-pointer shrink-0" style="background:#fde68a;color:#78350f">বিস্তারিত দেখুন ▾</button>
   </div>
   <div id="officialReportDetail" class="hidden mt-3 pt-3 text-[11px]" style="border-top:1px solid #fde68a;color:#78350f">
     <p class="font-semibold mb-1.5">উপজেলাভিত্তিক সম্মিলিত অগ্রগতি (গাছের সংখ্যা):</p>
-    <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1 mb-2.5">
+    <div id="repUpazilaList" class="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1 mb-2.5">
       <span>ভুরুঙ্গামারী: <b>৪,৪৮৮</b></span>
       <span>চর রাজিবপুর: <b>২,৬২৮</b></span>
       <span>ফুলবাড়ী: <b>২,২৯৮</b></span>
@@ -528,8 +528,8 @@ tbody tr{border-bottom:1px solid #e5e7eb}
       <div><canvas id="chartOfficialUpazila" height="200"></canvas></div>
       <div><canvas id="chartOfficialCategory" height="200"></canvas></div>
     </div>
-    <p class="font-semibold mb-1">ডাটা মান যাচাই (১৭_কলাম_প্রতিবেদন, মোট ১,৩২৯ এন্ট্রি):</p>
-    <ul class="list-disc pl-4 space-y-0.5">
+    <p class="font-semibold mb-1">ডাটা মান যাচাই (১৭_কলাম_প্রতিবেদন, মোট <span id="rep17ColCount">১,৩২৯</span> এন্ট্রি):</p>
+    <ul id="repDataList" class="list-disc pl-4 space-y-0.5">
       <li>সিরিয়াল নম্বর অনুপস্থিত: ১৮টি (১.৩৫%)</li>
       <li>উপজেলা ঘর খালি: ৪টি (০.৩০%)</li>
       <li>কুড়িগ্রাম জেলার বাইরে: ২টি (০.১৫%)</li>
@@ -537,7 +537,7 @@ tbody tr{border-bottom:1px solid #e5e7eb}
       <li>রোপণের তারিখ খালি: ৬৬৪টি (৪৯.৯৬%)</li>
       <li>মনিটরিং অফিসার খালি: ১৭১টি (১২.৮৭%)</li>
     </ul>
-    <p class="mt-2 text-[10.5px] italic" style="color:#a16207">এই সংখ্যাগুলো সাপ্তাহিক অফিসিয়াল ইমেইল প্রতিবেদনের সাথে যাচাইকৃত একটি স্ন্যাপশট; নিচের লাইভ কার্ড, ফিল্টার ও চার্ট সরাসরি বর্তমান App_Entry ডাটা থেকে রিয়েল-টাইমে হিসাব করা হয়।</p>
+    <p class="mt-2 text-[10.5px] italic" style="color:#a16207">এই সংখ্যাগুলো সরাসরি Tree_Plantation_Reporting_Workbook-এর মূল_ডাটা ও ১৭_কলাম_প্রতিবেদন শিট থেকে রিয়েল-টাইমে আপডেট হয়; অফলাইন হলে শেষ যাচাইকৃত সাপ্তাহিক স্ন্যাপশট দেখা যায়।</p>
   </div>
 </div>
 
@@ -3538,25 +3538,82 @@ window.setDashboardViewMode = function(mode) {
   window.renderDashboard();
 };
 
-// ── Latest Official Weekly Report: static charts (Chart.js) for the
-// reconciled snapshot card. Data mirrors the numbers in the card markup
-// (part1.txt) and this week's Tree_Plantation_Reporting_Workbook.xlsx.
-// Renders once (guarded) since this is a hand-updated weekly snapshot,
-// not live data -- update both the markup numbers and the arrays below
-// together when a new weekly report goes out.
-var _officialChartsRendered=false;
+var OFFICIAL_REPORT_CACHE_KEY="official_report_summary_v1";
+var OFFICIAL_REPORT_CACHE_MAX_AGE_MS=5*60*1000;
+var _officialReportCache=null;
+var _officialReportCacheAt=null;
+var _lastOfficialCardSig="";
+function loadCachedOfficialReport(){
+  try{
+    var raw=localStorage.getItem(OFFICIAL_REPORT_CACHE_KEY);
+    if(!raw)return null;
+    var p=JSON.parse(raw);
+    if(!p||!p.data)return null;
+    return p;
+  }catch(e){return null;}
+}
+function saveCachedOfficialReport(data){
+  try{localStorage.setItem(OFFICIAL_REPORT_CACHE_KEY,JSON.stringify({data:data,cachedAt:new Date().toISOString()}));}catch(e){}
+}
+function fetchOfficialReportSummary(force){
+  var cached=loadCachedOfficialReport();
+  if(cached){_officialReportCache=cached.data;_officialReportCacheAt=cached.cachedAt?new Date(cached.cachedAt):new Date();}
+  if(_officialReportCache&&!force){
+    var age=Date.now()-(_officialReportCacheAt?_officialReportCacheAt.getTime():Date.now());
+    if(age<OFFICIAL_REPORT_CACHE_MAX_AGE_MS){return Promise.resolve(_officialReportCache);}
+  }
+  return fetch(GAS_SYNC_ENDPOINT+"?officialSummary=1",{cache:"no-store"})
+    .then(function(r){return r.json();})
+    .then(function(data){
+      if(data&&data.ok){_officialReportCache=data;_officialReportCacheAt=new Date();saveCachedOfficialReport(data);}
+      return data;
+    })
+    .catch(function(err){
+      if(_officialReportCache)return _officialReportCache;
+      return {ok:false,error:String(err)};
+    });
+}
+function officialBnCount(n){n=Number(n)||0;return n.toLocaleString("bn-BD");}
+function officialBnPct(n){n=Number(n)||0;return n.toLocaleString("bn-BD",{minimumFractionDigits:2,maximumFractionDigits:2})+"%";}
+function officialDate(d){if(!d)return "";var dt=new Date(d);if(isNaN(dt.getTime()))return d;return dt.toLocaleDateString("bn-BD",{day:"numeric",month:"long",year:"numeric"});}
+function officialText(id,v){var el=document.getElementById(id);if(el)el.textContent=v;}
+function applyOfficialReportSummary(data){
+  if(!data||!data.ok)return;
+  var s=data.summary||{};
+  var sig=[s.totalEntries,s.totalTrees,s.upazilaCoverage,s.needsVerifyCount,s.needsVerifyPct].join("|");
+  if(sig===_lastOfficialCardSig)return;
+  _lastOfficialCardSig=sig;
+  officialText("repTotalEntries",officialBnCount(s.totalEntries)+" টি");
+  officialText("repTotalTrees",officialBnCount(s.totalTrees)+" টি");
+  officialText("repUpazilaCoverage",s.upazilaCoverage||"");
+  officialText("repNeedsVerify",officialBnCount(s.needsVerifyCount)+" টি ("+officialBnPct(s.needsVerifyPct)+")");
+  officialText("repMainDataEntries",officialBnCount(s.mainDataEntries));
+  officialText("rep17ColEntries",officialBnCount(s.seventeenColEntries));
+  officialText("rep17ColCount",officialBnCount(s.seventeenColEntries));
+  officialText("officialReportDate","("+officialDate(data.reportDate)+")");
+  var list=document.getElementById("repUpazilaList");
+  if(list&&data.upazilaTrees){list.innerHTML=data.upazilaTrees.map(function(u){return '<span>'+u.label+": <b>"+officialBnCount(u.trees)+"</b></span>";}).join("");}
+  var dq=document.getElementById("repDataList");
+  if(dq&&data.dataQuality){dq.innerHTML=data.dataQuality.map(function(d){return '<li>'+d.label+": "+officialBnCount(d.count)+"টি ("+officialBnPct(d.pct)+")";}).join("");}
+  var panel=document.getElementById("officialReportDetail");
+  if(panel&&!panel.classList.contains("hidden")){drawOfficialCharts(data);}
+}
+function drawOfficialCharts(data){
+  var uc=document.getElementById("chartOfficialUpazila");
+  var cc=document.getElementById("chartOfficialCategory");
+  if(!uc||!cc||typeof Chart==="undefined")return;
+  if(window._officialCharts){for(var k in window._officialCharts){var c=window._officialCharts[k];if(c&&c.destroy)c.destroy();}}
+  window._officialCharts={};
+  var upz=data.upazilaTrees||[];
+  var cat=data.categories||[];
+  window._officialCharts.upazila=new Chart(uc,{type:"bar",data:{labels:upz.map(function(u){return u.label;}),datasets:[{label:"",data:upz.map(function(u){return u.trees;}),backgroundColor:"rgba(180,83,9,0.65)",borderRadius:4}]},options:{indexAxis:"y",responsive:true,plugins:{legend:{display:false},title:{display:true,text:"উপজেলাভিত্তিক মোট রোপণকৃত বৃক্ষ (সম্মিলিত)",font:{size:11}}},scales:{x:{beginAtZero:true,ticks:{precision:0}}}}});
+  window._officialCharts.category=new Chart(cc,{type:"doughnut",data:{labels:cat.map(function(c){return c.label;}),datasets:[{data:cat.map(function(c){return c.trees;}),backgroundColor:["#f97316","#16a34a","#84cc16","#0891b2","#78350f","#9ca3af"]}]},options:{responsive:true,plugins:{legend:{position:"bottom",labels:{font:{size:10},boxWidth:12}},title:{display:true,text:"চারার ক্যাটাগরি অনুযায়ী বিতরণ",font:{size:11}}}}});
+}
+function refreshOfficialReportCard(){
+  fetchOfficialReportSummary(false).then(function(data){if(data&&data.ok)applyOfficialReportSummary(data);});
+}
 function renderOfficialReportCharts(){
-  if(_officialChartsRendered)return;
-  var upzCanvas=document.getElementById("chartOfficialUpazila");
-  var catCanvas=document.getElementById("chartOfficialCategory");
-  if(!upzCanvas||!catCanvas||typeof Chart==="undefined")return;
-  _officialChartsRendered=true;
-  var upzLabels=["ভুরুঙ্গামারী","চর রাজিবপুর","ফুলবাড়ী","উলিপুর","চিলমারী","রৌমারী","কুড়িগ্রাম সদর","নাগেশ্বরী","রাজারহাট"];
-  var upzTrees=[4488,2628,2298,2123,1024,988,682,598,553];
-  new Chart(upzCanvas,{type:"bar",data:{labels:upzLabels,datasets:[{label:"গাছের সংখ্যা",data:upzTrees,backgroundColor:"rgba(180,83,9,0.65)",borderRadius:4}]},options:{indexAxis:"y",responsive:true,plugins:{legend:{display:false},title:{display:true,text:"উপজেলাভিত্তিক মোট রোপণকৃত বৃক্ষ (সম্মিলিত)",font:{size:11}}},scales:{x:{beginAtZero:true,ticks:{precision:0}}}}});
-  var catLabels=["ফলদ","মিশ্র প্যাকেজ","একক প্রজাতি","ঔষধি","বনজ","অন্যান্য"];
-  var catTrees=[7320,7288,100,408,286,10];
-  new Chart(catCanvas,{type:"doughnut",data:{labels:catLabels,datasets:[{data:catTrees,backgroundColor:["#f97316","#16a34a","#84cc16","#0891b2","#78350f","#9ca3af"]}]},options:{responsive:true,plugins:{legend:{position:"bottom",labels:{font:{size:10},boxWidth:12}},title:{display:true,text:"চারার ক্যাটাগরি অনুযায়ী বিতরণ",font:{size:11}}}}});
+  fetchOfficialReportSummary(false).then(function(data){if(data&&data.ok)applyOfficialReportSummary(data);});
 }
 window.renderDashboard=function(){
 try{
@@ -3564,6 +3621,7 @@ try{
 
   var subs=getDashEntries();
   renderDashFilterSummary(subs);
+  refreshOfficialReportCard();
 
   var totalFruit=0,totalForest=0,totalMedicinal=0;
   var planters=new Set(), officers=new Set(), speciesMap={}, districtSet=new Set(), upazilaSet=new Set();

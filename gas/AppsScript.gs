@@ -53,6 +53,11 @@ var PROFILE_SHEET_NAME = 'User_Profile';
 var GROWTH_SHEET_NAME = 'Growth_Log';
 var CUSTOM_UPAZILA_SHEET_NAME = 'Custom_Upazila';
 var VISITOR_SHEET_NAME = 'Visitor_Log';
+var MINISTRY_REPORT_SHEET_NAME = 'মূল_ডাটা';
+var SEVENTEEN_COL_REPORT_SHEET_NAME = '১ৗ_কলাম_প্রতিবেদন';
+var REPORT_UPAZILAS = ['ভুরুঙ্গামারী','চর রাজিবপুর','ফুলবাড়ী','উলিপুর','চিলমারী','রৌমারী','কুড়িগ্রাম সদর','নাগেশ্বরী','রাজারহাট'];
+var REPORT_CATEGORIES = ['ফলদ','মিশ্র প্যাকেজ','একক প্রজাতি','ঔষধি','বনজ','অন্যান্য'];
+var OFFICIAL_REPORT_CACHE_SECONDS = 300;
 
 var VISITOR_COLUMNS = [
   'সময়', 'ইমেইল', 'ধরন', 'ডিভাইস আইডি'
@@ -470,7 +475,8 @@ function doGet(e) {
     if (params.mobile) return jsonOut_(lookupByMobile_(params.mobile));
     if (params.directory) return jsonOut_(getDirectory_(params.role, params.upazila));
     if (params.customUpazila) return jsonOut_(getCustomUpazilas_(params.district));
-    return jsonOut_({ ok: false, error: 'mobile, list, directory, or customUpazila query param required' });
+    if (params.officialSummary) return jsonOut_(getOfficialReportSummary_());
+    return jsonOut_({ ok: false, error: 'mobile, list, directory, customUpazila, or officialSummary query param required' });
   } catch (err) {
     return jsonOut_({ ok: false, error: String(err) });
   }
@@ -685,4 +691,158 @@ function lookupByMobile_(mobile) {
   }
   if (!match) return { ok: false, found: false };
   return { ok: true, found: true, user: match };
+}
+
+function asciiDigits_(s){
+  var bn='০১২৩৪৫৬৭৮৯';
+  s=String(s==null?'':s);
+  var out='';
+  for(var i=0;i<s.length;i++){var idx=bn.indexOf(s[i]);out+=idx>=0?String(idx):s[i];}
+  return out;
+}
+function num_(v){
+  if(v==null||v==='')return 0;
+  if(typeof v==='number')return v;
+  var s=asciiDigits_(String(v)).replace(/[^\d.\-]/g,'');
+  var n=parseFloat(s);return isNaN(n)?0:n;
+}
+function dateStr_(v){
+  if(v instanceof Date)return v.toISOString().slice(0,10);
+  if(v==null)return '';
+  var s=String(v).trim();
+  var m=s.match(/(\d{4})-(\d{2})-(\d{2})/);
+  return m?m[0]:s;
+}
+function geoLatLng_(v){
+  if(!v)return null;
+  var s=asciiDigits_(String(v).trim()).replace(/,/g,' ');
+  var nums=s.match(/-?\d+(?:\.\d+)?/g);
+  if(!nums||nums.length<2)return null;
+  var lat=parseFloat(nums[0]),lng=parseFloat(nums[1]);
+  if(isNaN(lat)||isNaN(lng))return null;
+  return {lat:lat,lng:lng};
+}
+function geoOk_(v){
+  var g=geoLatLng_(v);
+  if(!g)return false;
+  return g.lat>=20.5&&g.lat<=27.0&&g.lng>=88.0&&g.lng<=93.0;
+}
+function readSheetByHeaders_(sheetName){
+  var ss=SpreadsheetApp.getActiveSpreadsheet();
+  var sheet=ss.getSheetByName(sheetName);
+  if(!sheet)return null;
+  var values=sheet.getDataRange().getValues();
+  if(!values||values.length<2)return {header:[],rows:[]};
+  var header=values[0].map(function(h){return String(h==null?'':h).trim();});
+  var rows=[];
+  for(var r=1;r<values.length;r++){
+    var v=values[r];
+    if(!v.join(''))continue;
+    var row={};
+    for(var c=0;c<header.length;c++){row[header[c]]=(v[c]==null?'':v[c]);}
+    rows.push(row);
+  }
+  return {header:header,rows:rows};
+}
+function exactCol_(header,name){
+  for(var i=0;i<header.length;i++){if(header[i]===name)return header[i];}
+  return null;
+}
+function colFor_(header,aliases){
+  for(var i=0;i<header.length;i++){for(var a=0;a<aliases.length;a++){if(header[i]===aliases[a])return header[i];}}
+  for(var i=0;i<header.length;i++){for(var a=0;a<aliases.length;a++){if(header[i].indexOf(aliases[a])!==-1)return header[i];}}
+  return null;
+}
+function pctNum_(count,total){if(!total)return 0;return Math.round((count*1000/total))/10;}
+function inUpazilas_(u){return u&&REPORT_UPAZILAS.indexOf(u)!==-1;}
+
+function getOfficialReportSummary_(){
+  var COVERAGE=REPORT_UPAZILAS.length;
+  var main=readSheetByHeaders_(MINISTRY_REPORT_SHEET_NAME);
+  var col17=readSheetByHeaders_(SEVENTEEN_COL_REPORT_SHEET_NAME);
+  var res={
+    ok:true,
+    reportDate:'',
+    summary:{
+      mainDataEntries:0,mainDataTrees:0,
+      seventeenColEntries:0,seventeenColTrees:0,
+      totalEntries:0,totalTrees:0,
+      upazilaCount:0,coverageTotal:COVERAGE,
+      needsVerifyCount:0,needsVerifyPct:0
+    },
+    upazilaTrees:REPORT_UPAZILAS.map(function(u){return {label:u,trees:0};}),
+    categories:REPORT_CATEGORIES.map(function(c){return {label:c,trees:0};}),
+    dataQuality:[
+      {label:'সিরিয়াল নম্বর অনুপস্থিত',count:0,pct:0},
+      {label:'উপজেলা ঘর খালি',count:0,pct:0},
+      {label:'কুড়িগ্রাম জেলার বাইরে',count:0,pct:0},
+      {label:'জিও-কোঅর্ডিনেট ত্রুটিপূর্ণ',count:0,pct:0},
+      {label:'রোপণের তারিখ খালি',count:0,pct:0},
+      {label:'মনিটরিং অফিসার খালি',count:0,pct:0}
+    ],
+    source:{mainDataSheet:MINISTRY_REPORT_SHEET_NAME,seventeenColSheet:SEVENTEEN_COL_REPORT_SHEET_NAME}
+  };
+
+  var upazilaMap={};REPORT_UPAZILAS.forEach(function(u){upazilaMap[u]=0;});
+  var covered={};
+  var catMap={};REPORT_CATEGORIES.forEach(function(c){catMap[c]=0;});
+  var latestDate='';
+
+  function processSheet(sheetObj,entryField,treeField,isQuality){
+    if(!sheetObj)return;
+    var h=sheetObj.header,rows=sheetObj.rows;
+    res.summary[entryField]=rows.length;
+    var countKey=colFor_(h,['রোপণকৃত বৃক্ষের চারার প্রজাতিভিত্তিক সংখ্যা','রোপণকৃত বৃক্ষের সংখ্যা','মোট চারার সংখ্যা','সংখ্যা','মোট গাছের সংখ্যা']);
+    var upzKey=exactCol_(h,'উপজেলা');
+    var distKey=exactCol_(h,'জেলা');
+    var dateKey=colFor_(h,['রোপণের তারিখ','তারিখ']);
+    var catKey=colFor_(h,['বৃক্ষের শ্রেণী','শ্রেণী','চারার শ্রেণী','ক্যাটাগরি','ক্যাটেগরি']);
+    var serialKey=colFor_(h,['ক্রঃ নং','ক্র. নং','ক্র']);
+    var geoKey=colFor_(h,['জিওগ্রাফিক্যাল','কো-অর্ডিনেট','কোঅর্ডিনেট','জিও']);
+    var offKey=colFor_(h,['মনিটরিং অফিসারের নাম','মনিটরিং অফিসার']);
+    var totalTrees=0;
+    rows.forEach(function(row){
+      var count=num_(row[countKey]);
+      totalTrees+=count;
+      var upz=row[upzKey]||'';
+      if(upz){if(inUpazilas_(upz)){upazilaMap[upz]+=count;}covered[upz]=1;}
+      var cat=row[catKey]||'';
+      if(cat){if(catMap.hasOwnProperty(cat)){catMap[cat]+=count;}else{catMap['অন্যান্য']+=count;}}
+      var d=dateStr_(row[dateKey]);
+      if(d&&(!latestDate||d>latestDate))latestDate=d;
+      if(isQuality){
+        var sMissing=serialKey&&!row[serialKey];
+        var uEmpty=!upz;
+        var dist_=distKey?row[distKey]:'';
+        var oOutside=distKey&&dist_&&dist_.trim()!=='কুড়িগ্রাম';
+        var geoBad=geoKey&&!geoOk_(row[geoKey]);
+        var dateEmpty=dateKey&&!dateStr_(row[dateKey]);
+        var offEmpty=offKey&&!(row[offKey]||'').trim();
+        if(sMissing)res.dataQuality[0].count++;
+        if(uEmpty)res.dataQuality[1].count++;
+        if(oOutside)res.dataQuality[2].count++;
+        if(geoBad)res.dataQuality[3].count++;
+        if(dateEmpty)res.dataQuality[4].count++;
+        if(offEmpty)res.dataQuality[5].count++;
+        if(sMissing||uEmpty||oOutside||geoBad||dateEmpty||offEmpty)needsVerify++;
+      }
+    });
+    res.summary[treeField]=totalTrees;
+  }
+  var needsVerify=0;
+  processSheet(main,'mainDataEntries','mainDataTrees',false);
+  processSheet(col17,'seventeenColEntries','seventeenColTrees',true);
+
+  res.summary.totalEntries=res.summary.mainDataEntries+res.summary.seventeenColEntries;
+  res.summary.totalTrees=res.summary.mainDataTrees+res.summary.seventeenColTrees;
+  res.summary.upazilaCount=REPORT_UPAZILAS.filter(function(u){return covered[u];}).length;
+  res.summary.upazilaCoverage=res.summary.upazilaCount+' / '+COVERAGE;
+  res.summary.needsVerifyCount=needsVerify;
+  res.summary.needsVerifyPct=pctNum_(needsVerify,res.summary.seventeenColEntries);
+
+  REPORT_UPAZILAS.forEach(function(u,i){res.upazilaTrees[i].trees=Math.round(upazilaMap[u]||0);});
+  REPORT_CATEGORIES.forEach(function(c,i){res.categories[i].trees=Math.round(catMap[c]||0);});
+  res.dataQuality.forEach(function(d,i){d.pct=pctNum_(d.count,res.summary.seventeenColEntries);});
+  res.reportDate=latestDate||'';
+  return res;
 }
