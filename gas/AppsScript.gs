@@ -470,7 +470,11 @@ function doGet(e) {
     if (params.mobile) return jsonOut_(lookupByMobile_(params.mobile));
     if (params.directory) return jsonOut_(getDirectory_(params.role, params.upazila));
     if (params.customUpazila) return jsonOut_(getCustomUpazilas_(params.district));
-    return jsonOut_({ ok: false, error: 'mobile, list, directory, or customUpazila query param required' });
+    if (params.sendWeeklyReport) {
+      sendWeeklyReport();
+      return jsonOut_({ ok: true, message: 'Weekly report sent successfully to ' + REPORT_RECIPIENTS.join(', ') });
+    }
+    return jsonOut_({ ok: false, error: 'mobile, list, directory, customUpazila, or sendWeeklyReport query param required' });
   } catch (err) {
     return jsonOut_({ ok: false, error: String(err) });
   }
