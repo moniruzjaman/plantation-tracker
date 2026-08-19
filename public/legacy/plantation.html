@@ -487,7 +487,8 @@ tbody tr{border-bottom:1px solid #e5e7eb}
   </div>
   <div class="flex flex-wrap gap-2 mb-3">
     <a href="/reports/weekly-report-2026-08-11.xlsx" download="সাপ্তাহিক_বৃক্ষরোপণ_প্রতিবেদন_২০২৬-০৮-১১.xlsx" class="text-[11px] font-semibold px-2.5 py-1.5 rounded-md inline-flex items-center gap-1" style="background:#166534;color:#fff">⬇️ সম্পূর্ণ প্রতিবেদন ডাউনলোড (Excel)</a>
-    <a href="/reports/weekly-report-2026-08-11.html" target="_blank" rel="noopener" class="text-[11px] font-semibold px-2.5 py-1.5 rounded-md inline-flex items-center gap-1" style="background:#fde68a;color:#78350f">📧 ইমেইল প্রতিবেদন দেখুন</a>
+    <a href="/reports/weekly-report-2026-08-11.html" target="_blank" rel="noopener" class="text-[11px] font-semibold px-2.5 py-1.5 rounded-md inline-flex items-center gap-1" style="background:#fde68a;color:#78350f">📧 ইমেইল প্রতিবেদন প্রিভিউ</a>
+    <button onclick="triggerWeeklyReportEmail(this)" class="text-[11px] font-semibold px-3 py-1.5 rounded-md inline-flex items-center gap-1.5 cursor-pointer shadow-sm hover:opacity-90 transition active:scale-95" style="background:#047857;color:#fff" id="btnSendWeeklyReport">🚀 সাপ্তাহিক রিপোর্ট পাঠান (Email Send)</button>
   </div>
   <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-3">
     <div class="rounded-lg p-2.5 text-center" style="background:#fff7ed;border:1px solid #fed7aa">
@@ -3424,6 +3425,35 @@ window.toggleOfficialReportDetail=function(){
     setTimeout(renderOfficialReportCharts,0);
   }
   else{panel.classList.add("hidden");btn.textContent="বিস্তারিত দেখুন ▾";}
+};
+window.triggerWeeklyReportEmail = async function(btn) {
+  var confirmed = confirm("আপনি কি বর্তমান তথ্যের ভিত্তিতে প্রস্তুতকৃত সাপ্তাহিক অগ্রগতি প্রতিবেদন moniruzjamanlearner@gmail.com ঠিকানায় প্রেরণ করতে চান?");
+  if (!confirmed) return;
+
+  var origText = btn ? btn.innerHTML : "";
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = "⏳ পাঠানো হচ্ছে...";
+    btn.style.opacity = "0.7";
+  }
+
+  try {
+    var res = await fetch("/api/gas-sync?sendWeeklyReport=1");
+    var data = await res.json();
+    if (data && data.ok) {
+      alert("✅ সাপ্তাহিক প্রতিবেদন সফলভাবে পাঠানো হয়েছে!\n" + (data.message || "moniruzjamanlearner@gmail.com এ ইমেইল ও এক্সেল ফাইল প্রেরিত হয়েছে।"));
+    } else {
+      alert("⚠️ ইমেইল প্রেরণে সমস্যা হয়েছে: " + (data && data.error ? data.error : "সার্ভার রেসপন্স চেক করুন।"));
+    }
+  } catch (err) {
+    alert("⚠️ সংযোগ ত্রুটি: " + err.message + "\nApps Script ডিপ্লয়মেন্ট ও নেটওয়ার্ক সংযোগ নিশ্চিত করুন।");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = origText || "🚀 সাপ্তাহিক রিপোর্ট পাঠান (Email Send)";
+      btn.style.opacity = "1";
+    }
+  }
 };
 window.setDashboardViewMode = function(mode) {
   window.currentDashboardViewMode = mode;

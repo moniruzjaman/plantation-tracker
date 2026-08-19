@@ -489,6 +489,35 @@ window.toggleOfficialReportDetail=function(){
   }
   else{panel.classList.add("hidden");btn.textContent="বিস্তারিত দেখুন ▾";}
 };
+window.triggerWeeklyReportEmail = async function(btn) {
+  var confirmed = confirm("আপনি কি বর্তমান তথ্যের ভিত্তিতে প্রস্তুতকৃত সাপ্তাহিক অগ্রগতি প্রতিবেদন moniruzjamanlearner@gmail.com ঠিকানায় প্রেরণ করতে চান?");
+  if (!confirmed) return;
+
+  var origText = btn ? btn.innerHTML : "";
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = "⏳ পাঠানো হচ্ছে...";
+    btn.style.opacity = "0.7";
+  }
+
+  try {
+    var res = await fetch("/api/gas-sync?sendWeeklyReport=1");
+    var data = await res.json();
+    if (data && data.ok) {
+      alert("✅ সাপ্তাহিক প্রতিবেদন সফলভাবে পাঠানো হয়েছে!\n" + (data.message || "moniruzjamanlearner@gmail.com এ ইমেইল ও এক্সেল ফাইল প্রেরিত হয়েছে।"));
+    } else {
+      alert("⚠️ ইমেইল প্রেরণে সমস্যা হয়েছে: " + (data && data.error ? data.error : "সার্ভার রেসপন্স চেক করুন।"));
+    }
+  } catch (err) {
+    alert("⚠️ সংযোগ ত্রুটি: " + err.message + "\nApps Script ডিপ্লয়মেন্ট ও নেটওয়ার্ক সংযোগ নিশ্চিত করুন।");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = origText || "🚀 সাপ্তাহিক রিপোর্ট পাঠান (Email Send)";
+      btn.style.opacity = "1";
+    }
+  }
+};
 window.setDashboardViewMode = function(mode) {
   window.currentDashboardViewMode = mode;
   var btnGov = document.getElementById("btnViewGov");

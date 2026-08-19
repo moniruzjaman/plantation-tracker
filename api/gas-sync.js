@@ -43,13 +43,18 @@ export default async function handler(req, res) {
   //     narrows the payload; the client also re-filters, so this is just an
   //     optimization. Requires the doGet(e) "list" branch — see gas/AppsScript.gs.
   if (req.method === 'GET') {
-    const { mobile, list, district, region } = req.query || {};
-    if (!mobile && !list) {
-      return res.status(400).json({ ok: false, error: 'mobile or list query param required' });
+    const { mobile, list, district, region, directory, role, upazila, customUpazila, sendWeeklyReport } = req.query || {};
+    if (!mobile && !list && !directory && !customUpazila && !sendWeeklyReport) {
+      return res.status(400).json({ ok: false, error: 'mobile, list, directory, customUpazila, or sendWeeklyReport query param required' });
     }
     try {
       const params = new URLSearchParams();
       if (mobile) params.set('mobile', mobile);
+      if (directory) params.set('directory', '1');
+      if (role) params.set('role', role);
+      if (upazila) params.set('upazila', upazila);
+      if (customUpazila) params.set('customUpazila', '1');
+      if (sendWeeklyReport) params.set('sendWeeklyReport', '1');
       if (list) {
         params.set('list', '1');
         if (district) params.set('district', district);
