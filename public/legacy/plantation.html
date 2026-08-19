@@ -485,10 +485,14 @@ tbody tr{border-bottom:1px solid #e5e7eb}
     <p class="font-bold text-sm flex items-center gap-1.5" style="color:#92400e">📑 সর্বশেষ যাচাইকৃত সাপ্তাহিক প্রতিবেদন <span id="officialReportDate" class="font-normal text-xs" style="color:#b45309">(11 August, 2026)</span></p>
     <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a">✔ ডাটা মান যাচাইকৃত (উভয় উৎস একত্রীকৃত)</span>
   </div>
-  <div class="flex flex-wrap gap-2 mb-3">
-    <a href="/reports/weekly-report-2026-08-11.xlsx" download="সাপ্তাহিক_বৃক্ষরোপণ_প্রতিবেদন_২০২৬-০৮-১১.xlsx" class="text-[11px] font-semibold px-2.5 py-1.5 rounded-md inline-flex items-center gap-1" style="background:#166534;color:#fff">⬇️ সম্পূর্ণ প্রতিবেদন ডাউনলোড (Excel)</a>
-    <a href="/reports/weekly-report-2026-08-11.html" target="_blank" rel="noopener" class="text-[11px] font-semibold px-2.5 py-1.5 rounded-md inline-flex items-center gap-1" style="background:#fde68a;color:#78350f">📧 ইমেইল প্রতিবেদন প্রিভিউ</a>
-    <button onclick="triggerWeeklyReportEmail(this)" class="text-[11px] font-semibold px-3 py-1.5 rounded-md inline-flex items-center gap-1.5 cursor-pointer shadow-sm hover:opacity-90 transition active:scale-95" style="background:#047857;color:#fff" id="btnSendWeeklyReport">🚀 সাপ্তাহিক রিপোর্ট পাঠান (Email Send)</button>
+  <div class="flex flex-wrap items-center gap-2 mb-3">
+    <a href="/reports/weekly-report-2026-08-11.xlsx" download="সাপ্তাহিক_বৃক্ষরোপণ_প্রতিবেদন_২০২৬-০৮-১১.xlsx" class="text-[11px] font-semibold px-2.5 py-1.5 rounded-md inline-flex items-center gap-1" style="background:#166534;color:#fff">⬇️ সম্পূর্ণ প্রতিবেদন (Excel)</a>
+    <a href="/reports/weekly-report-2026-08-11.html" target="_blank" rel="noopener" class="text-[11px] font-semibold px-2.5 py-1.5 rounded-md inline-flex items-center gap-1" style="background:#fde68a;color:#78350f">📧 ইমেইল প্রিভিউ</a>
+    <div class="inline-flex items-center gap-1 bg-white rounded-md border border-amber-300 p-0.5 shadow-sm">
+      <span class="text-[11px] text-amber-800 font-semibold pl-1.5 hidden sm:inline">✉️</span>
+      <input type="text" id="reportRecipientEmail" value="moniruzjamanlearner@gmail.com" placeholder="প্রাপকের ইমেইল (কমা দিয়ে একাধিক)..." class="text-[11px] px-2 py-1 outline-none text-gray-700 w-44 sm:w-56 bg-transparent" title="প্রতিবেদন পাঠানোর ইমেইল ঠিকানা (কমা দিয়ে একাধিক লিখতে পারেন)" />
+      <button onclick="triggerWeeklyReportEmail(this)" class="text-[11px] font-semibold px-2.5 py-1 rounded-md inline-flex items-center gap-1 cursor-pointer shadow-sm hover:opacity-90 transition active:scale-95 text-white" style="background:#047857" id="btnSendWeeklyReport">🚀 রিপোর্ট পাঠান</button>
+    </div>
   </div>
   <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-3">
     <div class="rounded-lg p-2.5 text-center" style="background:#fff7ed;border:1px solid #fed7aa">
@@ -3427,7 +3431,16 @@ window.toggleOfficialReportDetail=function(){
   else{panel.classList.add("hidden");btn.textContent="বিস্তারিত দেখুন ▾";}
 };
 window.triggerWeeklyReportEmail = async function(btn) {
-  var confirmed = confirm("আপনি কি বর্তমান তথ্যের ভিত্তিতে প্রস্তুতকৃত সাপ্তাহিক অগ্রগতি প্রতিবেদন moniruzjamanlearner@gmail.com ঠিকানায় প্রেরণ করতে চান?");
+  var inputEl = document.getElementById("reportRecipientEmail");
+  var targetEmail = inputEl ? inputEl.value.trim() : "";
+  if (!targetEmail) {
+    targetEmail = prompt("সাপ্তাহিক রিপোর্ট ও এক্সেল ফাইল কোন ইমেইলে পাঠাতে চান? (কমা দিয়ে একাধিক লিখতে পারেন):", "moniruzjamanlearner@gmail.com");
+    if (targetEmail === null) return;
+    targetEmail = targetEmail.trim() || "moniruzjamanlearner@gmail.com";
+    if (inputEl) inputEl.value = targetEmail;
+  }
+
+  var confirmed = confirm("আপনি কি বর্তমান তথ্যের ভিত্তিতে প্রস্তুতকৃত সাপ্তাহিক অগ্রগতি প্রতিবেদন " + targetEmail + " ঠিকানায় প্রেরণ করতে চান?");
   if (!confirmed) return;
 
   var origText = btn ? btn.innerHTML : "";
@@ -3438,10 +3451,10 @@ window.triggerWeeklyReportEmail = async function(btn) {
   }
 
   try {
-    var res = await fetch("/api/gas-sync?sendWeeklyReport=1");
+    var res = await fetch("/api/gas-sync?sendWeeklyReport=1&email=" + encodeURIComponent(targetEmail));
     var data = await res.json();
     if (data && data.ok) {
-      alert("✅ সাপ্তাহিক প্রতিবেদন সফলভাবে পাঠানো হয়েছে!\n" + (data.message || "moniruzjamanlearner@gmail.com এ ইমেইল ও এক্সেল ফাইল প্রেরিত হয়েছে।"));
+      alert("✅ সাপ্তাহিক প্রতিবেদন সফলভাবে পাঠানো হয়েছে!\n" + (data.message || (targetEmail + " এ ইমেইল ও এক্সেল ফাইল প্রেরিত হয়েছে।")));
     } else {
       alert("⚠️ ইমেইল প্রেরণে সমস্যা হয়েছে: " + (data && data.error ? data.error : "সার্ভার রেসপন্স চেক করুন।"));
     }
@@ -3450,7 +3463,7 @@ window.triggerWeeklyReportEmail = async function(btn) {
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.innerHTML = origText || "🚀 সাপ্তাহিক রিপোর্ট পাঠান (Email Send)";
+      btn.innerHTML = origText || "🚀 রিপোর্ট পাঠান";
       btn.style.opacity = "1";
     }
   }

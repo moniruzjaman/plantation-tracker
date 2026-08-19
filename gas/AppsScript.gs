@@ -471,8 +471,10 @@ function doGet(e) {
     if (params.directory) return jsonOut_(getDirectory_(params.role, params.upazila));
     if (params.customUpazila) return jsonOut_(getCustomUpazilas_(params.district));
     if (params.sendWeeklyReport) {
-      sendWeeklyReport();
-      return jsonOut_({ ok: true, message: 'Weekly report sent successfully to ' + REPORT_RECIPIENTS.join(', ') });
+      var recipient = params.email || params.emailId || params.to || '';
+      sendWeeklyReport(recipient);
+      var sentTo = recipient || REPORT_RECIPIENTS.join(', ');
+      return jsonOut_({ ok: true, message: 'Weekly report sent successfully to ' + sentTo, recipient: sentTo });
     }
     return jsonOut_({ ok: false, error: 'mobile, list, directory, customUpazila, or sendWeeklyReport query param required' });
   } catch (err) {
@@ -715,7 +717,7 @@ var REPORT_DEPT        = 'কৃষি সম্প্রসারণ অধি�
  * Generates a dynamic weekly plantation progress report and emails it to
  * REPORT_RECIPIENTS. Safe to run manually; also called by the weekly trigger.
  */
-function sendWeeklyReport() {
+function sendWeeklyReport(customRecipient) {
   var now       = new Date();
   var weekEnd   = new Date(now);
   var weekStart = new Date(now);
@@ -734,8 +736,13 @@ function sendWeeklyReport() {
   var dateTag = Utilities.formatDate(now, 'Asia/Dhaka', 'dd MMM yyyy');
   var subject = '\uD83C\uDF33 সাপ্তাহিক বৃক্ষরোপণ অগ্রগতি — ' + REPORT_DISTRICT + ' জেলা (' + dateTag + ')';
 
+  var recipients = customRecipient
+    ? String(customRecipient).split(',').map(function(s) { return s.trim(); }).filter(Boolean)
+    : REPORT_RECIPIENTS;
+  if (!recipients.length) recipients = REPORT_RECIPIENTS;
+
   var emailPayload = {
-    to:       REPORT_RECIPIENTS.join(','),
+    to:       recipients.join(','),
     name:     REPORT_SENDER_NAME,
     subject:  subject,
     htmlBody: html
