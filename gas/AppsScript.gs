@@ -53,26 +53,10 @@ var PROFILE_SHEET_NAME = 'User_Profile';
 var GROWTH_SHEET_NAME = 'Growth_Log';
 var CUSTOM_UPAZILA_SHEET_NAME = 'Custom_Upazila';
 var VISITOR_SHEET_NAME = 'Visitor_Log';
-// Verified against the actual live "Tree_Plantation_Reporting_Workbook"
-// Google Sheet via Drive (not guessed from the old report's Bengali
-// descriptive text) -- the real tab names are plain English, not these
-// Bengali labels. Using the wrong names here means getSheetByName()
-// returns null for both, and the whole official-report summary silently
-// comes back as all-zeros with no error.
-var MINISTRY_REPORT_SHEET_NAME = 'ministry_report';
-var SEVENTEEN_COL_REPORT_SHEET_NAME = '17 column report';
+var MINISTRY_REPORT_SHEET_NAME = 'মূল_ডাটা';
+var SEVENTEEN_COL_REPORT_SHEET_NAME = '১ৗ_কলাম_প্রতিবেদন';
 var REPORT_UPAZILAS = ['ভুরুঙ্গামারী','চর রাজিবপুর','ফুলবাড়ী','উলিপুর','চিলমারী','রৌমারী','কুড়িগ্রাম সদর','নাগেশ্বরী','রাজারহাট'];
-// 'মিশ্র প্যাকেজ' (mixed package) and 'একক প্রজাতি' (single species) were
-// in the original taxonomy but verified (grep across the entire live
-// workbook) to appear in zero cells anywhere -- they were likely
-// hand-classified once for the old static report by a human reviewer,
-// not something derivable from the current sheet structure. Dropped
-// rather than left as permanently-empty, confusing legend entries on the
-// category chart. If that distinction matters, it could be approximated
-// by counting commas in the species-name text (multiple species listed
-// = "mixed package"), but that's a design decision worth confirming
-// rather than silently guessing.
-var REPORT_CATEGORIES = ['ফলদ','ঔষধি','বনজ','অন্যান্য'];
+var REPORT_CATEGORIES = ['ফলদ','মিশ্র প্যাকেজ','একক প্রজাতি','ঔষধি','বনজ','অন্যান্য'];
 var OFFICIAL_REPORT_CACHE_SECONDS = 300;
 
 var VISITOR_COLUMNS = [
@@ -743,43 +727,15 @@ function geoOk_(v){
   if(!g)return false;
   return g.lat>=20.5&&g.lat<=27.0&&g.lng>=88.0&&g.lng<=93.0;
 }
-/**
- * Scans the first 10 rows for the one containing every string in
- * mustContainAll, rather than assuming the header sits at a fixed row.
- * Both government sheets have a few title/instruction rows above their
- * real header -- ministry_report's real header is row 4 (rows 1-3 are a
- * merged instructional paragraph), "17 column report"'s is row 3.
- * Verified directly against the live sheet, not assumed.
- */
-function findHeaderRowIndex_(values, mustContainAll) {
-  var maxScan = Math.min(values.length, 10);
-  for (var r = 0; r < maxScan; r++) {
-    var rowText = values[r].join('|');
-    var allFound = mustContainAll.every(function (needle) { return rowText.indexOf(needle) !== -1; });
-    if (allFound) return r;
-  }
-  return -1;
-}
-function readSheetByHeaders_(sheetName, headerMarkers){
+function readSheetByHeaders_(sheetName){
   var ss=SpreadsheetApp.getActiveSpreadsheet();
   var sheet=ss.getSheetByName(sheetName);
   if(!sheet)return null;
   var values=sheet.getDataRange().getValues();
   if(!values||values.length<2)return {header:[],rows:[]};
-  var headerRowIdx = headerMarkers ? findHeaderRowIndex_(values, headerMarkers) : 0;
-  if (headerRowIdx === -1) return {header:[],rows:[]};
-  var header=values[headerRowIdx].map(function(h){return String(h==null?'':h).trim();});
+  var header=values[0].map(function(h){return String(h==null?'':h).trim();});
   var rows=[];
-  var startRow = headerRowIdx + 1;
-  // Both government sheets have a decorative row of plain sequential
-  // numbers (১,২,৩.../1,2,3...) immediately under the real header --
-  // detected and skipped here so it isn't counted as a data row.
-  if (startRow < values.length) {
-    var probe = values[startRow];
-    var looksSequential = probe.length > 1 && Number(probe[0]) === 1 && Number(probe[1]) === 2;
-    if (looksSequential) startRow++;
-  }
-  for(var r=startRow;r<values.length;r++){
+  for(var r=1;r<values.length;r++){
     var v=values[r];
     if(!v.join(''))continue;
     var row={};
@@ -802,8 +758,8 @@ function inUpazilas_(u){return u&&REPORT_UPAZILAS.indexOf(u)!==-1;}
 
 function getOfficialReportSummary_(){
   var COVERAGE=REPORT_UPAZILAS.length;
-  var main=readSheetByHeaders_(MINISTRY_REPORT_SHEET_NAME, ['ক্রঃ নং', 'রোপণকৃত বৃক্ষের সংখ্যা']);
-  var col17=readSheetByHeaders_(SEVENTEEN_COL_REPORT_SHEET_NAME, ['ক্র. নং', 'উপজেলা']);
+  var main=readSheetByHeaders_(MINISTRY_REPORT_SHEET_NAME);
+  var col17=readSheetByHeaders_(SEVENTEEN_COL_REPORT_SHEET_NAME);
   var res={
     ok:true,
     reportDate:'',
@@ -831,11 +787,6 @@ function getOfficialReportSummary_(){
   var covered={};
   var catMap={};REPORT_CATEGORIES.forEach(function(c){catMap[c]=0;});
   var latestDate='';
-  // "(category) × qty" pattern verified against the live "17 column
-  // report" sheet -- ~78% of its 1,599 rows match this cleanly; the rest
-  // (multi-species rows with no per-row category tag, e.g. "আম, কাঠাল,
-  // জাম, নিম, মেহগনি") fall back to 'অন্যান্য' rather than being dropped.
-  var CATEGORY_PATTERN=/\(([^)]+)\)\s*[×xX]/;
 
   function processSheet(sheetObj,entryField,treeField,isQuality){
     if(!sheetObj)return;
@@ -845,7 +796,7 @@ function getOfficialReportSummary_(){
     var upzKey=exactCol_(h,'উপজেলা');
     var distKey=exactCol_(h,'জেলা');
     var dateKey=colFor_(h,['রোপণের তারিখ','তারিখ']);
-    var speciesKey=colFor_(h,['রোপণকৃত বৃক্ষের প্রজাতির নাম','প্রজাতির নাম']);
+    var catKey=colFor_(h,['বৃক্ষের শ্রেণী','শ্রেণী','চারার শ্রেণী','ক্যাটাগরি','ক্যাটেগরি']);
     var serialKey=colFor_(h,['ক্রঃ নং','ক্র. নং','ক্র']);
     var geoKey=colFor_(h,['জিওগ্রাফিক্যাল','কো-অর্ডিনেট','কোঅর্ডিনেট','জিও']);
     var offKey=colFor_(h,['মনিটরিং অফিসারের নাম','মনিটরিং অফিসার']);
@@ -855,17 +806,8 @@ function getOfficialReportSummary_(){
       totalTrees+=count;
       var upz=row[upzKey]||'';
       if(upz){if(inUpazilas_(upz)){upazilaMap[upz]+=count;}covered[upz]=1;}
-      // Category breakdown is only meaningful for "17 column report" --
-      // ministry_report's species column lists multiple species per row
-      // with no per-row category tag at all, so attempting to categorize
-      // it would just dump its entire total into 'অন্যান্য' and distort
-      // the chart with a misleading "mostly uncategorized" appearance.
-      if(isQuality && speciesKey){
-        var speciesText=String(row[speciesKey]||'');
-        var m=CATEGORY_PATTERN.exec(speciesText);
-        var cat=m?m[1].trim():'অন্যান্য';
-        if(catMap.hasOwnProperty(cat)){catMap[cat]+=count;}else{catMap['অন্যান্য']+=count;}
-      }
+      var cat=row[catKey]||'';
+      if(cat){if(catMap.hasOwnProperty(cat)){catMap[cat]+=count;}else{catMap['অন্যান্য']+=count;}}
       var d=dateStr_(row[dateKey]);
       if(d&&(!latestDate||d>latestDate))latestDate=d;
       if(isQuality){
