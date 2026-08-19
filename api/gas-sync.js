@@ -54,6 +54,15 @@ export default async function handler(req, res) {
     try {
       const params = new URLSearchParams();
       if (mobile) params.set('mobile', mobile);
+      if (directory) params.set('directory', '1');
+      if (role) params.set('role', role);
+      if (upazila) params.set('upazila', upazila);
+      if (customUpazila) params.set('customUpazila', '1');
+      if (sendWeeklyReport) {
+        params.set('sendWeeklyReport', '1');
+        const targetEmail = email || emailId || to;
+        if (targetEmail) params.set('email', targetEmail);
+      }
       if (list) {
         params.set('list', '1');
         if (district) params.set('district', district);
