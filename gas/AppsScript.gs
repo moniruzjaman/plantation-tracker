@@ -730,12 +730,31 @@ function sendWeeklyReport() {
   var dateTag = Utilities.formatDate(now, 'Asia/Dhaka', 'dd MMM yyyy');
   var subject = '\uD83C\uDF33 সাপ্তাহিক বৃক্ষরোপণ অগ্রগতি — ' + REPORT_DISTRICT + ' জেলা (' + dateTag + ')';
 
-  MailApp.sendEmail({
+  var emailPayload = {
     to:       REPORT_RECIPIENTS.join(','),
     name:     REPORT_SENDER_NAME,
     subject:  subject,
     htmlBody: html
-  });
+  };
+
+  // Attempt to attach live Excel export of the workbook if OAuth token is available
+  try {
+    var ssId = SpreadsheetApp.getActiveSpreadsheet().getId();
+    var exportUrl = 'https://docs.google.com/spreadsheets/d/' + ssId + '/export?format=xlsx';
+    var response = UrlFetchApp.fetch(exportUrl, {
+      headers: { 'Authorization': 'Bearer ' + ScriptApp.getOAuthToken() },
+      muteHttpExceptions: true
+    });
+    if (response.getResponseCode() === 200) {
+      var xlsxBlob = response.getBlob().setName('সাপ্তাহিক_বৃক্ষরোপণ_প্রতিবেদন_' + REPORT_DISTRICT + '_' + Utilities.formatDate(now, 'Asia/Dhaka', 'yyyy-MM-dd') + '.xlsx');
+      emailPayload.attachments = [xlsxBlob];
+      Logger.log('Live Excel attachment generated and attached.');
+    }
+  } catch (err) {
+    Logger.log('Note: Automatic Excel attachment skipped: ' + err);
+  }
+
+  MailApp.sendEmail(emailPayload);
 
   Logger.log('Weekly report sent to: ' + REPORT_RECIPIENTS.join(', '));
 }
