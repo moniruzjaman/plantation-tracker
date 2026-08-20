@@ -47,9 +47,13 @@ export default async function handler(req, res) {
   //     summary JSON (entries, trees, upazila coverage, category breakdown,
   //     data-quality checks). Requires the doGet(e) "officialSummary" branch.
   if (req.method === 'GET') {
-    const { mobile, list, district, region, officialSummary } = req.query || {};
-    if (!mobile && !list && !officialSummary) {
-      return res.status(400).json({ ok: false, error: 'mobile, list, or officialSummary query param required' });
+    const {
+      mobile, list, district, region, officialSummary,
+      directory, role, upazila, customUpazila,
+      sendWeeklyReport, email, emailId, to
+    } = req.query || {};
+    if (!mobile && !list && !officialSummary && !directory && !customUpazila && !sendWeeklyReport) {
+      return res.status(400).json({ ok: false, error: 'mobile, list, officialSummary, directory, customUpazila, or sendWeeklyReport query param required' });
     }
     try {
       const params = new URLSearchParams();
