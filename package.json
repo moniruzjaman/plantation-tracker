@@ -36,6 +36,7 @@
     "@capacitor/haptics": "^8.0.2",
     "@prisma/client": "^6.8.2",
     "@tailwindcss/vite": "^4.1.14",
+    "@vercel/analytics": "^2.0.1",
     "@vitejs/plugin-react": "^5.0.4",
     "framer-motion": "^12.42.2",
     "leaflet": "^1.9.4",
