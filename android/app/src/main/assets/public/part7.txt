@@ -1,43 +1,178 @@
+    titleRows = [
+      ['১৭. ০৫ বছরে ২৫ কোটি বৃক্ষরোপণ কর্মসূচির আওতাভুক্ত হওয়ার লক্ষ্যে সাপ্তাহিকভিত্তিতে বৃক্ষরোপণের তথ্য ই-মেইলযোগে admonitoring@dae.gov.bd / ddimplement@dae.gov.bd এ প্রেরণ করতে হবে। কৃষি মন্ত্রণালয়ে (E-mail-input2@moa.gov.bd ও moa.input2@gmail.com) আবশ্যিকভাবে প্রেরণ করতে হবে।']
+    ];
+    headers = MINISTRY_HEADERS;
+    numRow = headers.map(function(_, i) { return i + 1; });
+    bodyRows = buildMinistryRows_(subs);
+    colWidths = [6, 46, 22, 12, 26, 30, 30, 30, 22];
+    sheetName = 'মন্ত্রণালয় প্রতিবেদন'; fileTag = 'ministry_report';
+  }
+
+  var data = titleRows.concat([headers, numRow]).concat(bodyRows);
+  var ws = XLSX.utils.aoa_to_sheet(data);
+  ws['!cols'] = colWidths.map(function(w) { return { wch: w }; });
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  XLSX.writeFile(wb, fileTag + '_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+  showBanner('successBanner', 'সরকারি ছকে এক্সেল সফলভাবে ডাউনলোড হয়েছে!');
+  setTimeout(function() { hideBanner('successBanner'); }, 3000);
+}
+
+function printGovReport_(kind, prefix) {
+  var subs = getGovReportSource_(prefix);
+  if (!subs.length) { showBanner('errorBanner', 'প্রিন্ট করার মতো কোনো ডাটা পাওয়া যায়নি।'); return; }
+  var headers, numRow, bodyRows, title;
+  if (kind === '17col') {
+    headers = COL17_HEADERS; numRow = headers.map(function(_, i) { return i + 1; });
+    bodyRows = build17ColRows_(subs);
+    title = '০৫ বছরে ২৫ কোটি বৃক্ষ রোপণ কর্মসূচির আওতায় রোপণকৃত চারার তথ্য';
+  } else {
+    headers = MINISTRY_HEADERS; numRow = headers.map(function(_, i) { return i + 1; });
+    bodyRows = buildMinistryRows_(subs);
+    title = 'সাপ্তাহিক বৃক্ষরোপণ কর্মসূচির অগ্রগতি প্রতিবেদন';
+  }
+  var esc = function(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;'); };
+  var thead = '<tr>' + headers.map(function(h) { return '<th>' + esc(h) + '</th>'; }).join('') + '</tr>' +
+              '<tr>' + numRow.map(function(n) { return '<th>' + n + '</th>'; }).join('') + '</tr>';
+  var tbody = bodyRows.map(function(r) { return '<tr>' + r.map(function(c) { return '<td>' + esc(c) + '</td>'; }).join('') + '</tr>'; }).join('');
+  var html = '<!DOCTYPE html><html lang="bn"><head><meta charset="utf-8"><title>' + esc(title) + '</title>' +
+    '<style>body{font-family:"Noto Sans Bengali",Arial,sans-serif;margin:16px}h1{font-size:14px;text-align:center}' +
+    'table{border-collapse:collapse;width:100%;font-size:10px}th,td{border:1px solid #333;padding:3px 5px;text-align:left}' +
+    'th{background:#f0fdf4}@media print{body{margin:6mm}}</style></head><body>' +
+    '<h1>' + esc(title) + '</h1><table><thead>' + thead + '</thead><tbody>' + tbody + '</tbody></table>' +
+    '<script>window.onload=function(){window.print();}<\/script></body></html>';
+  var w = window.open('', '_blank');
+  if (!w) { showBanner('errorBanner', 'পপ-আপ ব্লক করা হয়েছে। ব্রাউজার সেটিংসে পপ-আপ অনুমতি দিন।'); return; }
+  w.document.open(); w.document.write(html); w.document.close();
+}
+
+window.exportToGovExcel = function(prefix) { exportGovXlsx_('ministry', prefix); };
+window.export17ColGovExcel = function(prefix) { exportGovXlsx_('17col', prefix); };
+window.printGovReport = function(kind, prefix) { printGovReport_(kind, prefix); };
+
 
 // ── Admin ──
 window.adminLogin=function(){if(document.getElementById("adminPass").value===getAdminPw()){isAdmin=true;document.getElementById("adminLogin").classList.add("hidden");document.getElementById("adminPanel").classList.remove("hidden");document.getElementById("adminLoginErr").classList.add("hidden");renderAdminTable();populateRegionDD(document.getElementById("adminRegion"))}else document.getElementById("adminLoginErr").classList.remove("hidden")};
 window.adminLogout=function(){isAdmin=false;document.getElementById("adminLogin").classList.remove("hidden");document.getElementById("adminPanel").classList.add("hidden");document.getElementById("adminPass").value=""};
 window.changePassword=function(){var np=prompt("নতুন পাসওয়ার্ড দিন:");if(np&&np.trim().length>=4){setAdminPw(np.trim());showBanner("successBanner","পাসওয়ার্ড পরিবর্তন হয়েছে!");setTimeout(function(){hideBanner("successBanner")},3000)}else if(np)showBanner("errorBanner","পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে।")};
 window.renderAdminTable=function(){
-if(!isAdmin)return;var subs=getFiltered("admin"),tb=document.getElementById("adminTableBody"),nd=document.getElementById("adminNoData");
+if(!isAdmin)return;
+if(!_nationalEntries&&!_nationalEntriesLoading){fetchNationalEntries().then(function(){renderAdminTable()})}
+var subs=getFiltered("admin"),tb=document.getElementById("adminTableBody"),nd=document.getElementById("adminNoData");
+var noteEl=document.getElementById("adminDataSourceNote");
+if(noteEl){
+  if(_nationalEntries){
+    var localCount=subs.filter(function(s){return s._source==="local"}).length;
+    var t=_nationalEntriesAt?_nationalEntriesAt.toLocaleTimeString("bn-BD"):"";
+    noteEl.textContent=_nationalEntries.length.toLocaleString("bn-BD")+" জাতীয় + "+localCount.toLocaleString("bn-BD")+" লোকাল এন্ট্রি"+(t?" (সর্বশেষ: "+t+")":"");
+  } else {
+    noteEl.textContent="জাতীয় App_Entry ডাটা লোড হচ্ছে...";
+  }
+}
 if(!subs.length){tb.innerHTML="";nd.classList.remove("hidden");return}nd.classList.add("hidden");
-tb.innerHTML=subs.map(function(s,i){var c=countSeedlings(s),t=c.fruit+c.forest+c.medicinal;var pD = s.plantingDate ? new Date(s.plantingDate).toLocaleDateString("bn-BD") : new Date(s.submittedAt).toLocaleDateString("bn-BD");return '<tr class="border-b"><td class="px-2 py-2">'+(i+1).toLocaleString("bn-BD")+'</td><td class="px-2 py-2">'+s.region+'</td><td class="px-2 py-2">'+s.district+'</td><td class="px-2 py-2">'+s.upazila+'</td><td class="px-2 py-2">'+s.nurseryName+'</td><td class="px-2 py-2">'+s.mobile+'</td><td class="px-2 py-2 font-semibold">'+t+'</td><td class="px-2 py-2 text-gray-500 text-xs">'+pD+'</td><td class="px-2 py-2 text-center whitespace-nowrap"><button onclick="adminEdit(\''+s.id+'\')" style="background:#dbeafe;color:#1d4ed8;font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;border:none;cursor:pointer;margin-right:4px">✏️</button><button onclick="adminDelete(\''+s.id+'\')" style="background:#fee2e2;color:#b91c1c;font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;border:none;cursor:pointer">🗑️</button></td></tr>'}).join("");
+tb.innerHTML=subs.map(function(s,i){var c=countSeedlings(s),t=c.fruit+c.forest+c.medicinal;var pD = s.plantingDate ? new Date(s.plantingDate).toLocaleDateString("bn-BD") : (s.submittedAt?new Date(s.submittedAt).toLocaleDateString("bn-BD"):"");var sid=s.id||s.submissionId;var nm=s.farmerName||s.nurseryName||"";var mb=s.farmerMobile||s.mobile||"";var isLocal=s._source==="local";var syncBadge=s.synced?'<span style="color:#047857;font-size:9px" title="সিঙ্কড">✓</span>':'<span style="color:#dc2626;font-size:9px" title="অফলাইন">○</span>';var srcBadge=isLocal?'<span style="background:#eff6ff;color:#1d4ed8;font-size:9px;padding:1px 6px;border-radius:999px;font-weight:600">লোকাল</span>':'<span style="background:#f0fdf4;color:#15803d;font-size:9px;padding:1px 6px;border-radius:999px;font-weight:600">জাতীয়</span>';var actions=isLocal?('<button onclick="adminEdit(\''+sid+'\')" style="background:#dbeafe;color:#1d4ed8;font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;border:none;cursor:pointer;margin-right:4px">✏️</button><button onclick="adminDelete(\''+sid+'\')" style="background:#fee2e2;color:#b91c1c;font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;border:none;cursor:pointer">🗑️</button>'):'<span class="text-gray-400" style="font-size:10px" title="এই এন্ট্রিটি অন্য অফিসারের ডিভাইস থেকে সিঙ্ক হয়েছে — এখান থেকে সম্পাদনা/মুছে ফেলা যাবে না">শুধু দেখা যাবে</span>';return '<tr class="border-b"><td class="px-2 py-2">'+(i+1).toLocaleString("bn-BD")+'</td><td class="px-2 py-2">'+srcBadge+'</td><td class="px-2 py-2">'+(s.region||s.division||"")+'</td><td class="px-2 py-2">'+s.district+'</td><td class="px-2 py-2">'+s.upazila+'</td><td class="px-2 py-2">'+nm+' '+syncBadge+'</td><td class="px-2 py-2">'+mb+'</td><td class="px-2 py-2 font-semibold">'+t+'</td><td class="px-2 py-2 text-gray-500 text-xs">'+pD+'</td><td class="px-2 py-2 text-center whitespace-nowrap">'+actions+'</td></tr>'}).join("");
+};
+window.refreshAdminNationalData=function(){
+  var btn=document.getElementById("adminRefreshBtn");if(btn){btn.disabled=true;btn.textContent="রিফ্রেশ হচ্ছে...";}
+  fetchNationalEntries(true).then(function(){if(btn){btn.disabled=false;btn.textContent="🔄 রিফ্রেশ";}renderAdminTable()});
 };
 window.adminEdit=function(id){
-var s=getSubmissions().find(function(x){return x.id===id});if(!s)return;
-document.getElementById("eId").value=s.id;document.getElementById("eRegion").value=s.region;onEditRegionChange();
+var s=getSubmissions().find(function(x){return x.id===id||x.submissionId===id});if(!s)return;
+document.getElementById("eId").value=s.id||s.submissionId;
+if(s.division){document.getElementById("eDivision").value=s.division;}
+document.getElementById("eRegion").value=s.region;onEditRegionChange();
 setTimeout(function(){document.getElementById("eDistrict").value=s.district;onEditDistrictChange();
 document.getElementById("eUpazila").value=s.upazila||"";
-document.getElementById("eNursery").value=s.nurseryName;document.getElementById("eMobile").value=s.mobile;document.getElementById("eAddress").value=s.address||"";document.getElementById("eGeo").value=s.geoLocation||"";
-document.getElementById("eCaretakerName").value=s.caretakerName||"";document.getElementById("eCaretakerMobile").value=s.caretakerMobile||"";
+document.getElementById("eUnion").value=s.union||"";
+document.getElementById("eVillage").value=s.village||"";
+document.getElementById("eNursery").value=s.farmerName||s.nurseryName||"";
+document.getElementById("eMobile").value=s.farmerMobile||s.mobile||"";
+document.getElementById("eSaaoName").value=s.saaoName||"";
+document.getElementById("eSaaoMobile").value=s.saaoMobile||"";
+document.getElementById("eOfficerName").value=s.officerName||s.caretakerName||"";
+document.getElementById("eOfficerMobile").value=s.officerMobile||s.caretakerMobile||"";
+document.getElementById("eLocationType").value=s.locationType||"";
+document.getElementById("eAddress").value=s.address||"";
+document.getElementById("eGeo").value=s.geoLocation||((s.latitude&&s.longitude)?(s.latitude+", "+s.longitude):"");
+document.getElementById("eNdvi").value=s.ndvi||"";
 document.getElementById("eRemarks").value=s.remarks||"";
 document.getElementById("ePlantingDate").value=s.plantingDate||(s.submittedAt?s.submittedAt.slice(0, 10):new Date().toISOString().slice(0, 10));
-document.getElementById("editSeedlingSections").innerHTML=buildSeedlingSections("editSeedlingSections",s);document.getElementById("editModal").classList.remove("hidden")},60);
+var editRowsEl=document.getElementById("editSeedlingRows");
+editRowsEl.innerHTML="";
+if(Array.isArray(s.seedlings) && s.seedlings.length){
+  s.seedlings.forEach(function(sd){ addSeedlingRow("editSeedlingRows", sd); });
+} else {
+  [["fruitSeedlings","ফলদ"],["forestSeedlings","বনজ"],["medicinalSeedlings","ঔষধি"]].forEach(function(pair){
+    (s[pair[0]]||[]).forEach(function(e){
+      addSeedlingRow("editSeedlingRows", { speciesName:e.name, category:pair[1], quantity:(parseInt(e.count)||0)+(parseInt(e.graftingCount)||0) });
+    });
+  });
+}
+if(!editRowsEl.children.length){ addSeedlingRow("editSeedlingRows"); }
+document.getElementById("editModal").classList.remove("hidden")},60);
 };
 window.closeEditModal=function(){document.getElementById("editModal").classList.add("hidden")};
 document.getElementById("editForm").addEventListener("submit",function(e){
-e.preventDefault();var mob=document.getElementById("eMobile").value.trim();
-if(!validateMobile(mob)){alert("মোবাইল নম্বর অবশ্যই ১১ ডিজিট (017XXXXXXXX)");return}
-var careMob = document.getElementById("eCaretakerMobile").value.trim();
-if(careMob && !validateMobile(careMob)){alert("তদারককারীর মোবাইল অবশ্যই ১১ ডিজিট (01XXXXXXXXX)");return}
-var upEl=document.getElementById("eUpazila"),upVal=upEl&&upEl.value.trim();
-if(!upVal||!document.getElementById("eRegion").value||!document.getElementById("eDistrict").value||!document.getElementById("eNursery").value){alert("সকল প্রয়োজনীয় তথ্য পূরণ করুন");return}
-var subs=getSubmissions(),idx=subs.findIndex(function(s){return s.id===document.getElementById("eId").value});
+e.preventDefault();
+if(!validateForm("e")){return}
+var seedlings=collectSeedlings("editSeedlingRows");
+if(seedlings.length===0){alert("অন্তত একটি চারা যোগ করুন।");return}
+var subs=getSubmissions(),idx=subs.findIndex(function(s){return s.id===document.getElementById("eId").value||s.submissionId===document.getElementById("eId").value});
 if(idx===-1){closeEditModal();return}
-subs[idx]=Object.assign({},subs[idx],{region:document.getElementById("eRegion").value,district:document.getElementById("eDistrict").value,upazila:upVal,nurseryName:document.getElementById("eNursery").value.trim(),mobile:mob,caretakerName:document.getElementById("eCaretakerName").value.trim(),caretakerMobile:careMob,address:document.getElementById("eAddress").value.trim(),geoLocation:document.getElementById("eGeo").value.trim(),plantingDate:document.getElementById("ePlantingDate").value.trim(),officerName:document.getElementById("eCaretakerName").value.trim(),remarks:document.getElementById("eRemarks").value.trim()},collectSeedlingsFromDOM("editSeedlingSections"));
+var geoStr=document.getElementById("eGeo").value.trim();
+var geoParts=geoStr.split(",").map(function(x){return x.trim();});
+var updated=Object.assign({},subs[idx],{
+  division:document.getElementById("eDivision").value,
+  region:document.getElementById("eRegion").value,
+  district:document.getElementById("eDistrict").value,
+  upazila:document.getElementById("eUpazila").value.trim(),
+  union:document.getElementById("eUnion").value.trim(),
+  village:document.getElementById("eVillage").value.trim(),
+  locationType:document.getElementById("eLocationType").value,
+  farmerName:document.getElementById("eNursery").value.trim(),
+  farmerMobile:document.getElementById("eMobile").value.trim(),
+  saaoName:document.getElementById("eSaaoName").value.trim(),
+  saaoMobile:document.getElementById("eSaaoMobile").value.trim(),
+  officerName:document.getElementById("eOfficerName").value.trim(),
+  officerMobile:document.getElementById("eOfficerMobile").value.trim(),
+  address:document.getElementById("eAddress").value.trim(),
+  geoLocation:geoStr,
+  latitude:geoParts[0]||"",
+  longitude:geoParts[1]||"",
+  ndvi:document.getElementById("eNdvi").value.trim(),
+  remarks:document.getElementById("eRemarks").value.trim(),
+  plantingDate:document.getElementById("ePlantingDate").value.trim(),
+  seedlings:seedlings,
+  synced:false,
+  syncedAt:null
+});
+updated.nurseryName=updated.farmerName;
+updated.mobile=updated.farmerMobile;
+updated.caretakerName=updated.officerName;
+updated.caretakerMobile=updated.officerMobile;
+subs[idx]=updated;
 saveSubmissions(subs);closeEditModal();renderAdminTable();
 });
-window.adminDelete=function(id){if(!confirm("আপনি কি নিশ্চিত?"))return;saveSubmissions(getSubmissions().filter(function(s){return s.id!==id}));renderAdminTable()};
+window.adminDelete=function(id){if(!confirm("আপনি কি নিশ্চিত?"))return;saveSubmissions(getSubmissions().filter(function(s){return s.id!==id&&s.submissionId!==id}));renderAdminTable()};
 document.getElementById("editModal").addEventListener("click",function(e){if(e.target===this)closeEditModal()});
 
 // ── Leaflet Map Visualizer ──
 var mapInstance = null;
 var mapMarkers = [];
+var mapAccuracyCircles = [];
+var _meAccuracyCircle = null;
+
+// Bangladesh's real extent, with a generous buffer, used to reject clearly
+// bad/placeholder GPS coordinates (e.g. "0,0" null-island, a GPS glitch, or
+// a lat/lng typo) before they can ever reach fitBounds(). A single such
+// point mixed in with real Bangladesh coordinates forces Leaflet to zoom
+// out to fit both — which is exactly what a "world map" view looks like.
+var BD_BOUNDS = { minLat: 20.0, maxLat: 27.5, minLng: 87.5, maxLng: 93.5 };
+function isValidBdCoord(lat, lng) {
+  if (isNaN(lat) || isNaN(lng)) return false;
+  if (lat === 0 && lng === 0) return false; // null island
+  return lat >= BD_BOUNDS.minLat && lat <= BD_BOUNDS.maxLat && lng >= BD_BOUNDS.minLng && lng <= BD_BOUNDS.maxLng;
+}
 
 window.zoomToMyGeoLocation = function() {
   if (navigator.geolocation) {
@@ -45,6 +180,7 @@ window.zoomToMyGeoLocation = function() {
       if (mapInstance) {
         var lat = pos.coords.latitude;
         var lng = pos.coords.longitude;
+        var accuracy = pos.coords.accuracy;
         mapInstance.setView([lat, lng], 13);
         var pulseIcon = L.divIcon({
           html: '<span class="flex h-3 w-3 relative"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" style="position:absolute; background:#60a5fa; border-radius:9999px; width:12px; height:12px; display:inline-block;"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-blue-500" style="position:relative; background:#3b82f6; border-radius:9999px; width:12px; height:12px; display:inline-block;"></span></span>',
@@ -52,6 +188,18 @@ window.zoomToMyGeoLocation = function() {
           iconSize: [12, 12]
         });
         L.marker([lat, lng], { icon: pulseIcon }).addTo(mapInstance).bindPopup("<b>আপনার বর্তমান অবস্থান</b>").openPopup();
+        // Show GPS accuracy as a translucent circle (radius in metres)
+        if (_meAccuracyCircle) { mapInstance.removeLayer(_meAccuracyCircle); }
+        if (accuracy && accuracy > 0) {
+          _meAccuracyCircle = L.circle([lat, lng], {
+            radius: accuracy,
+            color: '#3b82f6',
+            fillColor: '#60a5fa',
+            fillOpacity: 0.15,
+            weight: 1,
+            interactive: false
+          }).addTo(mapInstance);
+        }
       }
     }, function() {
       alert("লোকেশন পাওয়া যায়নি বা পারমিশন নেই।");
@@ -60,6 +208,167 @@ window.zoomToMyGeoLocation = function() {
     alert("আপনার ব্রাউজার লোকেশন সমর্থন করে না।");
   }
 };
+
+// ── National App_Entry sync for the Map tab ──
+// The Map should show every location recorded in the App_Entry sheet
+// (columns L=অক্ষাংশ/latitude, M=দ্রাঘিমাংশ/longitude), across every
+// officer's device — not just this browser's localStorage. The GAS proxy
+// (/api/gas-sync?list=1) fetches and groups the sheet rows server-side
+// (one object per অ্যাপ জমা আইডি, with a seedlings[] array), in the same
+// shape produced locally by buildBaseSubmission()/toGASRows(), so the
+// existing marker-rendering code below needs no special-casing.
+var _nationalEntries = null;        // cache: array | null (not loaded yet)
+var _nationalEntriesAt = null;      // Date of last successful fetch
+var _nationalEntriesLoading = false;
+var NATIONAL_ENTRIES_CACHE_KEY = "national_entries_cache_v1";
+var NATIONAL_ENTRIES_CACHE_MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
+
+function loadCachedNationalEntries() {
+  try {
+    var raw = localStorage.getItem(NATIONAL_ENTRIES_CACHE_KEY);
+    if (!raw) return null;
+    var parsed = JSON.parse(raw);
+    if (!parsed || !Array.isArray(parsed.entries)) return null;
+    return parsed;
+  } catch (e) { return null; }
+}
+function saveCachedNationalEntries(entries) {
+  try {
+    localStorage.setItem(NATIONAL_ENTRIES_CACHE_KEY, JSON.stringify({ entries: entries, cachedAt: new Date().toISOString() }));
+  } catch (e) { /* storage full/unavailable — ignore, cache is best-effort */ }
+}
+
+function fetchNationalEntries(force) {
+  if (_nationalEntriesLoading) return Promise.resolve(_nationalEntries || []);
+  if (_nationalEntries && !force) return Promise.resolve(_nationalEntries);
+
+  // Serve the persisted cache immediately (if any) so the map isn't empty
+  // while the network request is in flight; a fresh fetch still runs unless
+  // the cache is very recent.
+  var cached = !force ? loadCachedNationalEntries() : null;
+  if (cached && !_nationalEntries) {
+    _nationalEntries = cached.entries;
+    _nationalEntriesAt = new Date(cached.cachedAt);
+    var cacheAgeMs = Date.now() - _nationalEntriesAt.getTime();
+    var statusElInit = document.getElementById("mapSyncStatus");
+    if (statusElInit) {
+      statusElInit.textContent = "📦 ক্যাশ থেকে " + _nationalEntries.length + " টি এন্ট্রি (" + _nationalEntriesAt.toLocaleTimeString("bn-BD") + ") — নতুন তথ্য আনা হচ্ছে...";
+    }
+    if (cacheAgeMs < NATIONAL_ENTRIES_CACHE_MAX_AGE_MS) {
+      // Still kick off a background refresh, but don't block on it.
+      fetchNationalEntries(true).then(function() { if (typeof renderMap === "function") renderMap(); });
+      return Promise.resolve(_nationalEntries);
+    }
+  }
+
+  _nationalEntriesLoading = true;
+  var statusEl = document.getElementById("mapSyncStatus");
+  if (statusEl) statusEl.textContent = "📡 App_Entry (সকল জেলা) থেকে তথ্য লোড হচ্ছে...";
+  return fetch(GAS_SYNC_ENDPOINT + "?list=1")
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      var rows = (data && data.ok && Array.isArray(data.entries)) ? data.entries : [];
+      _nationalEntries = rows.map(function(r) { r._source = "national"; return r; });
+      _nationalEntriesAt = new Date();
+      saveCachedNationalEntries(_nationalEntries);
+      if (statusEl) {
+        statusEl.textContent = "✅ App_Entry থেকে " + _nationalEntries.length + " টি এন্ট্রি সিঙ্ক করা হয়েছে (" + _nationalEntriesAt.toLocaleTimeString("bn-BD") + ")";
+      }
+      return _nationalEntries;
+    })
+    .catch(function(err) {
+      console.error("National App_Entry fetch failed:", err);
+      if (!_nationalEntries) {
+        var fallback = loadCachedNationalEntries();
+        _nationalEntries = fallback ? fallback.entries : [];
+      }
+      if (statusEl) statusEl.textContent = "⚠️ App_Entry থেকে তথ্য আনা যায়নি — ক্যাশ/এই ডিভাইসের তথ্য দেখানো হচ্ছে।";
+      return _nationalEntries;
+    })
+    .finally(function() { _nationalEntriesLoading = false; });
+}
+
+window.refreshNationalMapData = function() {
+  var btn = document.getElementById("mapRefreshBtn");
+  if (btn) { btn.disabled = true; btn.textContent = "🔄 রিফ্রেশ হচ্ছে..."; }
+  fetchNationalEntries(true).then(function() {
+    if (btn) { btn.disabled = false; btn.textContent = "🔄 তথ্য রিফ্রেশ করুন"; }
+    renderMap();
+  });
+};
+
+// Combine this device's local (possibly not-yet-synced) submissions with
+// the national App_Entry list, de-duplicated by অ্যাপ জমা আইডি
+// (submissionId) — preferring the national (sheet-confirmed) copy — then
+// apply the same region/district filters as the rest of the Map tab.
+function getMapEntries() {
+  var r = document.getElementById("mapRegion") && document.getElementById("mapRegion").value;
+  var d = document.getElementById("mapDistrict") && document.getElementById("mapDistrict").value;
+  var u = document.getElementById("mapUpazila") && document.getElementById("mapUpazila").value;
+  var st = document.getElementById("mapSourceType") && document.getElementById("mapSourceType").value;
+  var from = document.getElementById("mapDateFrom") && document.getElementById("mapDateFrom").value;
+  var to = document.getElementById("mapDateTo") && document.getElementById("mapDateTo").value;
+
+  var byId = {};
+  var merged = [];
+
+  (_nationalEntries || []).forEach(function(s) {
+    var key = s.submissionId || s.id;
+    if (key) byId[key] = true;
+    merged.push(s);
+  });
+  getSubmissions().forEach(function(s) {
+    var key = s.submissionId || s.id;
+    if (key && byId[key]) return; // already present via the national (synced) copy
+    s._source = s._source || "local";
+    merged.push(s);
+  });
+
+  return merged.filter(function(s) {
+    if (r && s.region !== r) return false;
+    if (d && s.district !== d) return false;
+    if (u && s.upazila !== u) return false;
+    if (st) {
+      if (st === "অন্যান্য") { if (["প্রদর্শনী","প্রণোদনা","নিজস্ব"].indexOf(s.sourceType) !== -1) return false; }
+      else if (s.sourceType !== st) return false;
+    }
+    if (from || to) {
+      var pD = s.plantingDate || (s.submittedAt ? s.submittedAt.slice(0, 10) : "");
+      if (from && pD && pD < from) return false;
+      if (to && pD && pD > to) return false;
+    }
+    return true;
+  });
+}
+
+window.resetMapFilters = function() {
+  ["mapDateFrom","mapDateTo","mapSourceType","mapRegion","mapDistrict","mapUpazila"].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.value = "";
+  });
+  populateDistrictDD(document.getElementById("mapDistrict"), "");
+  populateMapUpazilaDD();
+  renderMap();
+};
+
+function renderMapFilterSummary(subs) {
+  var el = document.getElementById("mapFilterSummary");
+  if (!el) return;
+  var bits = [];
+  var from = document.getElementById("mapDateFrom") ? document.getElementById("mapDateFrom").value : "";
+  var to = document.getElementById("mapDateTo") ? document.getElementById("mapDateTo").value : "";
+  if (from) bits.push("তারিখ: " + from + " থেকে");
+  if (to) bits.push(to + " পর্যন্ত");
+  var st = document.getElementById("mapSourceType") ? document.getElementById("mapSourceType").value : "";
+  if (st) bits.push("উৎস: " + st);
+  var r = document.getElementById("mapRegion") ? document.getElementById("mapRegion").value : "";
+  if (r) bits.push("অঞ্চল: " + r);
+  var d = document.getElementById("mapDistrict") ? document.getElementById("mapDistrict").value : "";
+  if (d) bits.push("জেলা: " + d);
+  var u = document.getElementById("mapUpazila") ? document.getElementById("mapUpazila").value : "";
+  if (u) bits.push("উপজেলা: " + u);
+  var label = bits.length ? ("ফিল্টার প্রয়োগ: " + bits.join(" · ")) : ("কোনো ফিল্টার নেই — সকল এন্ট্রি দেখানো হচ্ছে");
+  el.textContent = label + (" (" + subs.length.toLocaleString("bn-BD") + " টি এন্ট্রি)");
+}
 
 window.renderMap = function() {
   try {
@@ -70,19 +379,65 @@ window.renderMap = function() {
     if (!mapInstance) {
       // Default viewpoint focused on Bangladesh
       mapInstance = L.map('leafletMap').setView([23.8103, 90.4125], 7);
-      
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+
+      var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
       }).addTo(mapInstance);
+
+      var satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: 'Tiles &copy; Esri'
+      });
+
+      // NDVI / EVI: NASA GIBS MODIS 8-day vegetation index composites (free, no API key).
+      // Composites lag a few days behind real-time, so we request a date ~6 days back
+      // and silently fall back to OSM if a tile set turns out unavailable.
+      var gibsDate = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      var ndviLayer = L.tileLayer(
+        'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_NDVI_8Day/default/' + gibsDate + '/GoogleMapsCompatible_Level9/{z}/{y}/{x}.png',
+        { maxZoom: 9, attribution: 'NASA GIBS — MODIS Terra NDVI (8-Day)', errorTileUrl: '' }
+      );
+      var eviLayer = L.tileLayer(
+        'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_EVI_8Day/default/' + gibsDate + '/GoogleMapsCompatible_Level9/{z}/{y}/{x}.png',
+        { maxZoom: 9, attribution: 'NASA GIBS — MODIS Terra EVI (8-Day)', errorTileUrl: '' }
+      );
+      [ndviLayer, eviLayer].forEach(function(l) {
+        var tileErrCount = 0;
+        l.on('tileerror', function() {
+          tileErrCount++;
+          if (tileErrCount > 3 && mapInstance.hasLayer(l)) {
+            mapInstance.removeLayer(l);
+            mapInstance.addLayer(osmLayer);
+          }
+        });
+      });
+
+      L.control.layers({
+        '🗺️ রাস্তার মানচিত্র': osmLayer,
+        '🛰️ স্যাটেলাইট': satelliteLayer,
+        '🌿 NDVI (উদ্ভিদ সূচক)': ndviLayer,
+        '🍃 EVI (বর্ধিত উদ্ভিদ সূচক)': eviLayer
+      }, null, { collapsed: true, position: 'topright' }).addTo(mapInstance);
     }
     
     // Clear old markers
     mapMarkers.forEach(function(m) { mapInstance.removeLayer(m); });
     mapMarkers = [];
+    mapAccuracyCircles.forEach(function(c) { mapInstance.removeLayer(c); });
+    mapAccuracyCircles = [];
     
-    // Get filtered submissions
-    var subs = getFiltered("map");
+    // Kick off (or reuse the cached) national App_Entry fetch. First paint
+    // uses whatever is cached/local; once the fetch resolves we re-render
+    // automatically so markers appear without the user having to act.
+    if (!_nationalEntries && !_nationalEntriesLoading) {
+      fetchNationalEntries().then(function() { renderMap(); });
+    }
+    
+    // Get filtered submissions (local + national App_Entry, deduped, district/region/upazila filtered)
+    var subs = getMapEntries();
+    renderMapFilterSummary(subs);
+    var _mapUpazilaLegend = {}; // rebuilt each render for the dynamic legend
     
     var bounds = [];
     var mappedCount = 0;
@@ -95,7 +450,10 @@ window.renderMap = function() {
       if (parts.length !== 2) return;
       var lat = parseFloat(parts[0]);
       var lng = parseFloat(parts[1]);
-      if (isNaN(lat) || isNaN(lng)) return;
+      if (!isValidBdCoord(lat, lng)) {
+        if (!isNaN(lat) && !isNaN(lng)) console.warn("Skipping out-of-range/placeholder coordinate for map marker:", s.id || s.submissionId, lat, lng);
+        return;
+      }
       
       bounds.push([lat, lng]);
       mappedCount++;
@@ -104,42 +462,100 @@ window.renderMap = function() {
       var totalScCount = t.fruit + t.forest + t.medicinal;
       
       // Seedlings detailed details
+      var _nm = s.farmerName || s.nurseryName || "";
+      var _mb = s.farmerMobile || s.mobile || "";
+      var _off = s.officerName || s.caretakerName || "";
+      var _offmb = s.officerMobile || s.caretakerMobile || "";
+      var _reg = s.region || s.division || "";
+      var _sid = s.id || s.submissionId || "";
       var detailsHtml = '<div style="font-family: inherit; font-size:12px; line-height:1.5; min-width: 200px;">';
-      detailsHtml += '<p style="font-weight:700; color:#15803d; font-size:13px; margin:0 0 4px 0;">' + s.nurseryName + '</p>';
-      detailsHtml += '<p style="margin:2px 0;"><b>মোবাইল:</b> <a href="tel:' + s.mobile + '" style="color:#2563eb; font-weight:600; text-decoration:underline;">' + s.mobile + '</a></p>';
-      if (s.caretakerName) {
-        detailsHtml += '<p style="margin:2px 0;"><b>তদারককারী:</b> ' + s.caretakerName + (s.caretakerMobile ? ' (<a href="tel:' + s.caretakerMobile + '" style="color:#2563eb; text-decoration:underline;">' + s.caretakerMobile + '</a>)' : '') + '</p>';
-      }
+      detailsHtml += '<p style="font-weight:700; color:#15803d; font-size:13px; margin:0 0 4px 0;">' + _nm + '</p>';
+      if(_mb){detailsHtml += '<p style="margin:2px 0;"><b>মোবাইল:</b> <a href="tel:' + _mb + '" style="color:#2563eb; font-weight:600; text-decoration:underline;">' + _mb + '</a></p>';}
+      if(_off){detailsHtml += '<p style="margin:2px 0;"><b>মনিটরিং অফিসার:</b> ' + _off + (_offmb ? ' (<a href="tel:' + _offmb + '" style="color:#2563eb; text-decoration:underline;">' + _offmb + '</a>)' : '') + '</p>';}
       var pD = s.plantingDate ? new Date(s.plantingDate).toLocaleDateString("bn-BD") : (s.submittedAt ? new Date(s.submittedAt).toLocaleDateString("bn-BD") : "");
       if (pD) {
         detailsHtml += '<p style="margin:2px 0;"><b>রোপণের তারিখ:</b> ' + pD + '</p>';
       }
       detailsHtml += '<p style="margin:2px 0;"><b>রোপণকৃত বৃক্ষের অবস্থান:</b> ' + (s.address || "উল্লেখ নেই") + '</p>';
-      detailsHtml += '<p style="font-size:10px; color:#6b7280; margin:2px 0;">(' + s.region + ' > ' + s.district + ' > ' + s.upazila + ')</p>';
+      detailsHtml += '<p style="font-size:10px; color:#6b7280; margin:2px 0;">(' + _reg + ' > ' + s.district + ' > ' + s.upazila + ')</p>';
       detailsHtml += '<div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 4px; text-align: center; font-size:10px; margin-top:6px;">';
       detailsHtml += '<div style="background:#fff7ed; border-radius:4px; padding:3px;"><span style="color:#ea580c; font-weight:bold;">' + t.fruit + '</span><br><span style="color:#6b7280;">ফলদ</span></div>';
       detailsHtml += '<div style="background:#ecfdf5; border-radius:4px; padding:3px;"><span style="color:#047857; font-weight:bold;">' + t.forest + '</span><br><span style="color:#6b7280;">বনজ</span></div>';
       detailsHtml += '<div style="background:#eff6ff; border-radius:4px; padding:3px;"><span style="color:#1d4ed8; font-weight:bold;">' + t.medicinal + '</span><br><span style="color:#6b7280;">ঔষধি</span></div>';
       detailsHtml += '</div>';
-      detailsHtml += '<button onclick="parent.window.editMySubmission ? parent.window.editMySubmission(\''+s.id+'\') : editMySubmission(\''+s.id+'\')" style="width:100%; margin-top:8px; background:#dbeafe; color:#1d4ed8; border:none; padding:5px; border-radius:6px; font-weight:700; cursor:pointer; font-size:11px;">✏️ তথ্য সম্পাদনা</button>';
+      // Ownership check moved up so the popup's edit button can be gated on it.
+      var myProfile = getProfile();
+      if (!s._isMine) {
+        var pm = myProfile && myProfile.mobile;
+        if (pm && (s.saaoMobile === pm || s.officerMobile === pm)) s._isMine = true;
+      }
+      var _canEdit = s._source === "local" || s._isMine;
+      if (_canEdit) {
+        detailsHtml += '<button onclick="parent.window.editMySubmission ? parent.window.editMySubmission(\''+_sid+'\') : editMySubmission(\''+_sid+'\')" style="width:100%; margin-top:8px; background:#dbeafe; color:#1d4ed8; border:none; padding:5px; border-radius:6px; font-weight:700; cursor:pointer; font-size:11px;">✏️ তথ্য সম্পাদনা</button>';
+      } else {
+        detailsHtml += '<p style="width:100%; margin-top:8px; text-align:center; color:#9ca3af; font-size:10px;">শুধু দেখা যাবে — অন্য কর্মকর্তার এন্ট্রি</p>';
+      }
       detailsHtml += '</div>';
       
-      // Marker color logic: Larger is Orange, Medium is Blue, Small is Emerald
-      var markerBg = '#10b981'; // Green
-      if (totalScCount >= 10000) markerBg = '#f97316'; // Orange
-      else if (totalScCount >= 5000) markerBg = '#3b82f6'; // Blue
+      // Marker color logic: each upazila gets a distinct, curated color
+      // (same palette as plantation-tracker-app, see UPAZILA_COLORS above)
+      // — this makes it easy to visually cluster by upazila on the map,
+      // and keeps the two apps visually consistent for anyone using both.
+      // Special overrides: local-unsynced = gray, current user's own entry = purple.
+      var markerBg = upazilaColor(s.upazila);
+      if (s._source === "local") markerBg = '#9ca3af'; // Gray — not yet synced
+      if (s._source === "local" || s._isMine) markerBg = '#a855f7'; // Purple — my entry
       
-      var customIcon = L.divIcon({
-        html: '<div style="background-color: ' + markerBg + '; width: 28px; height: 28px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); transform: scale(1);" title="' + s.nurseryName + '">🌳</div>',
-        className: 'custom-tree-icon',
-        iconSize: [28, 28],
-        iconAnchor: [14, 14]
-      });
-      
-      var marker = L.marker([lat, lng], { icon: customIcon }).addTo(mapInstance).bindPopup(detailsHtml);
+      // Track upazila→color for the dynamic legend
+      if (s.upazila && s._source !== "local" && !s._isMine) {
+        _mapUpazilaLegend[s.upazila] = markerBg;
+      }
+
+      // Plain colored circle marker — matches plantation-tracker-app's
+      // CircleMarker styling exactly (radius 6, weight 2, fillOpacity 0.75)
+      // instead of the old emoji pin, so markers look the same in both apps.
+      var marker = L.circleMarker([lat, lng], {
+        radius: 6,
+        color: markerBg,
+        fillColor: markerBg,
+        fillOpacity: 0.75,
+        weight: 2
+      }).addTo(mapInstance).bindPopup(detailsHtml);
+      if (s.upazila) {
+        marker.bindTooltip(s.upazila, { direction: 'top', offset: [0, -6] });
+      }
       mapMarkers.push(marker);
+      // Accuracy radius circle (if GPS accuracy was captured)
+      if (s.geoAccuracy) {
+        var accRadius = parseFloat(s.geoAccuracy);
+        if (accRadius > 0) {
+          var accCircle = L.circle([lat, lng], {
+            radius: accRadius,
+            color: markerBg,
+            fillColor: markerBg,
+            fillOpacity: 0.12,
+            weight: 1,
+            interactive: false
+          }).addTo(mapInstance);
+          mapAccuracyCircles.push(accCircle);
+        }
+      }
     });
     
+    // Build dynamic upazila color legend
+    var legendEl = document.getElementById("mapUpazilaLegend");
+    if (legendEl) {
+      var keys = Object.keys(_mapUpazilaLegend).sort();
+      if (keys.length > 0) {
+        legendEl.innerHTML = keys.map(function(u) {
+          return '<span class="inline-flex items-center gap-1 ml-3"><span class="w-3 h-3 rounded-full inline-block" style="background:' + _mapUpazilaLegend[u] + '"></span>' + u + '</span>';
+        }).join('');
+        legendEl.classList.remove('hidden');
+      } else {
+        legendEl.classList.add('hidden');
+      }
+    }
+
     // Update footer text statistics
     var statsText = document.getElementById("mapStatsText");
     if (statsText) {
@@ -150,13 +566,24 @@ window.renderMap = function() {
     if (bounds.length > 0) {
       mapInstance.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
     } else {
-      // Zoom to general Bangladesh bounds or default to Kurigram center
-      mapInstance.setView([25.8113, 89.6582], 9);
+      // No entries yet (e.g. still loading, or filtered to zero) — stay on
+      // the national Bangladesh-focused view rather than jumping to any
+      // single district, so the map always opens showing the whole country.
+      mapInstance.setView([23.8103, 90.4125], 7);
     }
     
-    // Correct Leaflet display inside hidden container
+    // Correct Leaflet display inside hidden container — the map may have
+    // been created (or last measured) while the tab was display:none, which
+    // leaves Leaflet's internal size/zoom projection wrong (it can render as
+    // a zoomed-way-out "world map" with markers in the wrong place). Fixing
+    // the size alone isn't enough — the view must be re-applied afterward.
     setTimeout(function() {
-      mapInstance.invalidateSize();
+      mapInstance.invalidateSize({ animate: false });
+      if (bounds.length > 0) {
+        mapInstance.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+      } else {
+        mapInstance.setView([23.8103, 90.4125], 7);
+      }
     }, 250);
     
   } catch (err) {
@@ -216,19 +643,27 @@ function checkIframeAndPrompt() {
 
 // ── Init ──
 try{
+populateDivisionDD(document.getElementById("fDivision"));
+populateDivisionDD(document.getElementById("eDivision"));
 populateRegionDD(document.getElementById("fRegion"));
 populateRegionDD(document.getElementById("dashRegion"));
 populateRegionDD(document.getElementById("mapRegion"));
 populateRegionDD(document.getElementById("adminRegion"));
-document.getElementById("seedlingSections").innerHTML=buildSeedlingSections("seedlingSections",null);
+document.getElementById("seedlingRows").innerHTML="";
+addSeedlingRow("seedlingRows");
+var fPhotoEl=document.getElementById("fPhoto");
+if(fPhotoEl){fPhotoEl.addEventListener("change", window.handlePhotoChange);}
+initProfile();
 fetchGeoLocation();
 checkIframeAndPrompt();
 if (window.loadSyncConfig) { window.loadSyncConfig(); }
 }catch(err){
 console.error("Init error:",err);
-// Retry seedling sections build
 setTimeout(function(){
-try{document.getElementById("seedlingSections").innerHTML=buildSeedlingSections("seedlingSections",null)}catch(e2){console.error("Retry error:",e2)}
+try{
+  var sr=document.getElementById("seedlingRows");
+  if(sr && !sr.children.length){ addSeedlingRow("seedlingRows"); }
+}catch(e2){console.error("Retry error:",e2)}
 },500);
 }
 })();
