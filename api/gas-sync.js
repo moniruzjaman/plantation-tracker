@@ -34,7 +34,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: 'GAS_WEBHOOK_URL not set on server' });
   }
 
-  // GET is used two ways by the client:
+  // GET is used three ways by the client:
   //   ?mobile=01XXXXXXXXX  — Profile modal look-up of an already-registered user.
   //   ?list=1[&district=..&region=..]  — Map tab: every App_Entry row, grouped
   //     one-object-per-অ্যাপ-জমা-আইডি (submissionId) with a seedlings[] array,
@@ -42,24 +42,46 @@ export default async function handler(req, res) {
   //     not just this device's own localStorage. Optional district/region
   //     narrows the payload; the client also re-filters, so this is just an
   //     optimization. Requires the doGet(e) "list" branch — see gas/AppsScript.gs.
+  //   ?officialSummary=1  — Dashboard's "Latest Official Weekly Report" card:
+  //     aggregates the ministry report + 17-column report sheets into a single
+  //     summary JSON (entries, trees, upazila coverage, category breakdown,
+  //     data-quality checks). Requires the doGet(e) "officialSummary" branch.
   if (req.method === 'GET') {
-    const { mobile, list, district, region } = req.query || {};
-    if (!mobile && !list) {
-      return res.status(400).json({ ok: false, error: 'mobile or list query param required' });
+    const {
+      mobile, list, district, region, officialSummary,
+      directory, role, upazila, customUpazila,
+      sendWeeklyReport, email, emailId, to
+    } = req.query || {};
+    if (!mobile && !list && !officialSummary && !directory && !customUpazila && !sendWeeklyReport) {
+      return res.status(400).json({ ok: false, error: 'mobile, list, officialSummary, directory, customUpazila, or sendWeeklyReport query param required' });
     }
     try {
       const params = new URLSearchParams();
       if (mobile) params.set('mobile', mobile);
+      if (directory) params.set('directory', '1');
+      if (role) params.set('role', role);
+      if (upazila) params.set('upazila', upazila);
+      if (customUpazila) params.set('customUpazila', '1');
+      if (sendWeeklyReport) {
+        params.set('sendWeeklyReport', '1');
+        const targetEmail = email || emailId || to;
+        if (targetEmail) params.set('email', targetEmail);
+      }
       if (list) {
         params.set('list', '1');
         if (district) params.set('district', district);
         if (region) params.set('region', region);
       }
+      if (officialSummary) params.set('officialSummary', '1');
       const r = await fetch(GAS_URL + '?' + params.toString());
       const data = await r.json();
       // Let Vercel's/browser's CDN cache the (potentially large) national
       // list briefly, since App_Entry doesn't change second-to-second.
       if (list) res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
+      // Official report sheets change only when a new weekly export lands, so
+      // cache longer than the live dashboard list but still revalidate fast
+      // enough to pick up a freshly published report.
+      if (officialSummary) res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
       return res.status(200).json(data);
     } catch (e) {
       return res.status(200).json({ ok: false, error: e.message });

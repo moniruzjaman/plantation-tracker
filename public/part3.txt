@@ -1,55 +1,3 @@
-  if(stored){_cachedDeviceId=stored;return stored;}
-  var id=_generateFingerprint();
-  localStorage.setItem(DEVICE_ID_KEY,id);
-  _cachedDeviceId=id;
-  return id;
-}
-function _generateFingerprint(){
-  try{
-    // Try Capacitor Device plugin (Android native UUID)
-    if(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.Plugins&&window.Capacitor.Plugins.Device){
-      // async but we try sync first; if not available, fall through
-    }
-  }catch(e){}
-  // Web fingerprint from stable browser properties
-  var parts=[];
-  parts.push(screen.width+"x"+screen.height);
-  parts.push(screen.colorDepth);
-  parts.push(navigator.language||"");
-  parts.push(navigator.hardwareConcurrency||"");
-  parts.push(navigator.platform||"");
-  var canvas=document.createElement("canvas");
-  canvas.width=200;canvas.height=50;
-  try{
-    var ctx=canvas.getContext("2d");
-    ctx.textBaseline="top";ctx.font="14px Arial";
-    ctx.fillStyle="#f60";ctx.fillRect(125,1,62,20);
-    ctx.fillStyle="#069";ctx.fillText("DeviceID:"+navigator.userAgent,2,15);
-    ctx.fillStyle="rgba(102,204,0,0.7)";ctx.fillText("DeviceID:"+navigator.userAgent,4,17);
-    parts.push(canvas.toDataURL().slice(-50));
-  }catch(e){parts.push("no-canvas");}
-  var str=parts.join("||");
-  var hash=0;
-  for(var i=0;i<str.length;i++){hash=((hash<<5)-hash)+str.charCodeAt(i);hash|=0;}
-  return "D-"+Math.abs(hash).toString(36).toUpperCase();
-}
-// Async — try to get native device UUID (Capacitor Android) and upgrade fingerprint
-function upgradeDeviceIdAsync(){
-  try{
-    if(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.Plugins&&window.Capacitor.Plugins.Device){
-      window.Capacitor.Plugins.Device.getInfo().then(function(info){
-        if(info&&info.uuid){
-          var nativeId="N-"+info.uuid.slice(0,16).toUpperCase();
-          localStorage.setItem(DEVICE_ID_KEY,nativeId);
-          _cachedDeviceId=nativeId;
-          var p=getProfile();
-          if(p){p.deviceId=nativeId;saveProfile(p);}
-        }
-      }).catch(function(){});
-    }
-  }catch(e){}
-}
-var ROLE_LABELS={SAAO:"উপ-সহকারী কৃষি কর্মকর্তা",AEO:"কৃষি সম্প্রসারণ কর্মকর্তা",AAO:"অতিরিক্ত কৃষি কর্মকর্তা",UAO:"উপজেলা কৃষি কর্মকর্তা",ADD:"অতিরিক্ত উপপরিচালক",DTO:"জেলা প্রশিক্ষণ কর্মকর্তা",DD:"উপপরিচালক"};
 var ALL_DISTRICTS=null;
 function getAllDistricts(){ if(!ALL_DISTRICTS){ ALL_DISTRICTS=Object.keys(BD_UPAZILA).sort(function(a,b){return a.localeCompare(b,"bn")}); } return ALL_DISTRICTS; }
 function populatePDistrictDD(selected){
@@ -133,11 +81,16 @@ document.addEventListener("DOMContentLoaded",function(){
     });
   });
 });
-window.openProfileModal=function(){
+window.openProfileModal=function(mandatory){
   populatePDistrictDD();
   document.getElementById("profileLookupNote").classList.add("hidden");
   document.getElementById("pDeviceId").value=getDeviceId();
+  document.getElementById("pEmailVerifiedNote").classList.add("hidden");
+  _pendingVerifiedEmail=null;
   var p=getProfile();
+  var guestBtn=document.getElementById("profileGuestBtn"), mandNote=document.getElementById("profileMandatoryNote");
+  if(mandatory){ guestBtn.classList.add("hidden"); mandNote.classList.remove("hidden"); }
+  else { mandNote.classList.add("hidden"); if(!p) guestBtn.classList.remove("hidden"); else guestBtn.classList.add("hidden"); }
   if(p){
     document.getElementById("pShortRole").value=p.shortRole||"SAAO";
     document.getElementById("pRoleLabel").value=p.roleLabel||ROLE_LABELS[p.shortRole]||"";
@@ -152,6 +105,7 @@ window.openProfileModal=function(){
     document.getElementById("pBlock").value=p.block?(isStdBlock?p.block:"__other__"):"";
     if(p.block&&!isStdBlock){document.getElementById("pBlockCustom").classList.remove("hidden");document.getElementById("pBlockCustom").value=p.block;}
     document.getElementById("profileCancelBtn").classList.remove("hidden");
+    if(p.email&&p.emailVerified){document.getElementById("pEmailVerifiedNote").classList.remove("hidden");_pendingVerifiedEmail=p.email;}
   }else{
     document.getElementById("pShortRole").value="SAAO";
     document.getElementById("pRoleLabel").value=ROLE_LABELS["SAAO"];
@@ -160,8 +114,91 @@ window.openProfileModal=function(){
     document.getElementById("profileCancelBtn").classList.add("hidden");
   }
   document.getElementById("profileModal").classList.remove("hidden");
+  renderGoogleSignInButton();
 };
 window.closeProfileModal=function(){document.getElementById("profileModal").classList.add("hidden")};
+
+// ── Guest mode ──
+// Lets a person browse without filling the profile form. Submitting the
+// plantation form or editing an entry still requires a completed profile --
+// requireProfileOrPrompt() below is the gate used at both of those points.
+window.continueAsGuest=function(){
+  localStorage.setItem(GUEST_MODE_KEY,"1");
+  closeProfileModal();
+  attemptSilentVisitorPing();
+};
+function isGuestMode(){ return !getProfile() && localStorage.getItem(GUEST_MODE_KEY)==="1"; }
+// Returns true if a real profile exists (i.e. it's fine to proceed). If not,
+// opens the profile modal in mandatory mode (no Guest-View escape) and
+// returns false so the caller can abort the submit/edit in progress.
+function requireProfileOrPrompt(){
+  if(getProfile()) return true;
+  openProfileModal(true);
+  return false;
+}
+
+// ── Google Sign-In (optional email auto-fetch) ──
+// No-ops entirely until GOOGLE_CLIENT_ID above is replaced with a real one.
+function _googleAuthConfigured(){ return GOOGLE_CLIENT_ID.indexOf("YOUR_")!==0; }
+function _decodeGoogleJwt(token){
+  try{
+    var payload=token.split(".")[1];
+    payload=payload.replace(/-/g,"+").replace(/_/g,"/");
+    while(payload.length%4)payload+="=";
+    return JSON.parse(decodeURIComponent(escape(atob(payload))));
+  }catch(e){ console.error("Google JWT decode error:",e); return null; }
+}
+function initGoogleAuth(){
+  if(!_googleAuthConfigured() || typeof google==="undefined" || !google.accounts || !google.accounts.id) return;
+  try{
+    google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential, auto_select: false });
+    if(!document.getElementById("profileModal").classList.contains("hidden")) renderGoogleSignInButton();
+  }catch(e){ console.error("Google auth init error:",e); }
+}
+function renderGoogleSignInButton(){
+  if(!_googleAuthConfigured() || typeof google==="undefined" || !google.accounts || !google.accounts.id) return;
+  var box=document.getElementById("googleSignInBox");
+  if(!box) return;
+  box.innerHTML="";
+  try{
+    google.accounts.id.renderButton(box,{ theme:"outline", size:"medium", text:"continue_with", width:260 });
+  }catch(e){ console.error("Google button render error:",e); }
+}
+function handleGoogleCredential(response){
+  var payload=_decodeGoogleJwt(response.credential);
+  if(!payload || !payload.email) return;
+  _pendingVerifiedEmail=payload.email;
+  var emailField=document.getElementById("pEmail");
+  if(emailField && !document.getElementById("profileModal").classList.contains("hidden")){
+    emailField.value=payload.email;
+    document.getElementById("pEmailVerifiedNote").classList.remove("hidden");
+    if(payload.name && !_val("pName")) document.getElementById("pName").value=payload.name;
+  } else {
+    // Fired outside the profile modal -- this is the passive guest-visitor
+    // path: log the ping so we can count unique visitors without requiring
+    // guests to fill in the profile form.
+    logVisitorPing(payload.email, isGuestMode()?"guest":"unprompted");
+  }
+}
+// One Tap, once per browser session, so we can identify guest visitors
+// (who by definition never open/complete the profile form) for analytics.
+function attemptSilentVisitorPing(){
+  if(!_googleAuthConfigured() || typeof google==="undefined" || !google.accounts || !google.accounts.id) return;
+  if(sessionStorage.getItem(VISITOR_PING_KEY)==="1") return;
+  sessionStorage.setItem(VISITOR_PING_KEY,"1");
+  try{
+    google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential, auto_select: true });
+    google.accounts.id.prompt();
+  }catch(e){ console.error("Silent visitor ping error:",e); }
+}
+function logVisitorPing(email, mode){
+  try{
+    fetch(GAS_SYNC_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+      entryType:"visitor_ping", email:email, mode:mode||"unknown", deviceId:getDeviceId()
+    })}).catch(function(e){console.error("Visitor ping failed:",e)});
+  }catch(e){console.error("Visitor ping error:",e)}
+}
+
 window.saveProfileFromModal=function(){
   var shortRole=_val("pShortRole");
   var roleLabel=_val("pRoleLabel")||ROLE_LABELS[shortRole]||shortRole;
@@ -175,9 +212,11 @@ window.saveProfileFromModal=function(){
   if(!name||!/^01[3-9]\d{8}$/.test(mobile)||!district){err.classList.remove("hidden");return}
   err.classList.add("hidden");
   var email=_val("pEmail");
+  var emailVerified=!!(email && _pendingVerifiedEmail && email===_pendingVerifiedEmail);
   var deviceId=getDeviceId();
-  var p={shortRole:shortRole,roleLabel:roleLabel,name:name,mobile:mobile,email:email,deviceId:deviceId,district:district,upazila:upazila,union:union,block:block};
+  var p={shortRole:shortRole,roleLabel:roleLabel,name:name,mobile:mobile,email:email,emailVerified:emailVerified,deviceId:deviceId,district:district,upazila:upazila,union:union,block:block};
   saveProfile(p);
+  localStorage.removeItem(GUEST_MODE_KEY); // completing a real profile supersedes guest browsing
   applyProfileToForm();
   closeProfileModal();
   syncProfileToSheet(p);
@@ -215,8 +254,50 @@ function applyProfileToForm(){
 }
 function initProfile(){
   var p=getProfile();
-  if(!p){openProfileModal();} else {applyProfileToForm();}
+  if(!p){ if(!isGuestMode()) maybeOpenProfileModalAfterShell(); } else { applyProfileToForm(); }
   upgradeDeviceIdAsync();
+  setTimeout(function(){
+    initGoogleAuth();
+    if(!p) attemptSilentVisitorPing(); // covers both guests and anyone who dismissed the modal
+  }, 300);
+}
+
+// The profile modal used to auto-open the instant this form loaded if no
+// profile was saved yet -- with zero coordination with the React shell's
+// WelcomeModal (the app's first-run intro screen, sometimes referred to as
+// the "user guide"). That meant a first-time user could see the profile
+// modal appear to open at the same moment as -- or immediately snap into
+// view the instant they dismissed -- the welcome screen, with no visual
+// hand-off between the two, which read as "two things opening at once."
+// This now waits for an explicit "shell-ready" signal from the parent
+// before opening, so the two are always strictly sequential: welcome
+// screen first, profile modal only after. Loaded standalone (no parent
+// shell, e.g. direct /legacy/plantation.html access) has nothing to wait
+// for, so it keeps the original immediate behavior.
+function maybeOpenProfileModalAfterShell(){
+  if(window.self === window.top){
+    openProfileModal(false);
+    return;
+  }
+  var opened = false;
+  var onShellReady = function(e){
+    if(e.data && e.data.type === "shell-ready") openOnce();
+  };
+  var openOnce = function(){
+    if(opened) return;
+    opened = true;
+    window.removeEventListener("message", onShellReady);
+    // Re-check on arrival: time has passed since this was queued, and a
+    // profile could now exist (or guest mode could now be active) from
+    // something the user did while the welcome screen was still up.
+    if(!getProfile() && !isGuestMode()) openProfileModal(false);
+  };
+  window.addEventListener("message", onShellReady);
+  try{ window.parent.postMessage({ type:"iframe-ready" }, "*"); }catch(_){}
+  // Safety net: an older/cached parent bundle (from before this fix) or
+  // any other reason "shell-ready" never arrives should never permanently
+  // block the profile modal from opening at all.
+  setTimeout(openOnce, 2500);
 }
 function syncProfileToSheet(p){
   try{
@@ -248,7 +329,22 @@ function syncProfileToSheet(p){
 // matches those names against our own BD/BD_UPAZILA/BD_DIVISIONS lists so
 // the four cascading dropdowns fill themselves instead of the SAAO tapping
 // through each one by hand.
-function _norm(s){return (s||"").toString().replace(/\s*(district|zila|division|উপজেলা|জেলা|বিভাগ)\s*/gi,"").trim().toLowerCase()}
+function _norm(s){
+  // .normalize('NFC') matters here: Nominatim's Bengali text and this
+  // file's own BD_UPAZILA constant can encode visually-identical
+  // characters (e.g. ড়) in different Unicode forms (precomposed vs
+  // decomposed+nukta) depending on which tool/source produced the text.
+  // Without normalizing both sides the same way, an exact string
+  // comparison silently fails even though the text is "the same" to a
+  // human reader -- this is what was leaving উপজেলা auto-fill blank for
+  // some upazilas (কুড়িগ্রাম সদর, নাগেশ্বরী, ফুলবাড়ী and others sharing
+  // that character) even when Nominatim's response was correct.
+  return (s||"").toString().normalize('NFC')
+    .replace(/\s*(district|zila|division|উপজেলা|জেলা|বিভাগ)\s*/gi,"")
+    .replace(/ী/g,"ি").replace(/ৌ/g,"ো").replace(/ূ/g,"ু") // common vowel-sign variants across Bengali data sources
+    .replace(/\s+/g,"")
+    .trim().toLowerCase();
+}
 function _findKeyMatch(candidates,keys){
   for(var i=0;i<candidates.length;i++){
     var c=_norm(candidates[i]); if(!c)continue;
@@ -287,7 +383,7 @@ window.autoSelectAdminFromGeo=function(addr){
     }
   }catch(e){console.error("Auto admin-select failed:",e)}
 };
-var chartDiv=null,chartCat=null,chartDist=null,chartSpec=null,isAdmin=false;
+var chartDiv=null,chartCat=null,chartDist=null,chartSpec=null,chartUpazila=null,chartSaao=null,chartOfficer=null,chartTrend=null,isAdmin=false;
 
 function getSubmissions(){try{return JSON.parse(localStorage.getItem(LS_KEY)||"[]")}catch(e){return[]}}
 function saveSubmissions(d){localStorage.setItem(LS_KEY,JSON.stringify(d))}
@@ -298,18 +394,264 @@ function setAdminPw(p){localStorage.setItem(PW_KEY,p)}
 // ── Tab switching ──
 window.switchTab=function(tab){
 try{
+// If the onboarding tour is mid-flight and the user taps a real tab
+// directly, they've clearly got the idea -- end the tour instead of
+// fighting the content switch underneath it.
+if(document.getElementById("coachmarkOverlay") && typeof coachmarkFinish==="function") coachmarkFinish();
 document.querySelectorAll(".tab-content").forEach(function(el){el.classList.add("hidden")});
 document.querySelectorAll(".nav-btn").forEach(function(b){b.classList.remove("active")});
 var sec=document.getElementById("tab-"+tab);
 if(sec)sec.classList.remove("hidden");
 document.querySelectorAll('.nav-btn[data-tab="'+tab+'"]').forEach(function(b){b.classList.add("active")});
 hideBanner("successBanner");hideBanner("errorBanner");
-if(tab==="dashboard")renderDashboard();
-if(tab==="admin"&&isAdmin)renderAdminTable();
+if(tab==="dashboard"){
+  renderDashboard();
+  startDashboardAutoRefresh();
+  maybeRefreshStaleDashboardData();
+} else {
+  stopDashboardAutoRefresh();
+}
 if(tab==="map")renderMap();
-if(tab==="storedData")renderMyTab();
+if(tab==="storedData")switchMyDataSubTab(window.currentMyDataSubTab||"mine");
 window.scrollTo({top:0,behavior:"smooth"});
 }catch(err){console.error("Tab switch error:",err)}
+};
+
+// ── Dashboard auto-refresh ──
+// The dashboard used to fetch national entries exactly once per session
+// (or on a manual "🔄 রিফ্রেশ" tap) and then sit frozen -- if an officer
+// left it open during a review meeting, or just came back to it later in
+// the day, the numbers never moved even as new entries kept arriving from
+// other officers nationwide. This adds three ways the dashboard now keeps
+// itself current: periodic polling while it's the actual visible tab (not
+// wasting data/battery when it's backgrounded or another tab is open),
+// an immediate refresh the moment connectivity comes back, and a
+// background refresh when switching back onto the tab if the data has
+// gone stale (reusing the same 30-minute threshold fetchNationalEntries
+// already uses for its own cache, so the two stay consistent). A live
+// relative "X মিনিট আগে" ticker also keeps the freshness label honest
+// between refreshes, not just frozen at the last fetch's clock time.
+//
+// IMPORTANT: every async .then() below re-checks dashboardIsActiveTab()
+// AFTER the fetch resolves, not just before starting it. A fetch can take
+// a second or more, and the user may have already switched to another tab
+// (e.g. Map) while it was in flight -- calling renderDashboard() at that
+// point would draw Chart.js charts into a hidden, zero-size container,
+// which is exactly the kind of "chart sometimes fails to display" bug
+// this guard exists to prevent.
+var DASH_AUTO_REFRESH_INTERVAL_MS=5*60*1000; // 5 minutes
+var _dashAutoRefreshTimer=null;
+var _dashFreshnessTickTimer=null;
+
+function dashboardIsActiveTab(){
+  var sec=document.getElementById("tab-dashboard");
+  return !!(sec && !sec.classList.contains("hidden"));
+}
+
+window.startDashboardAutoRefresh=function(){
+  stopDashboardAutoRefresh();
+  var badge=document.getElementById("dashLiveBadge");
+  if(badge) badge.classList.remove("hidden");
+  _dashAutoRefreshTimer=setInterval(function(){
+    if(!dashboardIsActiveTab() || document.visibilityState!=="visible") return;
+    fetchNationalEntries(true).then(function(){
+      if(dashboardIsActiveTab()) renderDashboard();
+    });
+  }, DASH_AUTO_REFRESH_INTERVAL_MS);
+  _dashFreshnessTickTimer=setInterval(function(){
+    if(dashboardIsActiveTab()) updateDashFreshnessNote();
+  }, 30000);
+};
+window.stopDashboardAutoRefresh=function(){
+  var badge=document.getElementById("dashLiveBadge");
+  if(badge) badge.classList.add("hidden");
+  if(_dashAutoRefreshTimer){ clearInterval(_dashAutoRefreshTimer); _dashAutoRefreshTimer=null; }
+  if(_dashFreshnessTickTimer){ clearInterval(_dashFreshnessTickTimer); _dashFreshnessTickTimer=null; }
+};
+
+window.maybeRefreshStaleDashboardData=function(){
+  if(!_nationalEntriesAt) return; // still loading the initial fetch, nothing to check yet
+  var age=Date.now()-_nationalEntriesAt.getTime();
+  if(age>NATIONAL_ENTRIES_CACHE_MAX_AGE_MS){
+    fetchNationalEntries(true).then(function(){
+      if(dashboardIsActiveTab()) renderDashboard();
+    });
+  }
+};
+
+function dashRelativeFreshness(){
+  if(!_nationalEntriesAt) return "";
+  var mins=Math.floor((Date.now()-_nationalEntriesAt.getTime())/60000);
+  if(mins<1) return "এইমাত্র";
+  if(mins<60) return mins.toLocaleString("bn-BD")+" মিনিট আগে";
+  var hrs=Math.floor(mins/60);
+  return hrs.toLocaleString("bn-BD")+" ঘণ্টা আগে";
+}
+function updateDashFreshnessNote(){
+  var el=document.getElementById("dashDataSourceNote");
+  if(!el) return;
+  var base=el.getAttribute("data-base-text");
+  if(!base || !_nationalEntriesAt) return;
+  el.textContent=base+" (সর্বশেষ: "+dashRelativeFreshness()+")";
+}
+
+// Regaining connectivity while parked on the dashboard is exactly the
+// moment stale data is most likely (the device was probably offline for a
+// while) -- refresh immediately rather than waiting for the next poll.
+window.addEventListener("online", function(){
+  if(dashboardIsActiveTab()){
+    fetchNationalEntries(true).then(function(){
+      if(dashboardIsActiveTab()) renderDashboard();
+    });
+  }
+});
+// Coming back to a backgrounded/minimized tab is the other common "this
+// data could be stale" moment -- check against the same 30-minute
+// threshold used everywhere else rather than blindly refetching.
+document.addEventListener("visibilitychange", function(){
+  if(document.visibilityState==="visible" && dashboardIsActiveTab()){
+    maybeRefreshStaleDashboardData();
+  }
+});
+
+// ── Onboarding coach-marks (first-visit tab tour) ──
+// WelcomeModal (the React shell's branding modal) never explains what the
+// 4 bottom-nav tabs actually do. This is a lightweight, self-contained
+// spotlight tour over the real nav buttons -- runs once per device, works
+// whether this page is loaded standalone or inside the shell's iframe (in
+// the shell case it simply starts "underneath" WelcomeModal's overlay and
+// becomes visible the moment that modal closes, no cross-frame messaging
+// needed, since the iframe is just pixels within the parent page).
+var COACHMARK_KEY="coachmark_tabs_v1";
+var COACHMARK_STEPS=[
+  {tab:"form",title:"📝 ফর্ম",text:"এখানে নতুন বৃক্ষরোপণের তথ্য যোগ করুন — ধাপে ধাপে ঠিকানা, GPS ও চারার তথ্য দিয়ে।"},
+  {tab:"dashboard",title:"📊 ড্যাশবোর্ড",text:"সারাদেশ বা আপনার এলাকার রোপণের পরিসংখ্যান, চার্ট ও তথ্যের মান-স্কোর এখানে দেখুন।"},
+  {tab:"map",title:"🗺️ ম্যাপ",text:"সব কর্মকর্তার জমাকৃত বৃক্ষরোপণের অবস্থান মানচিত্রে দেখুন, নিজের এন্ট্রি আলাদা রঙে চিহ্নিত।"},
+  {tab:"storedData",title:"👤 প্রোফাইল",text:"আপনার জমাকৃত সব তথ্য দেখুন, সম্পাদনা করুন এবং সিঙ্ক না হওয়া তথ্য এখানে যাচাই করুন।"}
+];
+var coachmarkStepIndex=0;
+
+function coachmarkGetVisibleNavBtn(tab){
+  var btns=document.querySelectorAll('.nav-btn[data-tab="'+tab+'"]');
+  for(var i=0;i<btns.length;i++){
+    var r=btns[i].getBoundingClientRect();
+    if(r.width>0 && r.height>0) return btns[i];
+  }
+  return null;
+}
+
+function coachmarkPosition(step){
+  var target=coachmarkGetVisibleNavBtn(step.tab);
+  if(!target) return false;
+  var r=target.getBoundingClientRect();
+  var pad=8;
+  var ring=document.getElementById("coachmarkRing");
+  ring.style.top=(r.top-pad)+"px";
+  ring.style.left=(r.left-pad)+"px";
+  ring.style.width=(r.width+pad*2)+"px";
+  ring.style.height=(r.height+pad*2)+"px";
+
+  var tip=document.getElementById("coachmarkTooltip");
+  var tipRect=tip.getBoundingClientRect();
+  var spaceBelow=window.innerHeight-r.bottom;
+  var top=(spaceBelow>tipRect.height+24) ? (r.bottom+16) : Math.max(12,r.top-tipRect.height-16);
+  var left=Math.min(Math.max(12,r.left+r.width/2-tipRect.width/2),window.innerWidth-tipRect.width-12);
+  tip.style.top=top+"px";
+  tip.style.left=left+"px";
+  return true;
+}
+
+function coachmarkRender(){
+  var step=COACHMARK_STEPS[coachmarkStepIndex];
+  var isLast=coachmarkStepIndex===COACHMARK_STEPS.length-1;
+  var tip=document.getElementById("coachmarkTooltip");
+  if(!tip) return;
+  tip.setAttribute("role","dialog");
+  tip.setAttribute("aria-live","polite");
+  tip.innerHTML=
+    '<div style="font-weight:700;font-size:13px;margin-bottom:4px;color:#14532d">'+step.title+'</div>'+
+    '<div style="font-size:12px;color:#374151;line-height:1.5;margin-bottom:10px">'+step.text+'</div>'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">'+
+      '<button onclick="coachmarkSkip()" style="background:transparent;border:none;color:#9ca3af;font-size:11px;font-weight:600;cursor:pointer;padding:8px 4px;min-height:36px">এড়িয়ে যান</button>'+
+      '<div style="display:flex;align-items:center;gap:8px">'+
+        '<span style="font-size:10.5px;color:#9ca3af;font-weight:600">'+(coachmarkStepIndex+1)+'/'+COACHMARK_STEPS.length+'</span>'+
+        '<button onclick="coachmarkNext()" style="background:#15803d;border:none;color:#fff;font-size:12px;font-weight:700;cursor:pointer;padding:8px 14px;border-radius:8px;min-height:36px">'+(isLast?"বুঝেছি ✓":"পরবর্তী →")+'</button>'+
+      '</div>'+
+    '</div>';
+  var ok=coachmarkPosition(step);
+  if(!ok){ coachmarkFinish(); return; }
+}
+
+window.coachmarkNext=function(){
+  coachmarkStepIndex++;
+  if(coachmarkStepIndex>=COACHMARK_STEPS.length){ coachmarkFinish(); return; }
+  coachmarkRender();
+};
+window.coachmarkSkip=function(){ coachmarkFinish(); };
+
+function coachmarkFinish(){
+  try{ localStorage.setItem(COACHMARK_KEY,"1"); }catch(e){}
+  var overlay=document.getElementById("coachmarkOverlay");
+  if(overlay) overlay.remove();
+  window.removeEventListener("resize",coachmarkReposition);
+  document.removeEventListener("keydown",coachmarkKeyHandler);
+}
+function coachmarkReposition(){
+  if(!document.getElementById("coachmarkOverlay")) return;
+  coachmarkPosition(COACHMARK_STEPS[coachmarkStepIndex]);
+}
+function coachmarkKeyHandler(e){
+  if(!document.getElementById("coachmarkOverlay")) return;
+  if(e.key==="Escape") coachmarkSkip();
+  if(e.key==="Enter"||e.key===" ") coachmarkNext();
+}
+
+function initTabCoachmarks(){
+  try{ if(localStorage.getItem(COACHMARK_KEY)) return; }catch(e){ return; }
+  if(document.getElementById("coachmarkOverlay")) return;
+  var overlay=document.createElement("div");
+  overlay.id="coachmarkOverlay";
+  overlay.innerHTML='<div id="coachmarkScrim"></div><div id="coachmarkRing"></div><div id="coachmarkTooltip"></div>';
+  document.body.appendChild(overlay);
+  requestAnimationFrame(function(){
+    var scrim=document.getElementById("coachmarkScrim");
+    if(scrim) scrim.classList.add("visible");
+  });
+  var scrimEl=document.getElementById("coachmarkScrim");
+  if(scrimEl) scrimEl.addEventListener("click",function(){ coachmarkNext(); });
+  coachmarkStepIndex=0;
+  coachmarkRender();
+  window.addEventListener("resize",coachmarkReposition);
+  document.addEventListener("keydown",coachmarkKeyHandler);
+}
+document.addEventListener("DOMContentLoaded",function(){
+  // Small delay so the tour starts after initial layout/banners settle,
+  // and (when embedded in the shell) roughly lines up with WelcomeModal
+  // having already had a moment to render on top of it.
+  setTimeout(initTabCoachmarks,900);
+});
+
+// এডমিন এখন আলাদা টপ-লেভেল ট্যাব নয় — "আমার তথ্য" ট্যাবের ভেতরে একটি সাব-ট্যাব।
+// sub === "mine" | "admin"
+window.currentMyDataSubTab = "mine";
+window.switchMyDataSubTab=function(sub){
+try{
+window.currentMyDataSubTab=sub;
+var mineBtn=document.getElementById("myDataSubBtnMine"),adminBtn=document.getElementById("myDataSubBtnAdmin");
+var minePane=document.getElementById("myDataPane-mine"),adminPane=document.getElementById("myDataPane-admin");
+if(!mineBtn||!adminBtn||!minePane||!adminPane)return;
+var activeStyle="background:#ffffff;color:#15803d;box-shadow:0 1px 2px rgba(0,0,0,.06)";
+var inactiveStyle="color:#6b7280";
+if(sub==="admin"){
+  minePane.classList.add("hidden"); adminPane.classList.remove("hidden");
+  mineBtn.setAttribute("style",inactiveStyle); adminBtn.setAttribute("style",activeStyle);
+  if(isAdmin)renderAdminTable();
+}else{
+  adminPane.classList.add("hidden"); minePane.classList.remove("hidden");
+  adminBtn.setAttribute("style",inactiveStyle); mineBtn.setAttribute("style",activeStyle);
+  renderMyTab();
+}
+}catch(err){console.error("My Data sub-tab switch error:",err)}
 };
 
 function showBanner(id,text){var el=document.getElementById(id);if(!el)return;if(id==="errorBanner"&&text)document.getElementById("errorText").textContent=text;el.classList.remove("hidden");el.scrollIntoView({behavior:"smooth",block:"nearest"})}
@@ -318,15 +660,22 @@ window.showBanner=showBanner;window.hideBanner=hideBanner;
 
 // ── Share modal ──
 var SHARE_TITLE="বৃক্ষরোপণ ট্র্যাকার | ০৫ বছরে ২৫ কোটি বৃক্ষরোপণ কর্মসূচি";
-var SHARE_TEXT="\" বৃক্ষরোপণে সাজাই দেশ, সবার আগে বাংলাদেশ\" বৃক্ষ রোপণের তথ্য দিন, সবুজ বিপ্লবে অংশ নিন।:";
-var SHARE_URLS=["https://plantation-tracker.vercel.app","https://plantation.krishiai.live"];
-function getShareUrl(){try{return window.location.href.split("#")[0]}catch(e){return SHARE_URLS[0]}}
+var SHARE_TEXT="বৃক্ষ রোপণের তথ্য দিন, সবুজ বিপ্লবে অংশ নিন।";
+var SHARE_URLS=["https://plantation.krishiai.live","https://plantation-tracker.vercel.app"];
+// Always share the canonical root domain (SHARE_URLS[0]) -- never
+// window.location.href. This code runs inside an <iframe src="/plantation.html">
+// (see App.tsx), so window.location.href here is always the iframe's own bare
+// legacy/plantation.html URL, even when the page is reached via the root
+// domain. Sharing that bare URL skips the app shell entirely (no sync-status
+// chip, no manual retry, no haptics) -- so every share path must point at the
+// root domain instead, which loads this same form wrapped in the full shell.
+function getShareUrl(){return SHARE_URLS[0]}
 function getAllShareUrls(){return SHARE_URLS.join("%0A")}
 window.openShareModal=function(){
 try{
 var url=getShareUrl();
 var allUrlsText=SHARE_URLS.join("\n");
-var input=document.getElementById("shareLinkInput");if(input)input.value=allUrlsText;
+var input=document.getElementById("shareLinkInput");if(input)input.value=SHARE_URLS.join(" | ");
 var enc=encodeURIComponent(url),encText=encodeURIComponent(SHARE_TEXT),allUrls=encodeURIComponent(allUrlsText);
 var wa=document.getElementById("shareWhatsapp");if(wa)wa.href="https://wa.me/?text="+encText+"%0A%0A"+allUrls;
 var fb=document.getElementById("shareFacebook");if(fb)fb.href="https://www.facebook.com/sharer/sharer.php?u="+enc;
@@ -341,7 +690,7 @@ window.copyShareLink=function(){
 var input=document.getElementById("shareLinkInput");if(!input)return;
 var finish=function(ok){var btn=document.getElementById("copyLinkBtn");if(!btn)return;var old=btn.textContent;btn.textContent=ok?"✅ কপি হয়েছে":"❌ ব্যর্থ";setTimeout(function(){btn.textContent=old},1800)};
 if(navigator.clipboard&&navigator.clipboard.writeText){
-navigator.clipboard.writeText(input.value).then(function(){finish(true)}).catch(function(){finish(false)});
+navigator.clipboard.writeText(SHARE_URLS.join("\n")).then(function(){finish(true)}).catch(function(){finish(false)});
 }else{try{input.select();document.execCommand("copy");finish(true)}catch(e){finish(false)}}
 };
 window.nativeShare=function(){
@@ -359,7 +708,7 @@ try{window.open("/icons/icon-512.webp","_blank")}catch(e){}
 window.downloadShareImage=function(){
 try{
 var a=document.createElement("a");
-a.href="/og-image-large.png";
+a.href="/og-share-large.png";
 a.download="plantation-tracker-share.png";
 document.body.appendChild(a);a.click();document.body.removeChild(a);
 }catch(e){console.error("Download share image error:",e)}
@@ -498,8 +847,26 @@ function populateMapUpazilaDD(selected){
 }
 
 // ── Per-upazila color palette ──
-// Deterministic hash → one of 24 visually distinct colors so the same
-// upazila always gets the same color across re-renders.
+// Fixed, curated colors for Kurigram's 9 upazilas — kept identical to the
+// palette in plantation-tracker-app (src/utils/upazilaColors.ts) so the
+// same upazila renders with the same color across both apps. Falls back
+// to a deterministic hash (old behavior) for any name outside this list,
+// e.g. if a submission ever comes in from a different district.
+// NOTE: plantation-tracker-app's list spells this upazila "রাজিবপুর";
+// this app's own BD_UPAZILA list spells it "চর রাজিবপুর" — mapped to the
+// same color value here since they're the same place.
+var UPAZILA_COLORS={
+  'কুড়িগ্রাম সদর':'#2d6a4f',
+  'নাগেশ্বরী':'#1d6fa4',
+  'ভুরুঙ্গামারী':'#b5651d',
+  'ফুলবাড়ী':'#7b2d8b',
+  'রাজারহাট':'#c0392b',
+  'চিলমারী':'#2980b9',
+  'উলিপুর':'#d68910',
+  'রৌমারী':'#117864',
+  'চর রাজিবপুর':'#8e44ad',
+  'রাজিবপুর':'#8e44ad'
+};
 var UPAZILA_PALETTE=[
   '#e11d48','#db2777','#c026d3','#9333ea','#7c3aed','#4f46e5',
   '#2563eb','#0284c7','#0891b2','#0d9488','#059669','#16a34a',
@@ -509,6 +876,75 @@ var UPAZILA_PALETTE=[
 var _upazilaColorCache={};
 function upazilaColor(name){
   if(!name)return'#6b7280';
+  if(UPAZILA_COLORS[name])return UPAZILA_COLORS[name];
   if(_upazilaColorCache[name])return _upazilaColorCache[name];
   var h=0;for(var i=0;i<name.length;i++)h=((h<<5)-h)+name.charCodeAt(i);
   var idx=Math.abs(h)%UPAZILA_PALETTE.length;
+  _upazilaColorCache[name]=UPAZILA_PALETTE[idx];
+  return _upazilaColorCache[name];
+}
+window.onDashFilterChange=function(){/* defined near renderDashboard */};
+window.onFormDivisionChange=function(){/* placeholder for future division→region cascade */};
+window.onFormRegionChange=function(){populateDistrictDD(document.getElementById("fDistrict"),document.getElementById("fRegion").value);document.getElementById("fUpazila").innerHTML='<option value="">উপজেলা নির্বাচন করুন</option>'};
+window.onFormDistrictChange=function(){populateUpazilaDD(document.getElementById("fUpazila"),document.getElementById("fDistrict").value)};
+window.onAdminRegionChange=function(){populateDistrictDD(document.getElementById("adminDistrict"),document.getElementById("adminRegion").value);renderAdminTable()};
+window.onAdminDistrictChange=function(){renderAdminTable()};
+window.onEditDivisionChange=function(){/* placeholder */};
+window.onEditRegionChange=function(){populateDistrictDD(document.getElementById("eDistrict"),document.getElementById("eRegion").value);document.getElementById("eUpazila").innerHTML='<option value="">উপজেলা নির্বাচন করুন</option>'};
+window.onEditDistrictChange=function(){populateUpazilaDD(document.getElementById("eUpazila"),document.getElementById("eDistrict").value)};
+
+// ── Flat seedling repeater (one row per species) ──
+// Replaces the old 3-fixed-category fieldset. Each row produces ONE GAS row.
+function addSeedlingRow(containerId, data){
+  containerId = containerId || "seedlingRows";
+  data = data || {};
+  var container = document.getElementById(containerId);
+  if(!container) return;
+  var idx = container.querySelectorAll(".seedling-row").length;
+  var nameVal = (data.speciesName || data.name || "").replace(/"/g,"&quot;");
+  var catVal = data.category || "";
+  var qtyVal = data.quantity || data.count || "";
+  var catOpts = CATEGORY_OPTS.map(function(c){
+    return '<option value="'+c+'"'+(c===catVal?' selected':'')+'>'+c+'</option>';
+  }).join("");
+  var html = '<div class="seedling-row bg-white rounded-lg p-3 grid grid-cols-12 gap-2 items-end" data-idx="'+idx+'">'
+    + '<div class="col-span-12 sm:col-span-5"><label class="block text-[10px] font-bold text-gray-500 mb-0.5">প্রজাতি/নাম</label>'
+    + '<input type="text" list="speciesList" placeholder="যেমন: আম" value="'+nameVal+'" class="seedling-name w-full border rounded px-2 py-1.5 text-sm" style="border-color:#d1d5db"></div>'
+    + '<div class="col-span-6 sm:col-span-3"><label class="block text-[10px] font-bold text-gray-500 mb-0.5">শ্রেণী</label>'
+    + '<select class="seedling-category w-full border rounded px-2 py-1.5 text-sm bg-white" style="border-color:#d1d5db">'+catOpts+'</select></div>'
+    + '<div class="col-span-4 sm:col-span-2"><label class="block text-[10px] font-bold text-gray-500 mb-0.5">সংখ্যা</label>'
+    + '<input type="number" min="1" placeholder="০" value="'+qtyVal+'" class="seedling-quantity w-full border rounded px-2 py-1.5 text-sm" style="border-color:#d1d5db"></div>'
+    + '<div class="col-span-8 sm:col-span-2 flex justify-end gap-1">'
+    + '<button type="button" onclick="saveSeedlingRow(this)" class="seedling-save-btn text-white text-[11px] font-semibold px-2.5 py-1.5 rounded whitespace-nowrap" style="background:#15803d">💾 সংরক্ষণ</button>'
+    + '<button type="button" onclick="this.closest(\'.seedling-row\').remove()" class="text-red-500 text-xs px-2 py-1.5 hover:bg-red-50 rounded">✕</button></div>'
+    + '</div>';
+  container.insertAdjacentHTML("beforeend", html);
+}
+window.addSeedlingRow = addSeedlingRow;
+
+// Per-row "save": locks in a seedling entry (validates species + quantity,
+// then disables the fields and flips the button to an editable "saved"
+// state) so a user adding many species can confirm each one as they go,
+// rather than only finding out about a missing field at final submit time.
+window.saveSeedlingRow = function(btn){
+  var row = btn.closest(".seedling-row");
+  if(!row) return;
+  var nameEl = row.querySelector(".seedling-name");
+  var catEl = row.querySelector(".seedling-category");
+  var qtyEl = row.querySelector(".seedling-quantity");
+  var isSaved = row.classList.contains("seedling-saved");
+
+  if(isSaved){
+    row.classList.remove("seedling-saved");
+    row.style.background = "";
+    [nameEl, catEl, qtyEl].forEach(function(el){ if(el) el.disabled = false; });
+    btn.textContent = "💾 সংরক্ষণ";
+    btn.style.background = "#15803d";
+    return;
+  }
+
+  var qtyOk = parseInt(qtyEl && qtyEl.value) > 0;
+  if(!nameEl || !nameEl.value.trim() || !qtyOk){
+    [nameEl, qtyEl].forEach(function(el){
+      if(!el) return;
+      el.classList.add("shake"); el.style.borderColor = "#ef4444";

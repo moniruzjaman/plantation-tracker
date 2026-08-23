@@ -29,3 +29,16 @@ jobs:
 
       - name: Run tests
         run: npm test
+
+      - name: Verify part*.txt regenerates public/legacy/plantation.html exactly
+        run: |
+          cp public/legacy/plantation.html /tmp/committed_plantation.html
+          node map.js
+          if ! diff -q /tmp/committed_plantation.html public/legacy/plantation.html > /dev/null; then
+            echo "::error::public/part*.txt no longer matches public/legacy/plantation.html."
+            echo "::error::Either you edited legacy/plantation.html directly (edit the part*.txt files instead and run 'node map.js'),"
+            echo "::error::or you edited a part file but forgot to run 'node map.js' and commit the regenerated output."
+            diff /tmp/committed_plantation.html public/legacy/plantation.html | head -50
+            exit 1
+          fi
+          echo "OK: part*.txt and public/legacy/plantation.html are in sync."

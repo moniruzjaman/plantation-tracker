@@ -53,6 +53,11 @@ var PROFILE_SHEET_NAME = 'User_Profile';
 var GROWTH_SHEET_NAME = 'Growth_Log';
 var CUSTOM_UPAZILA_SHEET_NAME = 'Custom_Upazila';
 var VISITOR_SHEET_NAME = 'Visitor_Log';
+var MINISTRY_REPORT_SHEET_NAME = 'মূল_ডাটা';
+var SEVENTEEN_COL_REPORT_SHEET_NAME = '১ৗ_কলাম_প্রতিবেদন';
+var REPORT_UPAZILAS = ['ভুরুঙ্গামারী','চর রাজিবপুর','ফুলবাড়ী','উলিপুর','চিলমারী','রৌমারী','কুড়িগ্রাম সদর','নাগেশ্বরী','রাজারহাট'];
+var REPORT_CATEGORIES = ['ফলদ','মিশ্র প্যাকেজ','একক প্রজাতি','ঔষধি','বনজ','অন্যান্য'];
+var OFFICIAL_REPORT_CACHE_SECONDS = 300;
 
 var VISITOR_COLUMNS = [
   'সময়', 'ইমেইল', 'ধরন', 'ডিভাইস আইডি'
@@ -470,7 +475,8 @@ function doGet(e) {
     if (params.mobile) return jsonOut_(lookupByMobile_(params.mobile));
     if (params.directory) return jsonOut_(getDirectory_(params.role, params.upazila));
     if (params.customUpazila) return jsonOut_(getCustomUpazilas_(params.district));
-    return jsonOut_({ ok: false, error: 'mobile, list, directory, or customUpazila query param required' });
+    if (params.officialSummary) return jsonOut_(getOfficialReportSummary_());
+    return jsonOut_({ ok: false, error: 'mobile, list, directory, customUpazila, or officialSummary query param required' });
   } catch (err) {
     return jsonOut_({ ok: false, error: String(err) });
   }
@@ -687,415 +693,156 @@ function lookupByMobile_(mobile) {
   return { ok: true, found: true, user: match };
 }
 
-/**
- * ============================================================================
- * DYNAMIC WEEKLY REPORT
- * ============================================================================
- * Replaces the old manual process (someone opens the workbook, hand-copies
- * current totals into a static HTML email, uploads a fresh .xlsx export)
- * with a single function that reads live data straight from this workbook's
- * three real sources every time it runs, and emails a freshly-generated
- * report -- so the numbers are never more than a few minutes stale and no
- * one has to remember to update anything by hand.
- *
- * This workbook has THREE genuinely different data sources, verified by
- * inspecting the live sheet directly rather than guessing at column names:
- *
- *   1. App_Entry -- this app's own live submissions (one row per submission,
- *      already parsed by the existing readAllRows_() below). This is the
- *      only source with real-time GPS, photos, NDVI, and officer activity.
- *
- *   2. ministry_report -- a SEPARATE, manually-maintained government-format
- *      sheet. Its own header text (row 1-3) states it must be emailed to
- *      admonitoring@dae.gov.bd / ddimplement@dae.gov.bd (DAE) and
- *      E-mail-input2@moa.gov.bd / moa.input2@gmail.com (Ministry). Its rows
- *      are grouped by farmer within a location (not one-row-per-submission
- *      like App_Entry), so it's treated as a totals-only source here, not
- *      broken down by upazila.
- *
- *   3. "17 column report" -- the official 17-column government format, with
- *      clean per-row উপজেলা/ইউনিয়ন/গ্রাম columns, so upazila-wise breakdowns
- *      come from here.
- *
- * These two government sheets are NOT simply re-derived from App_Entry on
- * the fly -- they're read directly, live, exactly as this workbook actually
- * stores them, since that's the authoritative record for what's already
- * been officially reported.
- *
- * SETUP (one-time, run manually from the Apps Script editor):
- *   1. Run sendWeeklyReportTest() first -- sends the report to YOU ONLY
- *      (Session.getActiveUser().getEmail()), so you can check formatting
- *      and numbers before anything goes near a real ministry inbox.
- *   2. Once it looks right, review/edit WEEKLY_REPORT_RECIPIENTS below.
- *      It defaults to a single safe internal address, NOT the ministry
- *      addresses printed in the ministry_report sheet itself -- add those
- *      deliberately once you're confident, not as a default.
- *   3. Run createWeeklyReportTrigger() once to schedule the real weekly
- *      send (Wednesdays, 8:00 AM). Re-running it is safe -- it removes any
- *      previous trigger for this function first, so you never end up with
- *      duplicates silently sending the report twice.
- */
-
-// Deliberately NOT the ministry addresses from the sheet's own instructions
-// -- add those here yourself once a test run has been verified. Keeping
-// this a plain array (not reading from the sheet) means a typo in the
-// workbook can never accidentally redirect an official report.
-var WEEKLY_REPORT_RECIPIENTS = ['ddaekurigram@gmail.com'];
-
-var MINISTRY_REPORT_SHEET_NAME = 'ministry_report';
-var SEVENTEEN_COL_SHEET_NAME = '17 column report';
-var WEEKLY_SNAPSHOT_KEY = 'WEEKLY_REPORT_LAST_SNAPSHOT';
-
-/** Bengali-digit, comma-grouped number formatting, e.g. 15412 -> "১৫,৪১২". */
-function toBnNum_(n) {
-  var num = Number(n);
-  if (isNaN(num)) num = 0;
-  var s = String(Math.round(num));
-  var neg = s.charAt(0) === '-';
-  if (neg) s = s.slice(1);
-  var withCommas = s.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  var digitMap = { '0': '০', '1': '১', '2': '২', '3': '৩', '4': '৪', '5': '৫', '6': '৬', '7': '৭', '8': '৮', '9': '৯' };
-  var bn = withCommas.replace(/[0-9]/g, function (d) { return digitMap[d]; });
-  return (neg ? '-' : '') + bn;
+function asciiDigits_(s){
+  var bn='০১২৩৪৫৬৭৮৯';
+  s=String(s==null?'':s);
+  var out='';
+  for(var i=0;i<s.length;i++){var idx=bn.indexOf(s[i]);out+=idx>=0?String(idx):s[i];}
+  return out;
 }
-
-/** Bengali date, e.g. "১৭ আগস্ট, ২০২৬". */
-function toBnDate_(date) {
-  var months = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
-  return toBnNum_(date.getDate()) + ' ' + months[date.getMonth()] + ', ' + toBnNum_(date.getFullYear());
+function num_(v){
+  if(v==null||v==='')return 0;
+  if(typeof v==='number')return v;
+  var s=asciiDigits_(String(v)).replace(/[^\d.\-]/g,'');
+  var n=parseFloat(s);return isNaN(n)?0:n;
 }
-
-/**
- * Scans the first 10 rows of a sheet for the one that contains every string
- * in mustContainAll, rather than assuming the header sits at a fixed row
- * number -- both government sheets have a few title/instruction rows above
- * their real header, and this way an extra row inserted later up top can't
- * silently break report generation.
- */
-function findHeaderRow_(sheet, mustContainAll) {
-  var lastRow = sheet.getLastRow();
-  var lastCol = sheet.getLastColumn();
-  var maxScan = Math.min(lastRow, 10);
-  if (maxScan < 1 || lastCol < 1) return null;
-  var values = sheet.getRange(1, 1, maxScan, lastCol).getValues();
-  for (var r = 0; r < values.length; r++) {
-    var rowText = values[r].join('|');
-    var allFound = mustContainAll.every(function (needle) { return rowText.indexOf(needle) !== -1; });
-    if (allFound) return { rowIndex: r + 1, headers: values[r] };
+function dateStr_(v){
+  if(v instanceof Date)return v.toISOString().slice(0,10);
+  if(v==null)return '';
+  var s=String(v).trim();
+  var m=s.match(/(\d{4})-(\d{2})-(\d{2})/);
+  return m?m[0]:s;
+}
+function geoLatLng_(v){
+  if(!v)return null;
+  var s=asciiDigits_(String(v).trim()).replace(/,/g,' ');
+  var nums=s.match(/-?\d+(?:\.\d+)?/g);
+  if(!nums||nums.length<2)return null;
+  var lat=parseFloat(nums[0]),lng=parseFloat(nums[1]);
+  if(isNaN(lat)||isNaN(lng))return null;
+  return {lat:lat,lng:lng};
+}
+function geoOk_(v){
+  var g=geoLatLng_(v);
+  if(!g)return false;
+  return g.lat>=20.5&&g.lat<=27.0&&g.lng>=88.0&&g.lng<=93.0;
+}
+function readSheetByHeaders_(sheetName){
+  var ss=SpreadsheetApp.getActiveSpreadsheet();
+  var sheet=ss.getSheetByName(sheetName);
+  if(!sheet)return null;
+  var values=sheet.getDataRange().getValues();
+  if(!values||values.length<2)return {header:[],rows:[]};
+  var header=values[0].map(function(h){return String(h==null?'':h).trim();});
+  var rows=[];
+  for(var r=1;r<values.length;r++){
+    var v=values[r];
+    if(!v.join(''))continue;
+    var row={};
+    for(var c=0;c<header.length;c++){row[header[c]]=(v[c]==null?'':v[c]);}
+    rows.push(row);
   }
+  return {header:header,rows:rows};
+}
+function exactCol_(header,name){
+  for(var i=0;i<header.length;i++){if(header[i]===name)return header[i];}
   return null;
 }
-
-/**
- * Both government sheets have a decorative row of plain sequential numbers
- * (১,২,৩.../1,2,3...) immediately under their real header -- detected and
- * skipped here so it's never miscounted as a data row.
- */
-function readSheetDataRows_(sheet, headerInfo) {
-  var lastRow = sheet.getLastRow();
-  var lastCol = sheet.getLastColumn();
-  var startRow = headerInfo.rowIndex + 1;
-  if (startRow <= lastRow) {
-    var probe = sheet.getRange(startRow, 1, 1, Math.min(5, lastCol)).getValues()[0];
-    var looksSequential = probe.length > 1 && Number(probe[0]) === 1 && Number(probe[1]) === 2;
-    if (looksSequential) startRow++;
-  }
-  if (startRow > lastRow) return [];
-  return sheet.getRange(startRow, 1, lastRow - startRow + 1, lastCol).getValues();
+function colFor_(header,aliases){
+  for(var i=0;i<header.length;i++){for(var a=0;a<aliases.length;a++){if(header[i]===aliases[a])return header[i];}}
+  for(var i=0;i<header.length;i++){for(var a=0;a<aliases.length;a++){if(header[i].indexOf(aliases[a])!==-1)return header[i];}}
+  return null;
 }
+function pctNum_(count,total){if(!total)return 0;return Math.round((count*1000/total))/10;}
+function inUpazilas_(u){return u&&REPORT_UPAZILAS.indexOf(u)!==-1;}
 
-function computeMinistryReportStats_() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(MINISTRY_REPORT_SHEET_NAME);
-  if (!sheet) return { available: false };
-  var headerInfo = findHeaderRow_(sheet, ['ক্রঃ নং', 'রোপণকৃত বৃক্ষের সংখ্যা']);
-  if (!headerInfo) return { available: false };
-  var idx = {};
-  headerInfo.headers.forEach(function (h, i) { idx[String(h).trim()] = i; });
-  var qtyCol = idx['রোপণকৃত বৃক্ষের সংখ্যা'];
-  var rows = readSheetDataRows_(sheet, headerInfo);
-  var totalEntries = 0, totalTrees = 0;
-  rows.forEach(function (r) {
-    if (!r.join('')) return;
-    totalEntries++;
-    totalTrees += Number(r[qtyCol]) || 0;
-  });
-  return { available: true, totalEntries: totalEntries, totalTrees: totalTrees };
-}
-
-function compute17ColumnReportStats_() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(SEVENTEEN_COL_SHEET_NAME);
-  if (!sheet) return { available: false };
-  var headerInfo = findHeaderRow_(sheet, ['ক্র. নং', 'উপজেলা']);
-  if (!headerInfo) return { available: false };
-  var idx = {};
-  headerInfo.headers.forEach(function (h, i) { idx[String(h).trim()] = i; });
-  var qtyCol = idx['রোপণকৃত বৃক্ষের চারার প্রজাতিভিত্তিক সংখ্যা'];
-  var upazilaCol = idx['উপজেলা'];
-  var rows = readSheetDataRows_(sheet, headerInfo);
-  var totalEntries = 0, totalTrees = 0;
-  var byUpazila = {};
-  rows.forEach(function (r) {
-    if (!r.join('')) return;
-    totalEntries++;
-    var qty = Number(r[qtyCol]) || 0;
-    totalTrees += qty;
-    var upz = String(r[upazilaCol] || 'অজানা').trim();
-    if (!byUpazila[upz]) byUpazila[upz] = { entries: 0, trees: 0 };
-    byUpazila[upz].entries++;
-    byUpazila[upz].trees += qty;
-  });
-  return { available: true, totalEntries: totalEntries, totalTrees: totalTrees, byUpazila: byUpazila };
-}
-
-/** Live stats from the app's own data, reusing the existing readAllRows_(). */
-function computeAppEntryStats_() {
-  var rows = readAllRows_();
-  var totalTrees = 0;
-  var byUpazila = {};
-  var byCategory = {};
-  var bySpecies = {};
-  var officerSet = {};
-  var now = new Date();
-  var sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  var entriesThisWeek = 0, treesThisWeek = 0;
-
-  rows.forEach(function (r) {
-    var qty = (r.seedlings || []).reduce(function (sum, s) { return sum + (Number(s.quantity) || 0); }, 0);
-    totalTrees += qty;
-
-    var upz = r.upazila || 'অজানা';
-    if (!byUpazila[upz]) byUpazila[upz] = { entries: 0, trees: 0 };
-    byUpazila[upz].entries++;
-    byUpazila[upz].trees += qty;
-
-    (r.seedlings || []).forEach(function (s) {
-      var cat = s.category || 'অন্যান্য';
-      byCategory[cat] = (byCategory[cat] || 0) + (Number(s.quantity) || 0);
-      var sp = s.speciesName || 'অজানা';
-      bySpecies[sp] = (bySpecies[sp] || 0) + (Number(s.quantity) || 0);
-    });
-
-    if (r.saaoName) officerSet[r.saaoName] = true;
-    if (r.officerName) officerSet[r.officerName] = true;
-
-    var submittedAt = r.submittedAt ? new Date(r.submittedAt) : null;
-    if (submittedAt && !isNaN(submittedAt.getTime()) && submittedAt >= sevenDaysAgo) {
-      entriesThisWeek++;
-      treesThisWeek += qty;
-    }
-  });
-
-  return {
-    totalEntries: rows.length, totalTrees: totalTrees,
-    byUpazila: byUpazila, byCategory: byCategory, bySpecies: bySpecies,
-    officerCount: Object.keys(officerSet).length,
-    entriesThisWeek: entriesThisWeek, treesThisWeek: treesThisWeek
+function getOfficialReportSummary_(){
+  var COVERAGE=REPORT_UPAZILAS.length;
+  var main=readSheetByHeaders_(MINISTRY_REPORT_SHEET_NAME);
+  var col17=readSheetByHeaders_(SEVENTEEN_COL_REPORT_SHEET_NAME);
+  var res={
+    ok:true,
+    reportDate:'',
+    summary:{
+      mainDataEntries:0,mainDataTrees:0,
+      seventeenColEntries:0,seventeenColTrees:0,
+      totalEntries:0,totalTrees:0,
+      upazilaCount:0,coverageTotal:COVERAGE,
+      needsVerifyCount:0,needsVerifyPct:0
+    },
+    upazilaTrees:REPORT_UPAZILAS.map(function(u){return {label:u,trees:0};}),
+    categories:REPORT_CATEGORIES.map(function(c){return {label:c,trees:0};}),
+    dataQuality:[
+      {label:'সিরিয়াল নম্বর অনুপস্থিত',count:0,pct:0},
+      {label:'উপজেলা ঘর খালি',count:0,pct:0},
+      {label:'কুড়িগ্রাম জেলার বাইরে',count:0,pct:0},
+      {label:'জিও-কোঅর্ডিনেট ত্রুটিপূর্ণ',count:0,pct:0},
+      {label:'রোপণের তারিখ খালি',count:0,pct:0},
+      {label:'মনিটরিং অফিসার খালি',count:0,pct:0}
+    ],
+    source:{mainDataSheet:MINISTRY_REPORT_SHEET_NAME,seventeenColSheet:SEVENTEEN_COL_REPORT_SHEET_NAME}
   };
-}
 
-function getLastWeeklySnapshot_() {
-  var raw = PropertiesService.getScriptProperties().getProperty(WEEKLY_SNAPSHOT_KEY);
-  if (!raw) return null;
-  try { return JSON.parse(raw); } catch (e) { return null; }
-}
+  var upazilaMap={};REPORT_UPAZILAS.forEach(function(u){upazilaMap[u]=0;});
+  var covered={};
+  var catMap={};REPORT_CATEGORIES.forEach(function(c){catMap[c]=0;});
+  var latestDate='';
 
-function saveWeeklySnapshot_(snapshot) {
-  PropertiesService.getScriptProperties().setProperty(WEEKLY_SNAPSHOT_KEY, JSON.stringify(snapshot));
-}
-
-/** "+X" / "-X" / "পরিবর্তন নেই" delta badge text against last week's snapshot. */
-function deltaText_(current, previous) {
-  if (previous === null || previous === undefined) return 'নতুন হিসাব শুরু';
-  var diff = current - previous;
-  if (diff === 0) return 'গত সপ্তাহের সমান';
-  return (diff > 0 ? '▲ +' : '▼ ') + toBnNum_(Math.abs(diff)) + ' গত সপ্তাহ থেকে';
-}
-
-function topEntries_(obj, n) {
-  return Object.keys(obj)
-    .map(function (k) { return { name: k, value: typeof obj[k] === 'object' ? obj[k].trees : obj[k] }; })
-    .sort(function (a, b) { return b.value - a.value; })
-    .slice(0, n);
-}
-
-/**
- * Exports this bound spreadsheet as an .xlsx Blob for email attachment.
- * SpreadsheetApp has no direct "export as blob" call, so this fetches the
- * standard Sheets export URL with the script's own OAuth token.
- */
-function exportSpreadsheetAsXlsxBlob_() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var url = 'https://docs.google.com/spreadsheets/d/' + ss.getId() + '/export?format=xlsx';
-  var response = UrlFetchApp.fetch(url, {
-    headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() }
-  });
-  var fileName = 'Tree_Plantation_Reporting_Workbook_' +
-    Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd') + '.xlsx';
-  return response.getBlob().setName(fileName);
-}
-
-/**
- * Builds the branded HTML email. Table-based layout (not flexbox/grid) is
- * deliberate -- this is the layout style that survives Gmail/Outlook's
- * aggressive CSS stripping, matching the design already proven in the
- * earlier hand-built weekly report.
- */
-function buildWeeklyReportHtml_(ctx) {
-  var p = [];
-  p.push('<!DOCTYPE html><html lang="bn"><head><meta charset="UTF-8">');
-  p.push('<meta name="viewport" content="width=device-width, initial-scale=1.0">');
-  p.push('<title>সাপ্তাহিক বৃক্ষরোপণ অগ্রগতি প্রতিবেদন</title></head>');
-  p.push('<body style="margin:0;padding:0;background-color:#EEF2ED;font-family:\'Noto Sans Bengali\',\'Segoe UI\',Arial,sans-serif;">');
-  p.push('<div style="display:none;max-height:0;overflow:hidden;opacity:0;">');
-  p.push('কুড়িগ্রাম জেলায় সরকারি প্রতিবেদনে এ পর্যন্ত ' + toBnNum_(ctx.ministry.totalEntries + ctx.seventeenCol.totalEntries) +
-    'টি এন্ট্রিতে ' + toBnNum_(ctx.ministry.totalTrees + ctx.seventeenCol.totalTrees) + 'টি বৃক্ষ রোপণ সম্পন্ন — সম্পূর্ণ বিবরণ ভিতরে।</div>');
-
-  p.push('<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#EEF2ED;padding:24px 0;"><tr><td align="center">');
-  p.push('<table role="presentation" width="640" cellpadding="0" cellspacing="0" style="background-color:#FFFFFF;border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.08);">');
-
-  // Header
-  p.push('<tr><td style="background-color:#1B5E20;padding:28px 32px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">');
-  p.push('<tr><td style="font-size:12px;letter-spacing:1px;color:#C8E6C9;text-transform:uppercase;padding-bottom:6px;">কৃষি সম্প্রসারণ অধিদপ্তর &nbsp;•&nbsp; কুড়িগ্রাম জেলা</td></tr>');
-  p.push('<tr><td style="font-size:22px;line-height:30px;font-weight:700;color:#FFFFFF;">সাপ্তাহিক বৃক্ষরোপণ কর্মসূচির অগ্রগতি প্রতিবেদন</td></tr>');
-  p.push('<tr><td style="font-size:13px;color:#E8F5E9;padding-top:8px;">৫ বছরে ২৫ কোটি বৃক্ষরোপণ কর্মসূচি &nbsp;|&nbsp; প্রতিবেদনের তারিখ: <strong>' + toBnDate_(ctx.now) + '</strong></td></tr>');
-  p.push('</table></td></tr>');
-
-  // Salutation
-  p.push('<tr><td style="padding:28px 32px 4px 32px;font-size:14px;line-height:22px;color:#212121;">মহোদয়,<br>শুভেচ্ছা নিবেন। কৃষি সম্প্রসারণ অধিদপ্তর ও কৃষি মন্ত্রণালয়ের নিয়মিত নির্দেশনার আলোকে কুড়িগ্রাম জেলার বৃক্ষরোপণ কর্মসূচির হালনাগাদ অগ্রগতি প্রতিবেদন এই মেইলের সাথে সংযুক্ত করা হলো। প্রতিবেদনটি এই কর্মসূচির লাইভ তথ্যভাণ্ডার থেকে স্বয়ংক্রিয়ভাবে তৈরি — সংযুক্ত এক্সেল ফাইলে সম্পূর্ণ workbook রয়েছে।</td></tr>');
-
-  // Official government-format KPI cards (ministry_report + 17 column report)
-  p.push('<tr><td style="padding:20px 32px 4px 32px;font-size:13px;font-weight:700;color:#1B5E20;">সরকারি প্রতিবেদন ফরম্যাট (অফিসিয়াল)</td></tr>');
-  p.push('<tr><td style="padding:8px 32px 4px 32px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>');
-  p.push(kpiCard_('মূল প্রতিবেদন এন্ট্রি', toBnNum_(ctx.ministry.totalEntries) + ' টি', '#2E7D32', deltaText_(ctx.ministry.totalEntries, ctx.prevSnapshot ? ctx.prevSnapshot.ministryEntries : null)));
-  p.push('<td width="2%">&nbsp;</td>');
-  p.push(kpiCard_('১৭-কলাম প্রতিবেদন এন্ট্রি', toBnNum_(ctx.seventeenCol.totalEntries) + ' টি', '#F9A825', deltaText_(ctx.seventeenCol.totalEntries, ctx.prevSnapshot ? ctx.prevSnapshot.seventeenColEntries : null)));
-  p.push('<td width="2%">&nbsp;</td>');
-  p.push(kpiCard_('মোট বৃক্ষ রোপণ', toBnNum_(ctx.ministry.totalTrees + ctx.seventeenCol.totalTrees) + ' টি', '#00695C', deltaText_(ctx.ministry.totalTrees + ctx.seventeenCol.totalTrees, ctx.prevSnapshot ? ctx.prevSnapshot.officialTotalTrees : null)));
-  p.push('</tr></table></td></tr>');
-
-  // Live app-data KPI cards
-  p.push('<tr><td style="padding:20px 32px 4px 32px;font-size:13px;font-weight:700;color:#1B5E20;">বৃক্ষরোপণ ট্র্যাকার অ্যাপ (লাইভ)</td></tr>');
-  p.push('<tr><td style="padding:8px 32px 4px 32px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>');
-  p.push(kpiCard_('অ্যাপ এন্ট্রি (সর্বমোট)', toBnNum_(ctx.app.totalEntries) + ' টি', '#2E7D32', deltaText_(ctx.app.totalEntries, ctx.prevSnapshot ? ctx.prevSnapshot.appEntries : null)));
-  p.push('<td width="2%">&nbsp;</td>');
-  p.push(kpiCard_('গত ৭ দিনে নতুন এন্ট্রি', toBnNum_(ctx.app.entriesThisWeek) + ' টি', '#F9A825', toBnNum_(ctx.app.treesThisWeek) + ' টি বৃক্ষ'));
-  p.push('<td width="2%">&nbsp;</td>');
-  p.push(kpiCard_('সক্রিয় মাঠকর্মী', toBnNum_(ctx.app.officerCount) + ' জন', '#00695C', 'SAAO ও মনিটরিং অফিসার'));
-  p.push('</tr></table></td></tr>');
-
-  // Upazila breakdown (from the 17-column report, which has clean columns)
-  if (ctx.seventeenCol.available) {
-    var upazilaRows = Object.keys(ctx.seventeenCol.byUpazila).sort(function (a, b) {
-      return ctx.seventeenCol.byUpazila[b].trees - ctx.seventeenCol.byUpazila[a].trees;
+  function processSheet(sheetObj,entryField,treeField,isQuality){
+    if(!sheetObj)return;
+    var h=sheetObj.header,rows=sheetObj.rows;
+    res.summary[entryField]=rows.length;
+    var countKey=colFor_(h,['রোপণকৃত বৃক্ষের চারার প্রজাতিভিত্তিক সংখ্যা','রোপণকৃত বৃক্ষের সংখ্যা','মোট চারার সংখ্যা','সংখ্যা','মোট গাছের সংখ্যা']);
+    var upzKey=exactCol_(h,'উপজেলা');
+    var distKey=exactCol_(h,'জেলা');
+    var dateKey=colFor_(h,['রোপণের তারিখ','তারিখ']);
+    var catKey=colFor_(h,['বৃক্ষের শ্রেণী','শ্রেণী','চারার শ্রেণী','ক্যাটাগরি','ক্যাটেগরি']);
+    var serialKey=colFor_(h,['ক্রঃ নং','ক্র. নং','ক্র']);
+    var geoKey=colFor_(h,['জিওগ্রাফিক্যাল','কো-অর্ডিনেট','কোঅর্ডিনেট','জিও']);
+    var offKey=colFor_(h,['মনিটরিং অফিসারের নাম','মনিটরিং অফিসার']);
+    var totalTrees=0;
+    rows.forEach(function(row){
+      var count=num_(row[countKey]);
+      totalTrees+=count;
+      var upz=row[upzKey]||'';
+      if(upz){if(inUpazilas_(upz)){upazilaMap[upz]+=count;}covered[upz]=1;}
+      var cat=row[catKey]||'';
+      if(cat){if(catMap.hasOwnProperty(cat)){catMap[cat]+=count;}else{catMap['অন্যান্য']+=count;}}
+      var d=dateStr_(row[dateKey]);
+      if(d&&(!latestDate||d>latestDate))latestDate=d;
+      if(isQuality){
+        var sMissing=serialKey&&!row[serialKey];
+        var uEmpty=!upz;
+        var dist_=distKey?row[distKey]:'';
+        var oOutside=distKey&&dist_&&dist_.trim()!=='কুড়িগ্রাম';
+        var geoBad=geoKey&&!geoOk_(row[geoKey]);
+        var dateEmpty=dateKey&&!dateStr_(row[dateKey]);
+        var offEmpty=offKey&&!(row[offKey]||'').trim();
+        if(sMissing)res.dataQuality[0].count++;
+        if(uEmpty)res.dataQuality[1].count++;
+        if(oOutside)res.dataQuality[2].count++;
+        if(geoBad)res.dataQuality[3].count++;
+        if(dateEmpty)res.dataQuality[4].count++;
+        if(offEmpty)res.dataQuality[5].count++;
+        if(sMissing||uEmpty||oOutside||geoBad||dateEmpty||offEmpty)needsVerify++;
+      }
     });
-    p.push('<tr><td style="padding:24px 32px 8px 32px;font-size:13px;font-weight:700;color:#1B5E20;">উপজেলাভিত্তিক অগ্রগতি (১৭-কলাম প্রতিবেদন)</td></tr>');
-    p.push('<tr><td style="padding:4px 32px 12px 32px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:12px;">');
-    p.push('<tr style="background-color:#F1F8F2;"><td style="padding:8px 10px;font-weight:700;color:#1B5E20;border-bottom:2px solid #C8E6C9;">উপজেলা</td><td align="right" style="padding:8px 10px;font-weight:700;color:#1B5E20;border-bottom:2px solid #C8E6C9;">এন্ট্রি</td><td align="right" style="padding:8px 10px;font-weight:700;color:#1B5E20;border-bottom:2px solid #C8E6C9;">বৃক্ষ</td></tr>');
-    upazilaRows.forEach(function (u, i) {
-      var bg = i % 2 === 0 ? '#FFFFFF' : '#FAFDF8';
-      p.push('<tr style="background-color:' + bg + ';"><td style="padding:7px 10px;color:#212121;border-bottom:1px solid #EEEEEE;">' + u + '</td><td align="right" style="padding:7px 10px;color:#212121;border-bottom:1px solid #EEEEEE;">' + toBnNum_(ctx.seventeenCol.byUpazila[u].entries) + '</td><td align="right" style="padding:7px 10px;color:#212121;font-weight:600;border-bottom:1px solid #EEEEEE;">' + toBnNum_(ctx.seventeenCol.byUpazila[u].trees) + '</td></tr>');
-    });
-    p.push('</table></td></tr>');
+    res.summary[treeField]=totalTrees;
   }
+  var needsVerify=0;
+  processSheet(main,'mainDataEntries','mainDataTrees',false);
+  processSheet(col17,'seventeenColEntries','seventeenColTrees',true);
 
-  // Top species (from live app data)
-  var topSpecies = topEntries_(ctx.app.bySpecies, 5);
-  if (topSpecies.length) {
-    p.push('<tr><td style="padding:8px 32px 8px 32px;font-size:13px;font-weight:700;color:#1B5E20;">শীর্ষ প্রজাতি (অ্যাপ থেকে)</td></tr>');
-    p.push('<tr><td style="padding:0 32px 20px 32px;font-size:12px;color:#424242;line-height:20px;">');
-    p.push(topSpecies.map(function (s) { return s.name + ' (' + toBnNum_(s.value) + ' টি)'; }).join(' &nbsp;•&nbsp; '));
-    p.push('</td></tr>');
-  }
+  res.summary.totalEntries=res.summary.mainDataEntries+res.summary.seventeenColEntries;
+  res.summary.totalTrees=res.summary.mainDataTrees+res.summary.seventeenColTrees;
+  res.summary.upazilaCount=REPORT_UPAZILAS.filter(function(u){return covered[u];}).length;
+  res.summary.upazilaCoverage=res.summary.upazilaCount+' / '+COVERAGE;
+  res.summary.needsVerifyCount=needsVerify;
+  res.summary.needsVerifyPct=pctNum_(needsVerify,res.summary.seventeenColEntries);
 
-  // Footer
-  p.push('<tr><td style="padding:20px 32px 28px 32px;border-top:1px solid #EEEEEE;font-size:11px;color:#9E9E9E;line-height:18px;">');
-  p.push('এই প্রতিবেদনটি স্বয়ংক্রিয়ভাবে তৈরি হয়েছে — ' + toBnDate_(ctx.now) + ' তারিখে। সম্পূর্ণ workbook সংযুক্ত এক্সেল ফাইলে রয়েছে।<br>');
-  p.push('লাইভ ড্যাশবোর্ড: <a href="https://plantation.krishiai.live" style="color:#2E7D32;">plantation.krishiai.live</a></td></tr>');
-
-  p.push('</table></td></tr></table></body></html>');
-  return p.join('\n');
-}
-
-function kpiCard_(label, value, color, sublabel) {
-  return '<td width="32%" align="center" style="background-color:' + color + ';border-radius:8px;padding:16px 8px;">' +
-    '<div style="font-size:11px;color:#E8F5E9;font-weight:600;">' + label + '</div>' +
-    '<div style="font-size:24px;color:#FFFFFF;font-weight:700;padding-top:4px;">' + value + '</div>' +
-    (sublabel ? '<div style="font-size:10px;color:#E8F5E9;padding-top:3px;">' + sublabel + '</div>' : '') +
-    '</td>';
-}
-
-/**
- * Main entry point -- computes live stats from all three sources, builds
- * the HTML email + fresh .xlsx attachment, sends to WEEKLY_REPORT_RECIPIENTS,
- * and saves this run's totals as next week's comparison snapshot. Safe to
- * run manually any time; only sendWeeklyReportTest() and the Wednesday
- * trigger from createWeeklyReportTrigger() call this in normal operation.
- */
-function generateAndSendWeeklyReport(overrideRecipients) {
-  var now = new Date();
-  var ministry = computeMinistryReportStats_();
-  var seventeenCol = compute17ColumnReportStats_();
-  var app = computeAppEntryStats_();
-  var prevSnapshot = getLastWeeklySnapshot_();
-
-  var ctx = { now: now, ministry: ministry, seventeenCol: seventeenCol, app: app, prevSnapshot: prevSnapshot };
-  var html = buildWeeklyReportHtml_(ctx);
-  var plainText = 'সাপ্তাহিক বৃক্ষরোপণ অগ্রগতি প্রতিবেদন — ' + toBnDate_(now) +
-    '। মূল প্রতিবেদন এন্ট্রি: ' + toBnNum_(ministry.totalEntries) +
-    ', ১৭-কলাম প্রতিবেদন এন্ট্রি: ' + toBnNum_(seventeenCol.totalEntries) +
-    ', অ্যাপ এন্ট্রি: ' + toBnNum_(app.totalEntries) +
-    '। সম্পূর্ণ বিবরণের জন্য HTML সংস্করণ বা সংযুক্ত এক্সেল ফাইল দেখুন।';
-
-  var recipients = overrideRecipients || WEEKLY_REPORT_RECIPIENTS;
-  var xlsxBlob = exportSpreadsheetAsXlsxBlob_();
-
-  GmailApp.sendEmail(recipients.join(','), 'সাপ্তাহিক বৃক্ষরোপণ অগ্রগতি প্রতিবেদন — ' + toBnDate_(now), plainText, {
-    htmlBody: html,
-    attachments: [xlsxBlob],
-    name: 'বৃক্ষরোপণ ট্র্যাকার'
-  });
-
-  saveWeeklySnapshot_({
-    date: now.toISOString(),
-    ministryEntries: ministry.totalEntries,
-    seventeenColEntries: seventeenCol.totalEntries,
-    officialTotalTrees: ministry.totalTrees + seventeenCol.totalTrees,
-    appEntries: app.totalEntries
-  });
-
-  return { ok: true, sentTo: recipients, ministry: ministry, seventeenCol: seventeenCol, app: app };
-}
-
-/**
- * Safe first run -- sends ONLY to the script's own active user, never
- * touching WEEKLY_REPORT_RECIPIENTS. Run this from the Apps Script editor
- * (select this function in the toolbar dropdown, then Run) before ever
- * wiring up the real weekly trigger.
- */
-function sendWeeklyReportTest() {
-  var me = Session.getActiveUser().getEmail();
-  return generateAndSendWeeklyReport([me]);
-}
-
-/**
- * One-time setup -- schedules generateAndSendWeeklyReport() for every
- * Wednesday at 8 AM (script timezone). Safe to re-run: it always removes
- * any existing trigger for this function first, so you can never end up
- * with duplicate triggers silently double-sending the report.
- */
-function createWeeklyReportTrigger() {
-  var triggers = ScriptApp.getProjectTriggers();
-  triggers.forEach(function (t) {
-    if (t.getHandlerFunction() === 'generateAndSendWeeklyReport') {
-      ScriptApp.deleteTrigger(t);
-    }
-  });
-  ScriptApp.newTrigger('generateAndSendWeeklyReport')
-    .timeBased()
-    .onWeekDay(ScriptApp.WeekDay.WEDNESDAY)
-    .atHour(8)
-    .create();
-  return { ok: true, message: 'Weekly report scheduled for every Wednesday at 8 AM.' };
+  REPORT_UPAZILAS.forEach(function(u,i){res.upazilaTrees[i].trees=Math.round(upazilaMap[u]||0);});
+  REPORT_CATEGORIES.forEach(function(c,i){res.categories[i].trees=Math.round(catMap[c]||0);});
+  res.dataQuality.forEach(function(d,i){d.pct=pctNum_(d.count,res.summary.seventeenColEntries);});
+  res.reportDate=latestDate||'';
+  return res;
 }
