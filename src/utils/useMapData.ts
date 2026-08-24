@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import type { LocalSubmission, NationalEntry } from '../types/plantation';
 
-const LS_KEY = 'nursery_submissions'; // same key plantation.html writes to
+const LS_KEY = 'plantation_submission'; // same key plantation.html writes to
 const GAS_SYNC_ENDPOINT = '/api/gas-sync';
 const NATIONAL_CACHE_KEY = 'national_entries_cache_v1'; // shared cache key with plantation.html
 const NATIONAL_CACHE_MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes

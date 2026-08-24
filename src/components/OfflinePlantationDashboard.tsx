@@ -171,7 +171,7 @@ export default function OfflinePlantationDashboard({ onStateChange }: OfflinePla
 
   const fetchSubmissions = () => {
     try {
-      const dataStr = localStorage.getItem('nursery_submissions');
+      const dataStr = localStorage.getItem('plantation_submission');
       if (dataStr) {
         const parsed = JSON.parse(dataStr) as Submission[];
         if (Array.isArray(parsed)) {
@@ -191,7 +191,7 @@ export default function OfflinePlantationDashboard({ onStateChange }: OfflinePla
     const interval = setInterval(fetchSubmissions, 1500);
 
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'nursery_submissions') {
+      if (e.key === 'plantation_submission') {
         fetchSubmissions();
       }
     };
