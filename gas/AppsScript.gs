@@ -686,3 +686,413 @@ function lookupByMobile_(mobile) {
   if (!match) return { ok: false, found: false };
   return { ok: true, found: true, user: match };
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  WEEKLY REPORT — EMAIL DELIVERY SYSTEM
+//
+//  How to deploy:
+//   1. Save & deploy this script (Extensions → Apps Script → Deploy).
+//   2. IMPORTANT: Go to Project Settings → Time zone → set to "Asia/Dhaka".
+//   3. Run setupWeeklyTrigger()  — installs a recurring Wednesday 08:00 trigger.
+//   4. Run setupOnceOffTrigger() — queues the first send for Thu 21 Aug 08:00 BDT.
+//   5. Run sendWeeklyReport()    — manual test / send-now at any time.
+//
+//  Report window: rolling 7 days ending at the moment the function runs.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── Configuration ─────────────────────────────────────────────────────────
+var REPORT_RECIPIENTS  = ['moniruzjamanlearner@gmail.com'];
+var REPORT_SENDER_NAME = 'DAE কুড়িগ্রাম — বৃক্ষরোপণ ট্র্যাকার';
+var REPORT_DISTRICT    = 'কুড়িগ্রাম';
+var REPORT_DEPT        = 'কৃষি সম্প্রসারণ অধিদপ্তর';
+
+// ── Entry point ───────────────────────────────────────────────────────────
+/**
+ * Generates a dynamic weekly plantation progress report and emails it to
+ * REPORT_RECIPIENTS. Safe to run manually; also called by the weekly trigger.
+ */
+function sendWeeklyReport() {
+  var now       = new Date();
+  var weekEnd   = new Date(now);
+  var weekStart = new Date(now);
+  weekStart.setDate(weekStart.getDate() - 7);
+  weekStart.setHours(0, 0, 0, 0);
+
+  var prevEnd   = new Date(weekStart);
+  var prevStart = new Date(weekStart);
+  prevStart.setDate(prevStart.getDate() - 7);
+  prevStart.setHours(0, 0, 0, 0);
+
+  var allRows = readAllRows_();
+  var stats   = computeWeeklyStats_(allRows, weekStart, weekEnd, prevStart, prevEnd);
+  var html    = buildWeeklyReportHtml_(stats, weekStart, weekEnd);
+
+  var dateTag = Utilities.formatDate(now, 'Asia/Dhaka', 'dd MMM yyyy');
+  var subject = '\uD83C\uDF33 সাপ্তাহিক বৃক্ষরোপণ অগ্রগতি — ' + REPORT_DISTRICT + ' জেলা (' + dateTag + ')';
+
+  MailApp.sendEmail({
+    to:       REPORT_RECIPIENTS.join(','),
+    name:     REPORT_SENDER_NAME,
+    subject:  subject,
+    htmlBody: html
+  });
+
+  Logger.log('Weekly report sent to: ' + REPORT_RECIPIENTS.join(', '));
+}
+
+// ── Stats computation ─────────────────────────────────────────────────────
+function computeWeeklyStats_(rows, weekStart, weekEnd, prevStart, prevEnd) {
+  var thisWeek = { entries: 0, trees: 0, upazilas: {}, categories: {}, saao: {} };
+  var prevWeek = { entries: 0, trees: 0 };
+  var cumul    = { entries: 0, trees: 0, upazilaSet: {} };
+
+  rows.forEach(function(r) {
+    var d     = r.submittedAt ? new Date(r.submittedAt) : null;
+    var trees = (r.seedlings || []).reduce(function(s, sd) {
+      return s + (Number(sd.quantity) || 0);
+    }, 0);
+
+    // All-time cumulative
+    cumul.entries++;
+    cumul.trees += trees;
+    if (r.upazila) cumul.upazilaSet[r.upazila] = true;
+
+    if (!d) return;
+
+    // This week
+    if (d >= weekStart && d < weekEnd) {
+      thisWeek.entries++;
+      thisWeek.trees += trees;
+
+      var uz = r.upazila || 'অজ্ঞাত';
+      if (!thisWeek.upazilas[uz]) thisWeek.upazilas[uz] = { entries: 0, trees: 0 };
+      thisWeek.upazilas[uz].entries++;
+      thisWeek.upazilas[uz].trees += trees;
+
+      (r.seedlings || []).forEach(function(sd) {
+        var cat = sd.category || 'অন্যান্য';
+        if (!thisWeek.categories[cat]) thisWeek.categories[cat] = { qty: 0 };
+        thisWeek.categories[cat].qty += (Number(sd.quantity) || 0);
+      });
+
+      var saao = r.saaoName || '';
+      if (saao) {
+        if (!thisWeek.saao[saao]) thisWeek.saao[saao] = { entries: 0, trees: 0, upazila: r.upazila || '' };
+        thisWeek.saao[saao].entries++;
+        thisWeek.saao[saao].trees += trees;
+      }
+    }
+
+    // Previous week (WoW delta)
+    if (d >= prevStart && d < prevEnd) {
+      prevWeek.entries++;
+      prevWeek.trees += trees;
+    }
+  });
+
+  var upazilaList = Object.keys(thisWeek.upazilas).map(function(uz) {
+    return { name: uz, entries: thisWeek.upazilas[uz].entries, trees: thisWeek.upazilas[uz].trees };
+  }).sort(function(a, b) { return b.trees - a.trees; });
+
+  var catList = Object.keys(thisWeek.categories).map(function(c) {
+    return { name: c, qty: thisWeek.categories[c].qty };
+  }).sort(function(a, b) { return b.qty - a.qty; }).slice(0, 6);
+
+  var saaoList = Object.keys(thisWeek.saao).map(function(n) {
+    return { name: n, entries: thisWeek.saao[n].entries, trees: thisWeek.saao[n].trees, upazila: thisWeek.saao[n].upazila };
+  }).sort(function(a, b) { return b.trees - a.trees; }).slice(0, 5);
+
+  return {
+    thisWeek:     thisWeek,
+    cumul:        { entries: cumul.entries, trees: cumul.trees, upazilaCount: Object.keys(cumul.upazilaSet).length },
+    upazilaList:  upazilaList,
+    catList:      catList,
+    saaoList:     saaoList,
+    entriesDelta: thisWeek.entries - prevWeek.entries,
+    treesDelta:   thisWeek.trees   - prevWeek.trees
+  };
+}
+
+// ── Bengali numeral helpers ───────────────────────────────────────────────
+function toBengaliNumber_(n) {
+  var map = ['\u09E6','\u09E7','\u09E8','\u09E9','\u09EA','\u09EB','\u09EC','\u09ED','\u09EE','\u09EF'];
+  var abs = Math.abs(Math.round(n));
+  var s   = abs.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  var bn  = s.split('').map(function(c) { return /\d/.test(c) ? map[parseInt(c, 10)] : c; }).join('');
+  return (n < 0 ? '\u2212' : '') + bn;
+}
+
+function fmtDelta_(n) {
+  if (n === 0) return '\u00b1\u09E6';
+  return (n > 0 ? '\u25B2' : '\u25BC') + toBengaliNumber_(Math.abs(n));
+}
+
+function deltaColor_(n) { return n >= 0 ? '#2E7D32' : '#C62828'; }
+
+// ── HTML email builder ────────────────────────────────────────────────────
+function buildWeeklyReportHtml_(stats, weekStart, weekEnd) {
+  var tw       = stats.thisWeek;
+  var cumul    = stats.cumul;
+  var upazilas = stats.upazilaList;
+  var cats     = stats.catList;
+  var saaoList = stats.saaoList;
+
+  function fmtDate(d) { return Utilities.formatDate(d, 'Asia/Dhaka', 'dd MMM yyyy'); }
+  var periodLabel = fmtDate(weekStart) + ' \u2013 ' + fmtDate(new Date(weekEnd.getTime() - 1));
+  var reportDate  = fmtDate(new Date());
+  var maxTrees    = upazilas.length ? upazilas[0].trees : 1;
+  var maxCat      = cats.length ? cats[0].qty : 1;
+
+  // Upazila rows
+  var uzRows = '';
+  upazilas.forEach(function(uz, i) {
+    var barPct   = Math.max(4, Math.round((uz.trees / maxTrees) * 100));
+    var barColor = barPct >= 60 ? '#2E7D32' : (barPct >= 30 ? '#66BB6A' : '#A5D6A7');
+    var bg       = i % 2 === 0 ? '#FFFFFF' : '#F1F8F1';
+    var pct      = tw.trees > 0 ? Math.round(uz.trees / tw.trees * 100) : 0;
+    uzRows +=
+      '<tr style="background-color:' + bg + ';">' +
+        '<td style="padding:6px 10px;font-size:12px;color:#212121;white-space:nowrap;">' + uz.name + '</td>' +
+        '<td style="padding:6px 10px;">' +
+          '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>' +
+            '<td><div style="background-color:' + barColor + ';height:10px;width:' + barPct + '%;min-width:4px;border-radius:3px;"></div></td>' +
+            '<td width="44" style="font-size:11px;color:#424242;padding-left:6px;white-space:nowrap;" align="right">' + toBengaliNumber_(uz.trees) + '</td>' +
+            '<td width="34" style="font-size:10px;color:#9E9E9E;white-space:nowrap;" align="right">' + toBengaliNumber_(pct) + '%</td>' +
+          '</tr></table>' +
+        '</td>' +
+        '<td style="padding:6px 10px;font-size:11px;color:#757575;" align="center">' + toBengaliNumber_(uz.entries) + '</td>' +
+      '</tr>';
+  });
+  if (!uzRows) uzRows = '<tr><td colspan="3" style="padding:12px;font-size:12px;color:#9E9E9E;text-align:center;">এই সপ্তাহে কোনো এন্ট্রি নেই</td></tr>';
+
+  // Category rows
+  var catRows = '';
+  cats.forEach(function(c, i) {
+    var barPct = Math.max(4, Math.round((c.qty / maxCat) * 100));
+    var bg     = i % 2 === 0 ? '#FFFFFF' : '#FFF3E0';
+    var pct    = tw.trees > 0 ? Math.round(c.qty / tw.trees * 100) : 0;
+    catRows +=
+      '<tr style="background-color:' + bg + ';">' +
+        '<td style="padding:5px 10px;font-size:12px;color:#212121;">' + c.name + '</td>' +
+        '<td style="padding:5px 10px;">' +
+          '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>' +
+            '<td><div style="background-color:#F9A825;height:9px;width:' + barPct + '%;min-width:4px;border-radius:3px;"></div></td>' +
+            '<td width="44" style="font-size:11px;color:#424242;padding-left:6px;white-space:nowrap;" align="right">' + toBengaliNumber_(c.qty) + '</td>' +
+            '<td width="34" style="font-size:10px;color:#9E9E9E;white-space:nowrap;" align="right">' + toBengaliNumber_(pct) + '%</td>' +
+          '</tr></table>' +
+        '</td>' +
+      '</tr>';
+  });
+  if (!catRows) catRows = '<tr><td colspan="2" style="padding:10px;font-size:12px;color:#9E9E9E;text-align:center;">\u09A4\u09A5\u09CD\u09AF \u09A8\u09C7\u0987</td></tr>';
+
+  // SAAO rows
+  var medals = ['\uD83E\uDD47','\uD83E\uDD48','\uD83E\uDD49','\u2464','\u2465'];
+  var saaoRows = '';
+  saaoList.forEach(function(s, i) {
+    var bg = i % 2 === 0 ? '#FFFFFF' : '#EFF3FF';
+    saaoRows +=
+      '<tr style="background-color:' + bg + ';">' +
+        '<td style="padding:5px 10px;font-size:12px;color:#212121;">' + medals[i] + ' ' + s.name + '</td>' +
+        '<td style="padding:5px 10px;font-size:11px;color:#616161;" align="center">' + (s.upazila || '\u2014') + '</td>' +
+        '<td style="padding:5px 10px;font-size:12px;font-weight:700;color:#2E7D32;" align="center">' + toBengaliNumber_(s.trees) + '</td>' +
+        '<td style="padding:5px 10px;font-size:11px;color:#757575;" align="center">' + toBengaliNumber_(s.entries) + '</td>' +
+      '</tr>';
+  });
+  if (!saaoRows) saaoRows = '<tr><td colspan="4" style="padding:10px;font-size:12px;color:#9E9E9E;text-align:center;">\u09A4\u09A5\u09CD\u09AF \u09A8\u09C7\u0987</td></tr>';
+
+  // Delta chip
+  function deltaChip(n, label) {
+    return '<span style="font-size:10px;font-weight:600;color:' + deltaColor_(n) + ';">' +
+      fmtDelta_(n) + ' ' + label + '</span>';
+  }
+
+  // ── Full HTML ──────────────────────────────────────────────────────────
+  return '<!DOCTYPE html>' +
+'<html lang="bn"><head><meta charset="UTF-8">' +
+'<meta name="viewport" content="width=device-width,initial-scale=1">' +
+'<title>\u09B8\u09BE\u09AA\u09CD\u09A4\u09BE\u09B9\u09BF\u0995 \u09AC\u09C3\u0995\u09CD\u09B7\u09B0\u09CB\u09AA\u09A3 \u09AA\u09CD\u09B0\u09A4\u09BF\u09AC\u09C7\u09A6\u09A8</title>' +
+'</head>' +
+'<body style="margin:0;padding:0;background-color:#EEF2ED;font-family:\'Noto Sans Bengali\',\'Segoe UI\',Arial,sans-serif;">' +
+
+// Preheader hidden text
+'<div style="display:none;max-height:0;overflow:hidden;opacity:0;">' +
+REPORT_DISTRICT + ' — \u098F\u0987 \u09B8\u09AA\u09CD\u09A4\u09BE\u09B9\u09C7 ' + toBengaliNumber_(tw.entries) + '\u099F\u09BF \u098F\u09A8\u09CD\u099F\u09CD\u09B0\u09BF\u09A4\u09C7 ' + toBengaliNumber_(tw.trees) + '\u099F\u09BF \u09AC\u09C3\u0995\u09CD\u09B7 \u09B0\u09CB\u09AA\u09A3 \u09B8\u09AE\u09CD\u09AA\u09A8\u09CD\u09A8\u0964' +
+'</div>' +
+
+// Wrapper
+'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#EEF2ED;padding:18px 0;">' +
+'<tr><td align="center">' +
+'<table role="presentation" width="620" cellpadding="0" cellspacing="0" style="background-color:#FFFFFF;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.10);">' +
+
+// HEADER
+'<tr><td style="background:linear-gradient(135deg,#1B5E20 0%,#33691E 100%);padding:22px 26px 18px;">' +
+  '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>' +
+    '<td>' +
+      '<div style="font-size:10px;letter-spacing:1.2px;color:#A5D6A7;text-transform:uppercase;padding-bottom:3px;">' +
+        REPORT_DEPT + '&nbsp;\u2022&nbsp;' + REPORT_DISTRICT + ' \u099C\u09C7\u09B2\u09BE' +
+      '</div>' +
+      '<div style="font-size:19px;font-weight:700;color:#FFFFFF;line-height:26px;">' +
+        '\u09B8\u09BE\u09AA\u09CD\u09A4\u09BE\u09B9\u09BF\u0995 \u09AC\u09C3\u0995\u09CD\u09B7\u09B0\u09CB\u09AA\u09A3 \u0995\u09B0\u09CD\u09AE\u09B8\u09C2\u099A\u09BF\u09B0 \u0985\u0997\u09CD\u09B0\u0997\u09A4\u09BF \u09AA\u09CD\u09B0\u09A4\u09BF\u09AC\u09C7\u09A6\u09A8' +
+      '</div>' +
+      '<div style="font-size:11px;color:#C8E6C9;padding-top:5px;">' +
+        '\u09AA\u09CD\u09B0\u09A4\u09BF\u09AC\u09C7\u09A6\u09A8\u09C7\u09B0 \u09A4\u09BE\u09B0\u09BF\u0996: <strong style="color:#E8F5E9;">' + reportDate + '</strong>' +
+        '&nbsp;&nbsp;\u2502&nbsp;&nbsp;\u09B8\u09AE\u09AF\u09BC\u0995\u09BE\u09B2: <strong style="color:#E8F5E9;">' + periodLabel + '</strong>' +
+      '</div>' +
+    '</td>' +
+    '<td width="52" align="right" style="font-size:34px;opacity:0.45;">\uD83C\uDF33</td>' +
+  '</tr></table>' +
+'</td></tr>' +
+
+// KPI CARDS
+'<tr><td style="padding:14px 22px 6px;">' +
+  '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>' +
+    // Card 1 — this week entries
+    '<td width="31%" align="center" style="background-color:#F1F8F1;border:1px solid #C8E6C9;border-radius:8px;padding:12px 6px;">' +
+      '<div style="font-size:9px;color:#388E3C;font-weight:700;letter-spacing:.6px;text-transform:uppercase;">\u098F\u0987 \u09B8\u09AA\u09CD\u09A4\u09BE\u09B9\u09C7\u09B0 \u098F\u09A8\u09CD\u099F\u09CD\u09B0\u09BF</div>' +
+      '<div style="font-size:26px;color:#1B5E20;font-weight:700;padding:3px 0 2px;">' + toBengaliNumber_(tw.entries) + '</div>' +
+      '<div>' + deltaChip(stats.entriesDelta, '\u0997\u09A4 \u09B8\u09AA\u09CD\u09A4\u09BE\u09B9') + '</div>' +
+    '</td>' +
+    '<td width="3%"></td>' +
+    // Card 2 — this week trees
+    '<td width="31%" align="center" style="background-color:#2E7D32;border-radius:8px;padding:12px 6px;">' +
+      '<div style="font-size:9px;color:#A5D6A7;font-weight:700;letter-spacing:.6px;text-transform:uppercase;">\u098F\u0987 \u09B8\u09AA\u09CD\u09A4\u09BE\u09B9\u09C7\u09B0 \u09AC\u09C3\u0995\u09CD\u09B7</div>' +
+      '<div style="font-size:26px;color:#FFFFFF;font-weight:700;padding:3px 0 2px;">' + toBengaliNumber_(tw.trees) + '</div>' +
+      '<div style="font-size:10px;color:#C8E6C9;">' + fmtDelta_(stats.treesDelta) + ' \u0997\u09A4 \u09B8\u09AA\u09CD\u09A4\u09BE\u09B9</div>' +
+    '</td>' +
+    '<td width="3%"></td>' +
+    // Card 3 — all-time cumulative
+    '<td width="31%" align="center" style="background-color:#1565C0;border-radius:8px;padding:12px 6px;">' +
+      '<div style="font-size:9px;color:#BBDEFB;font-weight:700;letter-spacing:.6px;text-transform:uppercase;">\u09B8\u09B0\u09CD\u09AC\u09AE\u09CB\u099F \u09AC\u09C3\u0995\u09CD\u09B7 (\u098F \u09AF\u09BE\u09AC\u09CE)</div>' +
+      '<div style="font-size:26px;color:#FFFFFF;font-weight:700;padding:3px 0 2px;">' + toBengaliNumber_(cumul.trees) + '</div>' +
+      '<div style="font-size:10px;color:#90CAF9;">' + toBengaliNumber_(cumul.entries) + ' \u098F\u09A8\u09CD\u099F\u09CD\u09B0\u09BF&nbsp;\u2502&nbsp;' + toBengaliNumber_(cumul.upazilaCount) + ' \u0989\u09AA\u099C\u09C7\u09B2\u09BE</div>' +
+    '</td>' +
+  '</tr></table>' +
+'</td></tr>' +
+
+// SECTION A — Upazila
+'<tr><td style="padding:14px 22px 0;">' +
+  '<div style="background-color:#2E7D32;color:#FFFFFF;font-size:12px;font-weight:700;padding:7px 12px;border-radius:6px 6px 0 0;">' +
+    '\u0995. \u0989\u09AA\u099C\u09C7\u09B2\u09BE\u09AD\u09BF\u09A4\u09CD\u09A4\u09BF\u0995 \u0985\u0997\u09CD\u09B0\u0997\u09A4\u09BF (\u098F\u0987 \u09B8\u09AA\u09CD\u09A4\u09BE\u09B9)' +
+  '</div>' +
+  '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #C8E6C9;border-top:none;">' +
+    '<tr style="background-color:#1B5E20;">' +
+      '<td style="color:#fff;padding:6px 10px;font-size:11px;font-weight:600;width:26%;">\u0989\u09AA\u099C\u09C7\u09B2\u09BE</td>' +
+      '<td style="color:#fff;padding:6px 10px;font-size:11px;font-weight:600;">\u09AC\u09C3\u0995\u09CD\u09B7 (\u09AC\u09BE\u09B0 \u099A\u09BE\u09B0\u09CD\u099F)</td>' +
+      '<td style="color:#fff;padding:6px 10px;font-size:11px;font-weight:600;width:12%;" align="center">\u098F\u09A8\u09CD\u099F\u09CD\u09B0\u09BF</td>' +
+    '</tr>' +
+    uzRows +
+  '</table>' +
+'</td></tr>' +
+
+// SECTION B — Categories
+'<tr><td style="padding:12px 22px 0;">' +
+  '<div style="background-color:#E65100;color:#FFFFFF;font-size:12px;font-weight:700;padding:7px 12px;border-radius:6px 6px 0 0;">' +
+    '\u0996. \u09AA\u09CD\u09B0\u099C\u09BE\u09A4\u09BF \u0995\u09CD\u09AF\u09BE\u099F\u09BE\u0997\u09B0\u09BF (\u098F\u0987 \u09B8\u09AA\u09CD\u09A4\u09BE\u09B9)' +
+  '</div>' +
+  '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #FFE0B2;border-top:none;">' +
+    '<tr style="background-color:#BF360C;">' +
+      '<td style="color:#fff;padding:6px 10px;font-size:11px;font-weight:600;width:34%;">\u0995\u09CD\u09AF\u09BE\u099F\u09BE\u0997\u09B0\u09BF</td>' +
+      '<td style="color:#fff;padding:6px 10px;font-size:11px;font-weight:600;">\u099A\u09BE\u09B0\u09BE\u09B0 \u09B8\u0982\u0996\u09CD\u09AF\u09BE</td>' +
+    '</tr>' +
+    catRows +
+  '</table>' +
+'</td></tr>' +
+
+// SECTION C — SAAO Leaderboard
+'<tr><td style="padding:12px 22px 0;">' +
+  '<div style="background-color:#1565C0;color:#FFFFFF;font-size:12px;font-weight:700;padding:7px 12px;border-radius:6px 6px 0 0;">' +
+    '\u0997. \u09B6\u09C0\u09B0\u09CD\u09B7 \u09B8\u0995\u09CD\u09B0\u09BF\u09AF\u09BC \u098F\u09B8\u098F\u098F\u0993 (\u098F\u0987 \u09B8\u09AA\u09CD\u09A4\u09BE\u09B9)' +
+  '</div>' +
+  '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #BBDEFB;border-top:none;">' +
+    '<tr style="background-color:#0D47A1;">' +
+      '<td style="color:#fff;padding:6px 10px;font-size:11px;font-weight:600;">\u09A8\u09BE\u09AE</td>' +
+      '<td style="color:#fff;padding:6px 10px;font-size:11px;font-weight:600;" align="center">\u0989\u09AA\u099C\u09C7\u09B2\u09BE</td>' +
+      '<td style="color:#fff;padding:6px 10px;font-size:11px;font-weight:600;" align="center">\u09AC\u09C3\u0995\u09CD\u09B7</td>' +
+      '<td style="color:#fff;padding:6px 10px;font-size:11px;font-weight:600;" align="center">\u098F\u09A8\u09CD\u099F\u09CD\u09B0\u09BF</td>' +
+    '</tr>' +
+    saaoRows +
+  '</table>' +
+'</td></tr>' +
+
+// ATTACHMENT NOTE
+'<tr><td style="padding:12px 22px 0;">' +
+  '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#FFF8E1;border:1px solid #FFE082;border-radius:6px;">' +
+    '<tr><td style="padding:10px 14px;font-size:11px;color:#5D4037;line-height:17px;">' +
+      '\uD83D\uDCCE <strong>\u09B8\u0982\u09AF\u09C1\u0995\u09CD\u09A4\u09BF:</strong> \u09B8\u09BE\u09AA\u09CD\u09A4\u09BE\u09B9\u09BF\u0995 \u09B0\u09BF\u09AA\u09CB\u09B0\u09CD\u099F\u09C7\u09B0 \u09B8\u09BE\u09A5\u09C7 \u098F\u0995\u09CD\u09B8\u09C7\u09B2 \u09B8\u0982\u09AF\u09C1\u0995\u09CD\u09A4\u09BF \u09AC\u09BE\u099E\u09CD\u099B\u09A8\u09C0\u09AF\u09BC\u0964 ' +
+      '\u09A1\u09CD\u09AF\u09BE\u09B6\u09AC\u09CB\u09B0\u09CD\u09A1 \u09A5\u09C7\u0995\u09C7 <strong>Gov Excel</strong> \u09AC\u09BE <strong>\u09E7\u09ED \u0995\u09B2\u09BE\u09AE \u099B\u0995</strong> \u09B0\u09AA\u09CD\u09A4\u09BE\u09A8\u09BF \u0995\u09B0\u09C7 \u098F\u0987 \u0987\u09AE\u09C7\u0987\u09B2\u09C7\u09B0 \u09B0\u09BF\u09AA\u09CD\u09B2\u09BE\u0987\u09A4\u09C7 \u09B8\u0982\u09AF\u09C1\u0995\u09CD\u09A4 \u0995\u09B0\u09C1\u09A8\u0964' +
+    '</td></tr>' +
+  '</table>' +
+'</td></tr>' +
+
+// CLOSING
+'<tr><td style="padding:14px 22px 20px;font-size:13px;line-height:20px;color:#212121;">' +
+  '\u09AA\u09CD\u09B0\u09A4\u09BF\u09AC\u09C7\u09A6\u09A8\u099F\u09BF \u0986\u09AA\u09A8\u09BE\u09B0 \u09B8\u09A6\u09AF\u09BC \u0985\u09AC\u0997\u09A4\u09BF \u0993 \u09AA\u09B0\u09AC\u09B0\u09CD\u09A4\u09C0 \u09AC\u09CD\u09AF\u09AC\u09B8\u09CD\u09A5\u09BE \u0997\u09CD\u09B0\u09B9\u09A3\u09C7\u09B0 \u099C\u09A8\u09CD\u09AF \u09AA\u09C7\u09B6 \u0995\u09B0\u09BE \u09B9\u09B2\u09CB\u0964<br><br>' +
+  '\u09A7\u09A8\u09CD\u09AF\u09AC\u09BE\u09A6\u09BE\u09A8\u09CD\u09A4\u09C7,<br>' +
+  '<strong>\u0989\u09AA\u09AA\u09B0\u09BF\u099A\u09BE\u09B2\u0995\u09C7\u09B0 \u0995\u09BE\u09B0\u09CD\u09AF\u09BE\u09B2\u09AF\u09BC</strong><br>' +
+  REPORT_DEPT + ', ' + REPORT_DISTRICT +
+'</td></tr>' +
+
+// FOOTER
+'<tr><td style="background-color:#F5F5F5;padding:10px 22px;border-top:1px solid #E0E0E0;">' +
+  '<div style="font-size:10px;color:#BDBDBD;line-height:15px;">' +
+    '\u09B8\u09CD\u09AC\u09AF\u09BC\u0982\u0995\u09CD\u09B0\u09BF\u09AF\u09BC \u09AA\u09CD\u09B0\u09A4\u09BF\u09AC\u09C7\u09A6\u09A8 \u2022 \u09A4\u09A5\u09CD\u09AF\u09B8\u09C2\u09A4\u09CD\u09B0: DAE ' + REPORT_DISTRICT + ' App_Entry \u09B0\u09C7\u099C\u09BF\u09B8\u09CD\u099F\u09CD\u09B0\u09BF \u2022 \u09AA\u09CD\u09B0\u09A4\u09BF \u09AC\u09C1\u09A7\u09AC\u09BE\u09B0 \u09B8\u0995\u09BE\u09B2 \u09EE:\u09E6\u09E6\u09A4\u09C7 \u09AA\u09CD\u09B0\u09C7\u09B0\u09BF\u09A4' +
+  '</div>' +
+'</td></tr>' +
+
+'</table>' +
+'</td></tr>' +
+'</table>' +
+'</body></html>';
+}
+
+// ── Trigger setup ─────────────────────────────────────────────────────────
+
+/**
+ * Creates a recurring WEEKLY trigger: every Wednesday at ~08:00 BDT.
+ * Run ONCE from the Apps Script editor.
+ * Pre-req: Project Settings → Time zone must be set to "Asia/Dhaka".
+ */
+function setupWeeklyTrigger() {
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'sendWeeklyReport') {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+  ScriptApp.newTrigger('sendWeeklyReport')
+    .timeBased()
+    .onWeekDay(ScriptApp.WeekDay.WEDNESDAY)
+    .atHour(8)
+    .nearMinute(0)
+    .create();
+  Logger.log('Weekly trigger set: every Wednesday ~08:00 BDT.');
+}
+
+/**
+ * Queues a ONE-TIME send for Thu 21 Aug 2026 at 08:00 BDT (02:00 UTC).
+ * Run ONCE from the Apps Script editor.
+ * After firing the trigger self-destructs via sendWeeklyReportAndCleanup_.
+ */
+function setupOnceOffTrigger() {
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'sendWeeklyReportAndCleanup_') {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+  // Thu 21 Aug 2026 08:00 BDT = 02:00 UTC
+  ScriptApp.newTrigger('sendWeeklyReportAndCleanup_')
+    .timeBased()
+    .at(new Date('2026-08-21T02:00:00Z'))
+    .create();
+  Logger.log('One-off trigger set: Thu 21 Aug 2026 08:00 BDT.');
+}
+
+/** Fires once (Thu 21 Aug), sends report, then self-destructs. */
+function sendWeeklyReportAndCleanup_() {
+  sendWeeklyReport();
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'sendWeeklyReportAndCleanup_') {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+  Logger.log('One-off trigger self-cleaned after firing.');
+}

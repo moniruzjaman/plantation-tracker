@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, type RefObject } from 'react';
-import { MapContainer, TileLayer, CircleMarker, Marker, Popup, Tooltip, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, CircleMarker, Popup, Tooltip, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import type { LatLngBounds, LatLngTuple, Map as LeafletMap } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -21,26 +21,6 @@ L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-});
-
-const appscriptIcon = L.divIcon({
-  // Square, not round, so national AppScript entries stay visually distinct
-  // from this device's local (round) submissions even without color vision.
-  html: '<div style="background:#2563eb;width:8px;height:8px;border-radius:2px;border:1px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3)"></div>',
-  className: 'appscript-tree-icon',
-  iconSize: [8, 8],
-  iconAnchor: [4, 4],
-});
-
-// Same square shape, but red — flags a national entry whose GPS point
-// doesn't fall inside its own declared upazila. Kept visible (not
-// dropped) so a reviewer can see and investigate it, rather than the
-// mismatch only surfacing in a backend report nobody opens.
-const appscriptMismatchIcon = L.divIcon({
-  html: '<div style="background:#dc2626;width:9px;height:9px;border-radius:2px;border:1.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>',
-  className: 'appscript-tree-icon-mismatch',
-  iconSize: [9, 9],
-  iconAnchor: [4.5, 4.5],
 });
 
 const LAYER_LABELS: Record<LayerId, string> = {
@@ -587,11 +567,22 @@ export default function MapTab({ geoState, onMapReady }: MapTabProps) {
           );
         })}
 
-        {/* AppScript (Google Sheet) national entries */}
+        {/* AppScript (Google Sheet) national entries -- CircleMarker, matching
+            plantation-tracker-app's marker style (radius 6, color-coded,
+            no separate icon shape) for visual consistency across both apps. */}
         {nationalPoints.map(({ pos, entry, mismatched }, i) => {
           const actualUpazila = mismatched ? findContainingUpazila(mergedPolygons, pos[0], pos[1]) : null;
           return (
-            <Marker key={`nat-${entry.id || entry.submissionId || i}`} position={pos} icon={mismatched ? appscriptMismatchIcon : appscriptIcon}>
+            <CircleMarker
+              key={`nat-${entry.id || entry.submissionId || i}`}
+              center={pos}
+              radius={mismatched ? 7 : 6}
+              pathOptions={
+                mismatched
+                  ? { color: '#b91c1c', fillColor: '#ef4444', fillOpacity: 0.85, weight: 2.5 }
+                  : { color: '#1d4ed8', fillColor: '#3b82f6', fillOpacity: 0.75, weight: 2 }
+              }
+            >
               <Popup>
                 <div className="text-xs min-w-[160px]">
                   <div className="font-bold text-blue-700 mb-1">{entry.farmerName || entry.nurseryName || entry.village || 'অজানা'}</div>
@@ -629,7 +620,7 @@ export default function MapTab({ geoState, onMapReady }: MapTabProps) {
                   </div>
                 </div>
               </Popup>
-            </Marker>
+            </CircleMarker>
           );
         })}
 
