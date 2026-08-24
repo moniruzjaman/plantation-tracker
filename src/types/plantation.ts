@@ -1,4 +1,4 @@
-/** Local device submission, matching plantation.html's localStorage shape (LS_KEY = "nursery_submissions"). */
+/** Local device submission, matching plantation.html's localStorage shape (LS_KEY = "plantation_submission"). */
 export interface LocalSubmission {
   id?: string;
   submissionId?: string;
