@@ -57,4 +57,6 @@ declare module 'lucide-react' {
   export const RefreshCw: Icon;
   export const Trees: Icon;
   export const Satellite: Icon;
+  export const Droplet: Icon;
+  export const CalendarDays: Icon;
 }
