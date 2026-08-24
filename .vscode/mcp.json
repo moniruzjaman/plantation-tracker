@@ -1,0 +1,15 @@
+{
+  "servers": {
+    "plantation-mcp": {
+      "type": "stdio",
+      "command": "C:\\Users\\mithu\\AppData\\Local\\Programs\\cs-mcp\\cs-mcp.exe",
+      "args": [
+        "--auto-db",
+        "--deploy",
+        "--fix-pr",
+        "--rotate-gas",
+        "--local-server"
+      ]
+    }
+  }
+}

@@ -61,5 +61,9 @@
     "vercel": "^54.14.0",
     "vite-plugin-pwa": "^1.2.0",
     "vitest": "^4.1.10"
+  },
+  "allowScripts": {
+    "sharp@0.32.6": true,
+    "sharp@0.34.5": true
   }
 }
