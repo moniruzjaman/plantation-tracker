@@ -51,7 +51,17 @@ export default function App() {
       <PWAInstaller />
       <SyncToast />
       <iframe
-        src="/plantation.html"
+        // NOT "/plantation.html" -- that path only exists via a Vercel-only
+        // server-side redirect (vercel.json) to this real file. Capacitor's
+        // Android WebView serves bundled local assets directly with no
+        // Vercel edge server involved, so that redirect never applies
+        // there -- the iframe would 404 on a path that literally doesn't
+        // exist in the APK's bundled assets, leaving the entire core app
+        // (form/dashboard/map/everything inside this iframe) blank on
+        // Android. Pointing directly at the real file works identically
+        // on web (same file, redirect was never required) and fixes
+        // Android with zero behavior change on either platform.
+        src="/legacy/plantation.html"
         style={{ display: 'block', width: '100%', height: '100%', border: 'none' }}
         title="Plantation Form"
         allow="geolocation"
