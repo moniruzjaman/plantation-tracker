@@ -2544,47 +2544,88 @@ async function sendToGAS(rows){
   }
 }
 
-// Re-attempt sync for every locally-queued (synced:false) submission. Used by
-// the "Sync Now" button in the React shell's persistent sync-status chip, so
-// officers with patchy connectivity can retry the moment they get a bar of
-// signal instead of having to re-open and re-save each record individually.
-async function retryAllUnsynced(){
+// Re-attempt sync for every locally-queued submission. Used by the "Sync
+// Now" button in the React shell's persistent sync-status chip, the
+// auto-retry-on-reconnect listener below, and the background retry timer,
+// so officers with patchy connectivity get their data off the device as
+// soon as any signal is available instead of only on manual retry.
+//
+// Each record now carries a richer status than the old synced:true/false:
+//   syncStatus: "pending" | "syncing" | "synced" | "failed"
+//   retryCount: number of failed attempts so far
+//   lastError:  short message from the most recent failed attempt
+//   lastAttemptAt: ISO timestamp of the most recent attempt
+// synced/syncedAt are kept in lockstep for any legacy code that still reads
+// them directly (e.g. admin table rendering in part7.txt).
+var RETRY_BACKOFF_MS = [0, 15000, 60000, 300000]; // immediate, 15s, 1m, 5m+
+function _dueForRetry(s){
+  if(s.syncStatus !== "failed") return true; // pending/never-attempted: always try
+  var tier = Math.min(s.retryCount||0, RETRY_BACKOFF_MS.length-1);
+  var waitMs = RETRY_BACKOFF_MS[tier];
+  if(!s.lastAttemptAt) return true;
+  return (Date.now() - new Date(s.lastAttemptAt).getTime()) >= waitMs;
+}
+var _retryInFlight = false;
+async function retryAllUnsynced(force){
+  if(_retryInFlight) return; // avoid overlapping passes from timer + reconnect + manual tap
   var subs = getSubmissions();
   var unsynced = subs.filter(function(s){ return s.synced === false; });
+  var due = force ? unsynced : unsynced.filter(_dueForRetry);
   if(unsynced.length === 0){
     try{ window.parent.postMessage({ type:"sync-retry-result", ok:true, synced:0, failed:0, total:0 }, "*"); }catch(_){}
     return;
   }
+  if(due.length === 0) return; // everything still in backoff — quietly skip this pass
+  _retryInFlight = true;
   var syncedCount = 0, failedCount = 0;
-  for (var i = 0; i < unsynced.length; i++){
-    var s = unsynced[i];
+  for (var i = 0; i < due.length; i++){
+    var s = due[i];
+    _markStatus(s.id || s.submissionId, "syncing", {});
     // v2 flat seedlings array is required to rebuild GAS rows; legacy v1
     // 3-array records aren't retried here (user can re-open/edit to resync).
     var seedlings = Array.isArray(s.seedlings) && s.seedlings.length ? s.seedlings : null;
-    if(!seedlings){ failedCount++; continue; }
+    if(!seedlings){
+      _markStatus(s.id || s.submissionId, "failed", { error: "পুরনো ফরম্যাট — সম্পাদনা করে পুনরায় জমা দিন" });
+      failedCount++; continue;
+    }
     var base = Object.assign({}, s);
     delete base.seedlings;
     var rows = toGASRows(base, seedlings);
     var result = await sendToGAS(rows);
     if(result && result.ok){
-      var current = getSubmissions();
-      var idx = current.findIndex(function(x){ return x.id === s.id || x.submissionId === s.submissionId; });
-      if(idx > -1){
-        current[idx].synced = true;
-        current[idx].syncedAt = new Date().toISOString();
-        saveSubmissions(current);
-      }
+      _markStatus(s.id || s.submissionId, "synced", {});
       syncedCount++;
     } else {
+      _markStatus(s.id || s.submissionId, "failed", { error: (result && result.error) || "অজানা ত্রুটি" });
       failedCount++;
     }
   }
+  _retryInFlight = false;
   try{
-    window.parent.postMessage({ type:"sync-retry-result", ok: failedCount===0, synced: syncedCount, failed: failedCount, total: unsynced.length }, "*");
+    window.parent.postMessage({ type:"sync-retry-result", ok: failedCount===0, synced: syncedCount, failed: failedCount, total: due.length }, "*");
     if(syncedCount > 0){
       window.parent.postMessage({ type:"offline-synced-success", count: syncedCount }, "*");
     }
   }catch(_){}
+}
+// Shared helper: flip one record's status and keep legacy synced/syncedAt
+// fields in sync for any older code path that still reads them directly.
+function _markStatus(id, status, extra){
+  var current = getSubmissions();
+  var idx = current.findIndex(function(x){ return x.id === id || x.submissionId === id; });
+  if(idx === -1) return;
+  var rec = current[idx];
+  rec.syncStatus = status;
+  rec.lastAttemptAt = new Date().toISOString();
+  if(status === "synced"){
+    rec.synced = true; rec.syncedAt = rec.lastAttemptAt; rec.lastError = null;
+  } else if(status === "failed"){
+    rec.synced = false; rec.retryCount = (rec.retryCount||0) + 1; rec.lastError = extra.error || "অজানা ত্রুটি";
+  } else if(status === "syncing"){
+    rec.synced = false;
+  }
+  current[idx] = rec;
+  saveSubmissions(current);
 }
 window.retryAllUnsynced = retryAllUnsynced;
 
@@ -2592,8 +2633,26 @@ window.retryAllUnsynced = retryAllUnsynced;
 // "Sync Now" button) without duplicating this logic on the outside.
 window.addEventListener("message", function(e){
   if(!e.data || e.data.type !== "trigger-sync") return;
-  retryAllUnsynced();
+  retryAllUnsynced(true); // manual tap always ignores backoff
 });
+
+// Regaining connectivity is exactly the moment a field officer needs their
+// queued submissions to leave the device — don't make them find and tap
+// "Sync Now" themselves. Debounced slightly since flaky connections can
+// fire "online" repeatedly in a short window.
+var _onlineRetryTimer = null;
+window.addEventListener("online", function(){
+  clearTimeout(_onlineRetryTimer);
+  _onlineRetryTimer = setTimeout(function(){ retryAllUnsynced(false); }, 1500);
+});
+
+// Belt-and-braces background pass: if the tab is simply left open on a weak
+// but technically-online connection (common in the field — "online" never
+// fires because the device never fully drops), still make progress on the
+// queue every few minutes rather than requiring a tab reload.
+setInterval(function(){
+  if(navigator.onLine !== false) retryAllUnsynced(false);
+}, 180000);
 
 document.getElementById("nurseryForm").addEventListener("submit",async function(e){
 e.preventDefault();hideBanner("successBanner");hideBanner("errorBanner");
@@ -2615,21 +2674,16 @@ try{
     var rows = toGASRows(base, seedlings);
     // Was previously mine-but-national-only (no local record) -- this
     // creates the local shadow record now so it can sync/re-sync normally.
-    var updatedRecord = Object.assign({}, existing||{}, base, { seedlings: seedlings, synced: false, syncedAt: null, _source: "local" });
+    var updatedRecord = Object.assign({}, existing||{}, base, { seedlings: seedlings, synced: false, syncedAt: null, syncStatus: "syncing", _source: "local" });
     if(idx > -1){ subs[idx] = updatedRecord; } else { subs.push(updatedRecord); }
     saveSubmissions(subs);
 
     var editResult = await sendToGAS(rows);
     if(editResult && editResult.ok){
-      var updatedSubs = getSubmissions();
-      var newIdx = updatedSubs.findIndex(function(s){return s.id===updatedRecord.id || s.submissionId===updatedRecord.submissionId;});
-      if(newIdx > -1){
-        updatedSubs[newIdx].synced = true;
-        updatedSubs[newIdx].syncedAt = new Date().toISOString();
-        saveSubmissions(updatedSubs);
-      }
+      _markStatus(updatedRecord.id || updatedRecord.submissionId, "synced", {});
       showBanner("successBanner");
     } else {
+      _markStatus(updatedRecord.id || updatedRecord.submissionId, "failed", { error: (editResult && editResult.error) || "নেটওয়ার্ক ত্রুটি" });
       console.warn("GAS sync failed (edit):", editResult && editResult.error);
       showBanner("errorBanner","সিঙ্ক ব্যর্থ — তথ্য অফলাইনে সংরক্ষিত আছে। ড্যাশবোর্ড থেকে পরে আবার সিঙ্ক করুন।");
       setTimeout(function(){hideBanner("errorBanner");},5000);
@@ -2643,21 +2697,18 @@ try{
     base.seedlings = seedlings;
     base.synced = false;
     base.syncedAt = null;
+    base.syncStatus = "syncing";
+    base.retryCount = 0;
     subs.push(base);
     saveSubmissions(subs);
 
     var result = await sendToGAS(rows);
     if(result && result.ok){
-      var updated = getSubmissions();
-      var lastIdx = updated.length - 1;
-      if(updated[lastIdx]){
-        updated[lastIdx].synced = true;
-        updated[lastIdx].syncedAt = new Date().toISOString();
-        saveSubmissions(updated);
-      }
+      _markStatus(base.id, "synced", {});
       showBanner("successBanner");
       try{ window.parent.postMessage({ type:"offline-synced-success", count: rows.length }, "*"); }catch(_){}
     } else {
+      _markStatus(base.id, "failed", { error: (result && result.error) || "নেটওয়ার্ক ত্রুটি" });
       console.warn("GAS sync failed:", result && result.error);
       showBanner("errorBanner","সিঙ্ক ব্যর্থ — তথ্য অফলাইনে সংরক্ষিত আছে। ড্যাশবোর্ড থেকে পরে আবার সিঙ্ক করুন।");
       setTimeout(function(){hideBanner("errorBanner");},5000);

@@ -67,6 +67,9 @@ export interface Submission {
   medicinalSeedlings?: Seedling[];
   synced?: boolean;
   syncedAt?: string;
+  syncStatus?: 'pending' | 'syncing' | 'synced' | 'failed';
+  retryCount?: number;
+  lastError?: string;
 }
 
 interface OfflinePlantationDashboardProps {
