@@ -31,6 +31,8 @@
  *     - by_district (district) — for future district-level growth rollups
  */
 
+import { GAS_SYNC_ENDPOINT } from './apiBase';
+
 const DB_NAME = 'plantation_growth_db';
 const DB_VERSION = 1;
 const STORE_READINGS = 'growth_readings';
@@ -107,8 +109,6 @@ function tx<T>(storeName: string, mode: IDBTransactionMode, fn: (store: IDBObjec
 }
 
 // ── growth_readings CRUD ──
-
-const GAS_SYNC_ENDPOINT = '/api/gas-sync';
 
 /**
  * Best-effort sync of a growth reading to the Growth_Log sheet. Reads the
