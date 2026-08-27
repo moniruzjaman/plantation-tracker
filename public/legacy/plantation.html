@@ -1289,11 +1289,22 @@ var SPECIES_SUGGESTIONS = ["আম","জাম","কাঁঠাল","লেব�
 // Categories for the flat seedling repeater.
 var CATEGORY_OPTS = ["ফলদ","বনজ","ঔষধি","অন্যান্য"];
 
-// GAS sync endpoint — the Vercel serverless proxy. Using a relative URL
-// works for both the deployed PWA (same origin) and the Capacitor Android
-// build (WebView origin). The proxy forwards to the real GAS /exec URL
-// (configured as GAS_WEBHOOK_URL on Vercel) and adds CORS headers.
-var GAS_SYNC_ENDPOINT = "/api/gas-sync";
+// GAS sync endpoint. A relative URL only reaches the Vercel proxy when the
+// WebView's own origin *is* plantation.krishiai.live -- true for the
+// deployed PWA, but NOT for the Capacitor Android build: without a
+// `server.url` override in capacitor.config.ts, the APK loads its bundled
+// assets from the WebView's local origin (capacitor://localhost /
+// https://localhost), so "/api/gas-sync" resolves to a URL that doesn't
+// exist there and every GAS call (national entries, submissions,
+// directory, custom-upazila sync) fails silently -- the app then falls
+// back to whatever got cached in localStorage from the one time it
+// happened to run against a real origin (e.g. a livereload dev session),
+// and looks permanently frozen at that record count. Vercel already sends
+// Access-Control-Allow-Origin: * on /api/* (vercel.json), so an absolute
+// cross-origin URL from the native WebView works fine.
+var GAS_SYNC_ENDPOINT = (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())
+  ? "https://plantation.krishiai.live/api/gas-sync"
+  : "/api/gas-sync";
 var AGE_OPTS=["","১ মাস - ৬ মাস","৬ মাস - ১ বছর","১ বছর - ২ বছর","২ বছরের বেশি"];
 var CATEGORIES=[
 {key:"fruitSeedlings",label:"ফলদ চারা",color:"#f97316",bg:"#fff7ed",border:"#fdba74",legend:"#ea580c"},

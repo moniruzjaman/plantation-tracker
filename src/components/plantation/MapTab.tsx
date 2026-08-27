@@ -12,6 +12,7 @@ import { canonicalizeUpazilaAgainstRegistry } from '../../data/canonicalizeUpazi
 import { useDistrictPolygons } from '../../data/useDistrictPolygons';
 import { useMapData } from '../../utils/useMapData';
 import { countSeedlings } from '../../types/plantation';
+import { VALIDATION_TASKS_ENDPOINT } from '../../utils/apiBase';
 import NdviController from './NdviController';
 import GrowthTracker from './GrowthTracker';
 
@@ -318,7 +319,7 @@ export default function MapTab({ geoState, onMapReady }: MapTabProps) {
     try {
       const userRaw = localStorage.getItem('dae_user_profile');
       const user = userRaw ? JSON.parse(userRaw) : {};
-      await fetch('/api/validation-tasks', {
+      await fetch(VALIDATION_TASKS_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
