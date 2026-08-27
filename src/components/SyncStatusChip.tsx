@@ -34,6 +34,12 @@ export default function SyncStatusChip({ submissions, isOnline }: SyncStatusChip
   const totalLogs = submissions.length;
   const queuedCount = submissions.filter((s) => s.synced === false).length;
   const syncedCount = totalLogs - queuedCount;
+  // "failed" = actually attempted and rejected (bad data, GAS error, etc.);
+  // distinct from a fresh record that's simply pending its first attempt or
+  // waiting out backoff. A field officer needs to know which is which —
+  // "still waiting for signal" vs "this one needs a look."
+  const failedCount = submissions.filter((s) => s.synced === false && s.syncStatus === 'failed').length;
+  const pendingCount = queuedCount - failedCount;
 
   // Warn-buzz the moment a submission lands in the offline queue, and
   // success-buzz when the queue drains to zero — both cases the officer
@@ -153,16 +159,27 @@ export default function SyncStatusChip({ submissions, isOnline }: SyncStatusChip
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className={`grid gap-2 ${failedCount > 0 ? 'grid-cols-3' : 'grid-cols-2'}`}>
                 <div className="bg-primary-50/50 border border-primary-100 rounded-xl p-2.5 flex flex-col items-center text-center">
                   <span className="text-[10px] font-medium text-primary-700 uppercase tracking-wide">সিঙ্কড</span>
                   <span className="text-lg font-extrabold text-primary-600">{syncedCount}</span>
                 </div>
-                <div className={`rounded-xl p-2.5 flex flex-col items-center text-center border ${hasQueue ? 'bg-amber-50/60 border-amber-100' : 'bg-gray-50 border-gray-100'}`}>
-                  <span className={`text-[10px] font-medium uppercase tracking-wide ${hasQueue ? 'text-amber-700' : 'text-gray-500'}`}>বাকি আছে</span>
-                  <span className={`text-lg font-extrabold ${hasQueue ? 'text-amber-600' : 'text-gray-400'}`}>{queuedCount}</span>
+                <div className={`rounded-xl p-2.5 flex flex-col items-center text-center border ${pendingCount > 0 ? 'bg-amber-50/60 border-amber-100' : 'bg-gray-50 border-gray-100'}`}>
+                  <span className={`text-[10px] font-medium uppercase tracking-wide ${pendingCount > 0 ? 'text-amber-700' : 'text-gray-500'}`}>বাকি আছে</span>
+                  <span className={`text-lg font-extrabold ${pendingCount > 0 ? 'text-amber-600' : 'text-gray-400'}`}>{pendingCount}</span>
                 </div>
+                {failedCount > 0 && (
+                  <div className="rounded-xl p-2.5 flex flex-col items-center text-center border bg-red-50/60 border-red-100">
+                    <span className="text-[10px] font-medium uppercase tracking-wide text-red-700">ব্যর্থ</span>
+                    <span className="text-lg font-extrabold text-red-600">{failedCount}</span>
+                  </div>
+                )}
               </div>
+              {failedCount > 0 && (
+                <p className="text-[10.5px] text-red-600 leading-relaxed bg-red-50/60 border border-red-100 rounded-lg px-2.5 py-2">
+                  {failedCount}টি এন্ট্রি সিঙ্ক করা যায়নি — সিগন্যাল ঠিক থাকলেও তথ্যে সমস্যা থাকতে পারে। ড্যাশবোর্ড থেকে খুলে যাচাই করুন।
+                </p>
+              )}
 
               {retryState === 'result' && lastResult && (
                 <div className={`text-[11px] rounded-lg px-2.5 py-2 flex items-start gap-1.5 ${lastResult.failed > 0 ? 'bg-red-50 text-red-700 border border-red-100' : 'bg-primary-50 text-primary-700 border border-primary-100'}`}>
