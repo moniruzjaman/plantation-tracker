@@ -1,14 +1,27 @@
+# Dependencies
 node_modules/
+pnpm-lock.yaml
+
+# Build outputs
 build/
 dist/
+.next/
+.vercel
+
+# Testing
 coverage/
+
+# OS files
 .DS_Store
 *.log
+
+# Environment files
 .env*
 !.env.example
+
+# Turbo
+.turbo
 
 # Signing keys (never commit)
 *.keystore
 *.jks
-
-.vercel

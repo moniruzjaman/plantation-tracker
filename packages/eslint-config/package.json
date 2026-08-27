@@ -1,0 +1,10 @@
+{
+  "name": "@pmis/eslint-config",
+  "version": "1.0.0",
+  "private": true,
+  "main": "base.js",
+  "exports": {
+    "./base": "./base.js",
+    "./react": "./react.js"
+  }
+}

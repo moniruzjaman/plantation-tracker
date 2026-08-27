@@ -1,0 +1,27 @@
+{
+  "name": "@pmis/workers",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --port 8787",
+    "build": "tsc --noEmit && esbuild src/index.ts --bundle --minify --format=esm --outfile=dist/index.js --platform=neutral --target=es2022 --external:cloudflare:* --external:@cloudflare/workers-types",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@pmis/types": "workspace:*",
+    "@pmis/auth": "workspace:*",
+    "@pmis/db": "workspace:*",
+    "@pmis/ai": "workspace:*",
+    "@pmis/sync": "workspace:*",
+    "hono": "^4.6.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250101.0",
+    "esbuild": "^0.24.0",
+    "typescript": "~5.8.2",
+    "wrangler": "^3.99.0"
+  }
+}

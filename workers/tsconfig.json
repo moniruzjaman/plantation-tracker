@@ -1,0 +1,15 @@
+{
+  "extends": "@pmis/tsconfig/node.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@pmis/types": ["../packages/types/src"],
+      "@pmis/auth": ["../packages/auth/src"],
+      "@pmis/db": ["../packages/db/src"],
+      "@pmis/ai": ["../packages/ai/src"],
+      "@pmis/sync": ["../packages/sync/src"]
+    }
+  },
+  "include": ["src"],
+  "exclude": ["node_modules"]
+}

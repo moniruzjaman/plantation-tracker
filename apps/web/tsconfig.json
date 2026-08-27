@@ -1,0 +1,16 @@
+{
+  "extends": "@pmis/tsconfig/react.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@pmis/ui": ["../../packages/ui/src"],
+      "@pmis/types": ["../../packages/types/src"],
+      "@pmis/geo": ["../../packages/geo/src"],
+      "@pmis/gis": ["../../packages/gis/src"],
+      "@pmis/db": ["../../packages/db/src"]
+    }
+  },
+  "include": ["src"],
+  "exclude": ["node_modules"]
+}

@@ -1,75 +1,63 @@
-# 🌴 বৃক্ষরোপণ ট্র্যাকার (Plantation Tracker PWA)
+# PMIS V2 — KrishiAI Field Platform
 
-গণপ্রজাতন্ত্রী বাংলাদেশ সরকারের কৃষি সম্প্রসারণ অধিদপ্তর কর্তৃক **"০৫ বছরে ২৫ কোটি বৃক্ষরোপণ"** দেশব্যাপী মহা-কর্মসূচির আওতাভুক্ত তথ্য সংগ্রহ, ট্র্যাকিং এবং অফলাইন ডেটাবেজ ম্যানেজমেন্টের জন্য তৈরি একটি অত্যাধুনিক এবং শক্তিশালী **Progressive Web App (PWA)**।
+**Plantation Management Information System Version 2.0**
 
-**অ্যাপ লিংক:** https://plantation-tracker.vercel.app/
+A modern, offline-first field platform built with Turborepo, Hono, React, and Drizzle ORM.
 
----
+## Structure
 
-### ⚠️ Editing the legacy PWA (`public/legacy/plantation.html`)
-
-This file is what Vercel actually serves at `/` (see `vercel.json`). It's split into `public/part1.txt`–`part7.txt` for easier editing (GitHub web editor / mobile-friendly chunk sizes). **Never edit `public/legacy/plantation.html` directly** — edit the relevant `part*.txt` file, then run:
-
-```bash
-node map.js
+```
+pmis-v2/
+├── apps/
+│   └── web/          # React + Vite web app
+├── packages/
+│   ├── ui/           # shadcn/ui components
+│   ├── types/        # Shared TypeScript types
+│   ├── geo/          # GPS utilities
+│   ├── gis/          # Maps + Bangladesh boundaries
+│   ├── db/           # Drizzle ORM + Turso
+│   ├── auth/         # JWT + RBAC
+│   ├── ai/           # AI waterfall + providers
+│   └── sync/         # Offline sync engine
+├── workers/
+│   └── api/          # Cloudflare Workers (Hono)
+└── turbo.json
 ```
 
-This regenerates `public/legacy/plantation.html` from the parts. Commit **both** the `part*.txt` change and the regenerated `public/legacy/plantation.html` in the same commit. CI (`.github/workflows/check.yml`) runs `node map.js` and diffs the result against the committed file — the build fails if they don't match, so drift between the two gets caught immediately instead of silently accumulating.
+## Getting Started
 
----
+```bash
+# Install dependencies
+pnpm install
 
-### 🌟 ইউনিক ফিচারসমূহ (Unique Features)
+# Run all dev servers
+pnpm dev
 
-| ফিচার | বিবরণ |
-|--------|--------|
-| **Auto Fetch Geo Coordinates** | স্বয়ংক্রিয়ভাবে জিপিএস থেকে অক্ষাংশ ও দ্রাঘিমাংশ সংগ্রহ |
-| **Auto Fill Form** | জিও-কোঅর্ডিনেট ও রিভার্স জিওকোডিং এর মাধ্যমে ফর্ম স্বয়ংক্রিয়ভাবে পূরণ |
-| **Local Storage** | ইন্টারনেট ছাড়াই ব্রাউজার লোকাল স্টোরেজে ডেটা সংরক্ষণ (অফলাইন সাপোর্ট) |
-| **Auto Sync** | নেটওয়ার্ক পাওয়া মাত্র স্বয়ংক্রিয়ভাবে ডেটা সিঙ্ক |
-| **Server/Kobo/ODK Sync** | সার্ভার, KoboToolbox এবং ODK এর সাথে ডেটা সিঙ্ক (আসন্ন) |
+# Build all packages
+pnpm build
 
----
+# Run tests
+pnpm test
+```
 
-## 🚀 সাম্প্রতিক আপডেটসমূহ (Latest Feature Updates)
+## Tech Stack
 
-### ১. স্বয়ংক্রিয় ওয়ান-ক্লিক অ্যাপ হিসেবে ইন্সটল (PWA Auto-Install Prompt)
-* ব্যবহারকারী যখনই ব্রাউজারে সাইটটি ওপেন করবেন, অ্যাপ্লিকেশনটি স্বয়ংক্রিয়ভাবে একটি প্রফেশনাল ইন্সটলেশন অন-স্ক্রিন প্রম্পট ব্যানার প্রদর্শন করবে।
-* এক ক্লিকে সরাসরি হোম স্ক্রিনে অ্যাপ আকারে যুক্ত হয়ে যাবে (Android/iOS/PC)।
-* **iframe ডিটেকশন ও স্মার্ট গাইডেন্স**: যদি থার্ড পার্টি পোর্টাল বা কোনো আইফ্রেমের ভেতরে অ্যাপটি হোস্ট করা থাকে, তবে অ্যাপটি সয়ংক্রিয়ভাবে ব্যবহারকারীকে একটি সুন্দর নোটিফিকেশনের মাধ্যমে নতুন ট্যাবে/উইন্ডোতে ফুলস্ক্রিনে লোড করার অফার করে যাতে শতভাগ অফলাইন ও অফিশিয়াল জিপিএস সিঙ্ক পারফেক্টলি সক্রিয় হতে পারে।
+- **Frontend**: React 19, Vite 6, TypeScript, Tailwind CSS 4
+- **Backend**: Hono, Cloudflare Workers, Drizzle ORM
+- **Database**: Turso (SQLite)
+- **Maps**: MapLibre GL JS
+- **Offline**: Dexie.js, Service Workers
+- **AI**: Gemini, OpenRouter, Groq waterfall
 
-### ২. অফিশিয়াল সরকারি লোগো ও ব্র্যান্ডিং (Official Logo & High Fidelity Sharing)
-* গণপ্রজাতন্ত্রী বাংলাদেশ সরকারের অফিশিয়াল লোগো/সিল ব্যবহার করা হয়েছে অ্যাপের হেডার এবং ব্যাকগ্রাউন্ডে।
-* **logo.svg / logo.png / apple-touch-icon.png**: এই আইকনগুলি সম্পূর্ণ মডার্ন ডিরেক্টরিতে কম্পাইল ও সিঙ্ক করা হয়েছে।
-* **সোশ্যাল মিডিয়া শেয়ারিং ওভারভিউ (Open Graph - OG Preview)**: ফেসবুক, মেসেঞ্জার, হোয়াটসঅ্যাপ, টুইটারে অ্যাপলের লিঙ্ক শেয়ার করার সময় আকর্ষণীয় সবুজ রঙের ব্র্যান্ডেড প্রিভিউ কার্ড এবং উপযুক্ত ইনফরমেশনসহ প্রদর্শিত হবে।
+## Phases
 
-### ৩. সাপোর্ট ইমেইল সংযোগ
-* যেকোনো টেকনিক্যাল জিজ্ঞাসা, ডেটা রিকভারি, বা ত্রুটির জন্য ডেডিকেটেড সাপোর্ট ইমেইল সংযোজন করা হয়েছে: 
-  📧 **[krishiailive@gmail.com](mailto:krishiailive@gmail.com)**
+- **Phase 0**: Monorepo Foundation (Weeks 1-2)
+- **Phase 1**: Core Field Modules (Weeks 3-6)
+- **Phase 2**: Intelligence Layer (Weeks 7-10)
+- **Phase 3**: Administration & Reporting (Weeks 11-13)
+- **Phase 4**: Mobile & PWA (Weeks 14-15)
+- **Phase 5**: Hardening & Deployment (Week 16)
 
-### ৪. GPS জুরিসডিকশন যাচাই — উপজেলা সীমানা প্রোটেকশন (GPS Jurisdiction Verification)
-* প্রতিটি এন্ট্রির প্রকৃত GPS অবস্থান তার ঘোষিত উপজেলার **প্রকৃত সীমানা পলিগনের** মধ্যে পড়ছে কিনা তা এখন স্বয়ংক্রিয়ভাবে যাচাই করা হয় (শুধু নাম মিলিয়ে নয় — প্রকৃত জিও-বাউন্ডারি ধরে)। অমিল পাওয়া গেলে মানচিত্রে লাল মার্কার এবং পপ-আপে স্পষ্ট সতর্কবার্তা দেখানো হয়, যাতে পর্যালোচক সহজেই জেলা/উপজেলার বাইরে পড়া এন্ট্রি শনাক্ত করতে পারেন। কোনো এন্ট্রি স্বয়ংক্রিয়ভাবে মুছে ফেলা বা প্রত্যাখ্যান করা হয় না — শুধু পর্যালোচনার জন্য চিহ্নিত করা হয়।
-* **৬৪ জেলার সম্পূর্ণ কভারেজ, লেজি-লোড আর্কিটেকচারে**: প্রতিটি জেলার সীমানা ডেটা আলাদা ফাইলে রাখা হয়েছে, এবং একজন কর্মকর্তার ডিভাইসে শুধুমাত্র তার **নিজ কর্মস্থলের জেলার** ডেটা স্বয়ংক্রিয়ভাবে ডাউনলোড হয় (প্রোফাইলে সংরক্ষিত কর্মস্থল অনুযায়ী)। প্রয়োজনে ম্যানুয়ালি অন্য জেলা যোগ করার অপশনও আছে (একাধিক জেলা পর্যালোচনাকারী কর্মকর্তাদের জন্য)। এতে অ্যাপের সাইজ বা লোডিং সময় বৃদ্ধি পায় না — প্রতিটি ডিভাইস শুধু প্রাসঙ্গিক ডেটাটুকুই বহন করে।
-* **কুড়িগ্রাম জেলার ৯টি উপজেলার সীমানা হাতে-যাচাইকৃত (hand-verified, ১০০% নির্ভুল)**। জাতীয়ভাবে বাকি ৬৩টি জেলার প্রায় ৬১% উপজেলার সীমানা স্বয়ংক্রিয়ভাবে মিলানো হয়েছে; বাকিগুলো ধাপে ধাপে উন্নত করা হবে। কোনো উপজেলার সীমানা ডেটা এখনো না মিললে সেই এন্ট্রি কখনোই ভুলভাবে ফ্ল্যাগ হবে না — শুধু যাচাই স্থগিত থাকবে।
+## License
 
-### ৫. পেজ রিনেম, রিডাইরেক্ট ও মানচিত্র মার্কার উন্নতি
-* `legacy-nursery.html` পেজের নাম পরিবর্তন করে `plantation.html` করা হয়েছে। পুরনো বুকমার্ক করা বা শেয়ার করা লিংকে যাওয়া ব্যবহারকারীরা এখন স্বয়ংক্রিয়ভাবে নতুন পেজে রিডাইরেক্ট হয়ে যাবেন (৩০১ পার্মানেন্ট রিডাইরেক্ট)।
-* মানচিত্রের মার্কার আইকন অপ্টিমাইজ ও আইকন-অ্যাংকর বাগ ফিক্স করা হয়েছে; স্থানীয় ও জাতীয় (AppScript) এন্ট্রির মধ্যে বৃত্ত বনাম বর্গ আকৃতি ব্যবহার করে রঙ-অন্ধ ব্যবহারকারীদের জন্যও স্পষ্ট পার্থক্য নিশ্চিত করা হয়েছে।
-* সোশ্যাল মিডিয়া শেয়ারিং প্রিভিউ কার্ড (Open Graph) নতুন করে ডিজাইন করা হয়েছে — ছোট থাম্বনেইল সাইজেও (হোয়াটসঅ্যাপ/মেসেঞ্জার প্রিভিউ) স্পষ্টভাবে পড়া যায় এমনভাবে সরলীকৃত।
-
----
-
-## 🛠️ মডিউল ও কারিগরি বৈশিষ্ট্যসমূহ (Technical Features)
-
-1. **মোবাইল অফলাইন ডেটা কালেকশন**: ব্রাউজারের লোকাল স্টোরেজ ব্যবহার করে ইন্টারনেট ছাড়া বা দুর্বল নেটওয়ার্কেও সম্পূর্ণ নিরবচ্ছিন্নভাবে নার্সারির গাছের রোপণের ক্যাটাগরি অনুযায়ী এন্ট্রি পূরণ করা যায়।
-2. **অটো জিপিএস এবং রিভার্স জিওকোডিং**: জিপিএস থেকে সরাসরি অক্ষাংশ ও দ্রাঘিমাংশ সংগ্রহ করে Nominatim এর মাধ্যমে স্বয়ংক্রিয়ভাবে ঠিকানার বিবরণ উদ্ধার করে।
-3. **অফিসিয়াল এক্সেল এক্সপোর্ট**: সমস্ত ডেটা একটি মাত্র ক্লিকে সরকারি নির্ধারিত ছক ফরম্যাটে সরাসরি এক্সেল শিটে ডাউনলোড করা যায়।
-4. **অ্যাডমিন ড্যাশবোর্ড**: জেলা বা অঞ্চলভিত্তিক এবং প্রজাতি অনুযায়ী গ্রাফিকাল রিচার্টস ও স্ট্যাটিস্টিকস ওভারভিউ।
-5. **GPS জুরিসডিকশন যাচাই**: প্রতিটি এন্ট্রির GPS অবস্থান তার ঘোষিত উপজেলার প্রকৃত সীমানা পলিগনের মধ্যে আছে কিনা তা স্বয়ংক্রিয় যাচাই; দেশব্যাপী ৬৪ জেলা কভারেজ, তবে প্রতি ডিভাইসে শুধু প্রাসঙ্গিক জেলার ডেটা লেজি-লোড হয়।
-
----
-
-## 📞 যোগাযোগ ও সাপোর্ট (Support & Assistance)
-
-আপনার যেকোনো মতামত বা সহায়তায় যোগাযোগ করুন:
-* **ইমেইল**: [krishiailive@gmail.com](mailto:krishiailive@gmail.com)
-* **কর্তৃপক্ষ**: কৃষি সম্প্রসারণ অধিদপ্তর, গণপ্রজাতন্ত্রী বাংলাদেশ সরকার
+MIT

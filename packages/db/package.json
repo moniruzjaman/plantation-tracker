@@ -1,0 +1,17 @@
+{
+  "name": "@pmis/db",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "dependencies": {
+    "drizzle-orm": "^0.36.0",
+    "@libsql/client": "^0.14.0"
+  },
+  "devDependencies": {
+    "@pmis/tsconfig": "workspace:*",
+    "@types/node": "^22.20.1",
+    "drizzle-kit": "^0.28.0",
+    "typescript": "~5.8.2"
+  }
+}

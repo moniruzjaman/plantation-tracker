@@ -1,0 +1,39 @@
+{
+  "name": "pmis-v2-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-01-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "ENVIRONMENT": "development"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "pmis-v2-db",
+      "database_id": "local-db"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "ASSETS",
+      "bucket_name": "pmis-v2-assets"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "CACHE",
+      "id": "local-cache"
+    }
+  ],
+  "dev": {
+    "port": 8787,
+    "local_providers": {
+      "d1_databases": "D1DatabaseProvider",
+      "r2_buckets": "R2BucketProvider",
+      "kv_namespaces": "KVNamespaceProvider"
+    }
+  }
+}
