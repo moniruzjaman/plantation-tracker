@@ -1,66 +1,25 @@
 {
   "name": "pmis-v2",
   "private": true,
-  "version": "0.0.0",
+  "version": "2.0.0",
   "packageManager": "pnpm@9.12.0",
   "type": "module",
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "packages/*",
+    "workers/*"
   ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/moniruzjaman/pmis-v2.git"
-  },
-  "bugs": {
-    "url": "https://github.com/moniruzjaman/pmis-v2/issues"
-  },
-  "homepage": "https://github.com/moniruzjaman/pmis-v2#readme",
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "test": "turbo run test",
-    "clean": "turbo run clean",
-    "db:generate": "npx prisma generate",
-    "db:push": "npx prisma db push",
-    "db:seed": "npx prisma db seed",
-    "db:migrate": "npx prisma migrate dev --name init"
-  },
-  "prisma": {
-    "seed": "npx tsx prisma/seed.ts"
-  },
-  "dependencies": {
-    "@capacitor/android": "^8.3.0",
-    "@capacitor/cli": "^8.3.0",
-    "@capacitor/core": "^8.3.0",
-    "@capacitor/geolocation": "^8.2.0",
-    "@capacitor/haptics": "^8.0.2",
-    "@prisma/client": "^6.8.2",
-    "@tailwindcss/vite": "^4.1.14",
-    "@vitejs/plugin-react": "^5.0.4",
-    "framer-motion": "^12.42.2",
-    "leaflet": "^1.9.4",
-    "lucide-react": "^0.546.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "react-leaflet": "^5.0.0",
-    "vite": "^6.2.0"
+    "clean": "turbo run clean"
   },
   "devDependencies": {
-    "@capacitor/assets": "^3.0.5",
-    "@types/leaflet": "^1.9.21",
-    "@types/node": "^22.20.1",
-    "fake-indexeddb": "^6.2.5",
-    "prisma": "^6.8.2",
-    "sharp": "^0.34.5",
-    "tailwindcss": "^4.1.14",
     "turbo": "^2.0.0",
-    "tsx": "^4.21.0",
     "typescript": "~5.8.2",
-    "vercel": "^54.14.0",
-    "vite-plugin-pwa": "^1.2.0",
-    "vitest": "^4.1.10"
+    "@types/node": "^22.20.1"
   },
   "engines": {
     "node": ">=20.0.0"
