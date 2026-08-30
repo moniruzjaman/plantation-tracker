@@ -5,6 +5,7 @@
 
 import { useState, useCallback, useRef, Suspense, lazy } from 'react';
 import { Satellite, X, Loader2 } from 'lucide-react';
+import { Analytics } from '@vercel/analytics/react';
 import NetworkStatus, { NetworkStatusData } from './components/NetworkStatus';
 import GeolocationIndicator, { GeoState } from './components/GeolocationIndicator';
 import WelcomeModal from './components/WelcomeModal';
@@ -50,6 +51,7 @@ export default function App() {
       <WelcomeModal />
       <PWAInstaller />
       <SyncToast />
+      <Analytics />
       <iframe
         // NOT "/plantation.html" -- that path only exists via a Vercel-only
         // server-side redirect (vercel.json) to this real file. Capacitor's
