@@ -581,6 +581,8 @@ function fetchOfficialReportSummary(force){
 function officialBnCount(n){n=Number(n)||0;return n.toLocaleString("bn-BD");}
 function officialBnPct(n){n=Number(n)||0;return n.toLocaleString("bn-BD",{minimumFractionDigits:2,maximumFractionDigits:2})+"%";}
 function officialDate(d){if(!d)return "";var dt=new Date(d);if(isNaN(dt.getTime()))return d;return dt.toLocaleDateString("bn-BD",{day:"numeric",month:"long",year:"numeric"});}
+function officialDateSlug(d){var dt=d?new Date(d):null;if(!dt||isNaN(dt.getTime()))dt=new Date();var y=dt.getFullYear();var m=String(dt.getMonth()+1).padStart(2,"0");var day=String(dt.getDate()).padStart(2,"0");return y+"-"+m+"-"+day;}
+function officialDateSlugBn(d){return officialDateSlug(d).split("-").map(function(part){return Number(part).toLocaleString("bn-BD",{minimumIntegerDigits:part.length,useGrouping:false});}).join("-");}
 function officialText(id,v){var el=document.getElementById(id);if(el)el.textContent=v;}
 function applyOfficialReportSummary(data){
   if(!data||!data.ok)return;
@@ -596,6 +598,12 @@ function applyOfficialReportSummary(data){
   officialText("rep17ColEntries",officialBnCount(s.seventeenColEntries));
   officialText("rep17ColCount",officialBnCount(s.seventeenColEntries));
   officialText("officialReportDate","("+officialDate(data.reportDate)+")");
+  var reportSlug=officialDateSlug(data.reportDate);
+  var reportSlugBn=officialDateSlugBn(data.reportDate);
+  var xlsxLink=document.getElementById("officialReportXlsxLink");
+  if(xlsxLink){xlsxLink.href="/reports/weekly-report-"+reportSlug+".xlsx";xlsxLink.download="সাপ্তাহিক_বৃক্ষরোপণ_প্রতিবেদন_"+reportSlugBn+".xlsx";}
+  var htmlLink=document.getElementById("officialReportHtmlLink");
+  if(htmlLink){htmlLink.href="/reports/weekly-report-"+reportSlug+".html";}
   var list=document.getElementById("repUpazilaList");
   if(list&&data.upazilaTrees){list.innerHTML=data.upazilaTrees.map(function(u){return '<span>'+u.label+": <b>"+officialBnCount(u.trees)+"</b></span>";}).join("");}
   var dq=document.getElementById("repDataList");
