@@ -30,6 +30,7 @@ export interface FlatSeedling {
   speciesName: string;
   category: string;
   quantity: number;
+  age?: string;           // v2 — sapling age label (e.g. "৩-৬ মাস")
 }
 
 export interface Submission {
@@ -46,6 +47,10 @@ export interface Submission {
   geoLocation?: string;
   latitude?: string;
   longitude?: string;
+  altitude?: number;                // v2 — GPS altitude in meters
+  gpsAccuracy?: number;             // v2 — GPS accuracy in meters
+  precisionGrade?: 'HIGH' | 'MEDIUM' | 'LOW'; // v2 — GPS precision grade
+  treeHeightMeters?: number;        // v2 — measured tree height
   plantingDate?: string;
   submittedAt?: string;
   farmerName?: string;
