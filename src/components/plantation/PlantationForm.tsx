@@ -173,7 +173,7 @@ export default function PlantationForm({ onSubmissionSuccess }: PlantationFormPr
   };
 
   // Calculate total seedlings
-  const totalPresetSeedlings = Object.values(speciesCounts).reduce((a, b) => a + b, 0);
+  const totalPresetSeedlings = (Object.values(speciesCounts) as number[]).reduce((a, b) => a + b, 0);
   const totalCustomSeedlings = customList.reduce((a, b) => a + b.quantity, 0);
   const grandTotalSeedlings = totalPresetSeedlings + totalCustomSeedlings;
 
