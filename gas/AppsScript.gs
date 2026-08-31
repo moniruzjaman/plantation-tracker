@@ -1091,19 +1091,45 @@ function officialSummaryToWeeklyStats_(summary) {
 }
 
 /**
- * Exports this bound spreadsheet as an .xlsx Blob for email attachment.
- * SpreadsheetApp has no direct "export as blob" call, so this fetches the
- * standard Sheets export URL with the script's own OAuth token.
+ * Exports ONLY the ministry_report and 17 column report sheets as an
+ * .xlsx Blob for email attachment -- not the full workbook. The other
+ * sheets (App_Entry, User_Profile, Growth_Log, Custom_Upazila,
+ * Visitor_Log) hold field officers' raw contact info and submission
+ * data, which has no business leaving the org over an emailed report.
+ *
+ * The Sheets export URL has no "export just these N sheets" parameter
+ * (its gid param only takes one sheet, and this needs exactly two), so
+ * this makes a short-lived Drive copy of the spreadsheet, deletes every
+ * sheet except the two report sheets from the copy, exports that, and
+ * always trashes the copy afterward -- even if the export itself fails.
  */
 function exportSpreadsheetAsXlsxBlob_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var url = 'https://docs.google.com/spreadsheets/d/' + ss.getId() + '/export?format=xlsx';
-  var response = UrlFetchApp.fetch(url, {
-    headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() }
-  });
-  var fileName = 'Tree_Plantation_Reporting_Workbook_' +
-    Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd') + '.xlsx';
-  return response.getBlob().setName(fileName);
+  var keepNames = [MINISTRY_REPORT_SHEET_NAME, SEVENTEEN_COL_REPORT_SHEET_NAME];
+  var tempFile = DriveApp.getFileById(ss.getId()).makeCopy(
+    'weekly-report-export-tmp-' + new Date().getTime());
+  var tempId = tempFile.getId();
+  try {
+    var tempSs = SpreadsheetApp.openById(tempId);
+    tempSs.getSheets().forEach(function (sheet) {
+      if (keepNames.indexOf(sheet.getName()) === -1) {
+        try { tempSs.deleteSheet(sheet); } catch (e) {
+          Logger.log('could not drop sheet "' + sheet.getName() + '" from report export: ' + e);
+        }
+      }
+    });
+    var url = 'https://docs.google.com/spreadsheets/d/' + tempId + '/export?format=xlsx';
+    var response = UrlFetchApp.fetch(url, {
+      headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() }
+    });
+    var fileName = 'সাপ্তাহিক_বৃক্ষরোপণ_প্রতিবেদন_' +
+      Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd') + '.xlsx';
+    return response.getBlob().setName(fileName);
+  } finally {
+    try { DriveApp.getFileById(tempId).setTrashed(true); } catch (e) {
+      Logger.log('could not trash temp report-export copy ' + tempId + ': ' + e);
+    }
+  }
 }
 
 /**
@@ -1356,7 +1382,7 @@ REPORT_DISTRICT + ' — \u098F\u0987 \u09B8\u09AA\u09CD\u09A4\u09BE\u09B9\u09C7 
 '<tr><td style="padding:12px 22px 0;">' +
   '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#FFF8E1;border:1px solid #FFE082;border-radius:6px;">' +
     '<tr><td style="padding:10px 14px;font-size:11px;color:#5D4037;line-height:17px;">' +
-      '\uD83D\uDCCE <strong>\u09B8\u0982\u09AF\u09C1\u0995\u09CD\u09A4\u09BF:</strong> \u09B8\u09AE\u09CD\u09AA\u09C2\u09B0\u09CD\u09A3 Tree_Plantation_Reporting_Workbook.xlsx \u098F\u0987 \u0987\u09AE\u09C7\u0987\u09B2\u09C7\u09B0 \u09B8\u09BE\u09A5\u09C7 \u09B8\u09CD\u09AC\u09AF\u09BC\u0982\u0995\u09CD\u09B0\u09BF\u09AF\u09BC\u09AD\u09BE\u09AC\u09C7 \u09B8\u0982\u09AF\u09C1\u0995\u09CD\u09A4 \u0995\u09B0\u09BE \u09B9\u09AF\u09BC\u09C7\u099B\u09C7\u0964' +
+      '\uD83D\uDCCE <strong>\u09B8\u0982\u09AF\u09C1\u0995\u09CD\u09A4\u09BF:</strong> ministry_report \u098F\u09AC\u0982 17 column report \u09B6\u09C0\u099F \u09A6\u09C1\u099F\u09BF \u098F\u0987 \u0987\u09AE\u09C7\u0987\u09B2\u09C7\u09B0 \u09B8\u09BE\u09A5\u09C7 Excel \u09AB\u09BE\u0987\u09B2 \u09B9\u09BF\u09B8\u09C7\u09AC\u09C7 \u09B8\u0982\u09AF\u09C1\u0995\u09CD\u09A4 \u0995\u09B0\u09BE \u09B9\u09AF\u09BC\u09C7\u099B\u09C7\u0964' +
     '</td></tr>' +
   '</table>' +
 '</td></tr>' +
