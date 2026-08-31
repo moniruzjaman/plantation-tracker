@@ -470,7 +470,7 @@ function doGet(e) {
     if (params.mobile) return jsonOut_(lookupByMobile_(params.mobile));
     if (params.directory) return jsonOut_(getDirectory_(params.role, params.upazila));
     if (params.customUpazila) return jsonOut_(getCustomUpazilas_(params.district));
-    if (params.officialSummary) return jsonOut_(getOfficialReportSummary_());
+    if (params.officialSummary) return jsonOut_(getOfficialReportSummary_(params.upazila));
     if (params.sendWeeklyReport) {
       // Dashboard's "🚀 রিপোর্ট পাঠান" button passes a comma-separated
       // email list via ?email=... -- fall back to REPORT_RECIPIENTS when
@@ -815,13 +815,16 @@ function colFor_(header,aliases){
 function pctNum_(count,total){if(!total)return 0;return Math.round((count*1000/total))/10;}
 function inUpazilas_(u){return u&&REPORT_UPAZILAS.indexOf(u)!==-1;}
 
-function getOfficialReportSummary_(){
-  var COVERAGE=REPORT_UPAZILAS.length;
+function getOfficialReportSummary_(filterUpazila){
+  filterUpazila=(filterUpazila||'').trim();
+  var isFiltered=filterUpazila&&REPORT_UPAZILAS.indexOf(filterUpazila)!==-1;
+  var COVERAGE=isFiltered?1:REPORT_UPAZILAS.length;
   var main=readSheetByHeaders_(MINISTRY_REPORT_SHEET_NAME, ['ক্রঃ নং', 'রোপণকৃত বৃক্ষের সংখ্যা']);
   var col17=readSheetByHeaders_(SEVENTEEN_COL_REPORT_SHEET_NAME, ['ক্র. নং', 'উপজেলা']);
   var res={
     ok:true,
     reportDate:'',
+    appliedUpazilaFilter:isFiltered?filterUpazila:'',
     summary:{
       mainDataEntries:0,mainDataTrees:0,
       seventeenColEntries:0,seventeenColTrees:0,
@@ -857,9 +860,10 @@ function getOfficialReportSummary_(){
   function processSheet(sheetObj,entryField,treeField,isQuality){
     if(!sheetObj)return;
     var h=sheetObj.header,rows=sheetObj.rows;
+    var upzKey=exactCol_(h,'উপজেলা');
+    if(isFiltered){rows=rows.filter(function(row){return (row[upzKey]||'')===filterUpazila;});}
     res.summary[entryField]=rows.length;
     var countKey=colFor_(h,['রোপণকৃত বৃক্ষের চারার প্রজাতিভিত্তিক সংখ্যা','রোপণকৃত বৃক্ষের সংখ্যা','মোট চারার সংখ্যা','সংখ্যা','মোট গাছের সংখ্যা']);
-    var upzKey=exactCol_(h,'উপজেলা');
     var distKey=exactCol_(h,'জেলা');
     var dateKey=colFor_(h,['রোপণের তারিখ','তারিখ']);
     var speciesKey=colFor_(h,['রোপণকৃত বৃক্ষের প্রজাতির নাম','প্রজাতির নাম']);

@@ -545,36 +545,41 @@ window.setDashboardViewMode = function(mode) {
 
 var OFFICIAL_REPORT_CACHE_KEY="official_report_summary_v1";
 var OFFICIAL_REPORT_CACHE_MAX_AGE_MS=5*60*1000;
-var _officialReportCache=null;
-var _officialReportCacheAt=null;
+var _officialReportCache={};
+var _officialReportCacheAt={};
 var _lastOfficialCardSig="";
-function loadCachedOfficialReport(){
+function loadCachedOfficialReport(cacheKey){
   try{
-    var raw=localStorage.getItem(OFFICIAL_REPORT_CACHE_KEY);
+    var raw=localStorage.getItem(cacheKey);
     if(!raw)return null;
     var p=JSON.parse(raw);
     if(!p||!p.data)return null;
     return p;
   }catch(e){return null;}
 }
-function saveCachedOfficialReport(data){
-  try{localStorage.setItem(OFFICIAL_REPORT_CACHE_KEY,JSON.stringify({data:data,cachedAt:new Date().toISOString()}));}catch(e){}
+function saveCachedOfficialReport(cacheKey,data){
+  try{localStorage.setItem(cacheKey,JSON.stringify({data:data,cachedAt:new Date().toISOString()}));}catch(e){}
 }
-function fetchOfficialReportSummary(force){
-  var cached=loadCachedOfficialReport();
-  if(cached){_officialReportCache=cached.data;_officialReportCacheAt=cached.cachedAt?new Date(cached.cachedAt):new Date();}
-  if(_officialReportCache&&!force){
-    var age=Date.now()-(_officialReportCacheAt?_officialReportCacheAt.getTime():Date.now());
-    if(age<OFFICIAL_REPORT_CACHE_MAX_AGE_MS){return Promise.resolve(_officialReportCache);}
+function fetchOfficialReportSummary(force,upazila){
+  upazila=upazila||"";
+  var cacheKey=OFFICIAL_REPORT_CACHE_KEY+(upazila?(":"+upazila):"");
+  if(!(cacheKey in _officialReportCache)){
+    var cached=loadCachedOfficialReport(cacheKey);
+    if(cached){_officialReportCache[cacheKey]=cached.data;_officialReportCacheAt[cacheKey]=cached.cachedAt?new Date(cached.cachedAt):new Date();}
   }
-  return fetch(GAS_SYNC_ENDPOINT+"?officialSummary=1",{cache:"no-store"})
+  if(_officialReportCache[cacheKey]&&!force){
+    var age=Date.now()-(_officialReportCacheAt[cacheKey]?_officialReportCacheAt[cacheKey].getTime():Date.now());
+    if(age<OFFICIAL_REPORT_CACHE_MAX_AGE_MS){return Promise.resolve(_officialReportCache[cacheKey]);}
+  }
+  var url=GAS_SYNC_ENDPOINT+"?officialSummary=1"+(upazila?("&upazila="+encodeURIComponent(upazila)):"");
+  return fetch(url,{cache:"no-store"})
     .then(function(r){return r.json();})
     .then(function(data){
-      if(data&&data.ok){_officialReportCache=data;_officialReportCacheAt=new Date();saveCachedOfficialReport(data);}
+      if(data&&data.ok){_officialReportCache[cacheKey]=data;_officialReportCacheAt[cacheKey]=new Date();saveCachedOfficialReport(cacheKey,data);}
       return data;
     })
     .catch(function(err){
-      if(_officialReportCache)return _officialReportCache;
+      if(_officialReportCache[cacheKey])return _officialReportCache[cacheKey];
       return {ok:false,error:String(err)};
     });
 }
@@ -598,6 +603,11 @@ function applyOfficialReportSummary(data){
   officialText("rep17ColEntries",officialBnCount(s.seventeenColEntries));
   officialText("rep17ColCount",officialBnCount(s.seventeenColEntries));
   officialText("officialReportDate","("+officialDate(data.reportDate)+")");
+  var filterNote=document.getElementById("officialReportFilterNote");
+  if(filterNote){
+    if(data.appliedUpazilaFilter){filterNote.textContent="🔍 "+data.appliedUpazilaFilter+" উপজেলার প্রতিবেদন দেখানো হচ্ছে";filterNote.classList.remove("hidden");}
+    else{filterNote.textContent="";filterNote.classList.add("hidden");}
+  }
   var reportSlug=officialDateSlug(data.reportDate);
   var reportSlugBn=officialDateSlugBn(data.reportDate);
   var xlsxLink=document.getElementById("officialReportXlsxLink");
@@ -622,11 +632,32 @@ function drawOfficialCharts(data){
   window._officialCharts.upazila=new Chart(uc,{type:"bar",data:{labels:upz.map(function(u){return u.label;}),datasets:[{label:"",data:upz.map(function(u){return u.trees;}),backgroundColor:"rgba(180,83,9,0.65)",borderRadius:4}]},options:{indexAxis:"y",responsive:true,plugins:{legend:{display:false},title:{display:true,text:"উপজেলাভিত্তিক মোট রোপণকৃত বৃক্ষ (সম্মিলিত)",font:{size:11}}},scales:{x:{beginAtZero:true,ticks:{precision:0}}}}});
   window._officialCharts.category=new Chart(cc,{type:"doughnut",data:{labels:cat.map(function(c){return c.label;}),datasets:[{data:cat.map(function(c){return c.trees;}),backgroundColor:["#f97316","#16a34a","#84cc16","#0891b2","#78350f","#9ca3af"]}]},options:{responsive:true,plugins:{legend:{position:"bottom",labels:{font:{size:10},boxWidth:12}},title:{display:true,text:"চারার ক্যাটাগরি অনুযায়ী বিতরণ",font:{size:11}}}}});
 }
+var REPORT_UPAZILAS_FRONT=['ভুরুঙ্গামারী','চর রাজিবপুর','ফুলবাড়ী','উলিপুর','চিলমারী','রৌমারী','কুড়িগ্রাম সদর','নাগেশ্বরী','রাজারহাট'];
+function getReportUpazilaFilter(){
+  var district=document.getElementById("dashDistrict")?document.getElementById("dashDistrict").value:"";
+  var upazila=document.getElementById("dashUpazila")?document.getElementById("dashUpazila").value:"";
+  if(!upazila)return "";
+  if(district&&district!=="কুড়িগ্রাম")return "";
+  if(REPORT_UPAZILAS_FRONT.indexOf(upazila)===-1)return "";
+  return upazila;
+}
+function isReportUpazilaFilterIgnored(){
+  var district=document.getElementById("dashDistrict")?document.getElementById("dashDistrict").value:"";
+  var upazila=document.getElementById("dashUpazila")?document.getElementById("dashUpazila").value:"";
+  return !!(upazila&&district&&district!=="কুড়িগ্রাম");
+}
 function refreshOfficialReportCard(){
-  fetchOfficialReportSummary(false).then(function(data){if(data&&data.ok)applyOfficialReportSummary(data);});
+  var upazila=getReportUpazilaFilter();
+  var ignored=isReportUpazilaFilterIgnored();
+  fetchOfficialReportSummary(false,upazila).then(function(data){
+    if(data&&data.ok)applyOfficialReportSummary(data);
+    var filterNote=document.getElementById("officialReportFilterNote");
+    if(ignored&&filterNote){filterNote.textContent="⚠️ এই সাপ্তাহিক প্রতিবেদন শুধুমাত্র কুড়িগ্রাম জেলার জন্য প্রযোজ্য";filterNote.classList.remove("hidden");}
+  });
 }
 function renderOfficialReportCharts(){
-  fetchOfficialReportSummary(false).then(function(data){if(data&&data.ok)applyOfficialReportSummary(data);});
+  var upazila=getReportUpazilaFilter();
+  fetchOfficialReportSummary(false,upazila).then(function(data){if(data&&data.ok)applyOfficialReportSummary(data);});
 }
 window.renderDashboard=function(){
 try{
