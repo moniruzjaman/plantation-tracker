@@ -102,8 +102,13 @@ export async function getAuditLogsByEntity(entityId: string): Promise<AuditLogEn
 
 // ---------- Validation Tasks CRUD ----------
 
-export async function addValidationTask(record: Omit<ValidationTaskRecord, 'task_id'>): Promise<string> {
-  const task_id = crypto.randomUUID();
+export async function addValidationTask(
+  record: Omit<ValidationTaskRecord, 'task_id'> & { task_id?: string }
+): Promise<string> {
+  // Upsert semantics: reuse the record's own task_id when provided (update),
+  // otherwise mint a new one (create). The old implementation always minted
+  // a fresh id, so "updating" an existing task actually inserted a duplicate.
+  const task_id = record.task_id || crypto.randomUUID();
   const full: ValidationTaskRecord = { ...record, task_id };
   await tx<string>(STORE_VALIDATION_TASKS, 'readwrite', (store) => store.put(full) as IDBRequest<string>);
   return task_id;

@@ -19,6 +19,10 @@
  *                                              capture, for unique-visitor
  *                                              counting -- no profile
  *                                              form required)
+ *               -- entryType="validation_task" -> Validation_Task sheet
+ *                                              (upsert by taskId; approve/
+ *                                              reject decisions forwarded
+ *                                              from /api/validation-tasks)
  *               -- otherwise                  -> App_Entry sheet (seedling row)
  *   doGet(e)   -- ?mobile=01XXXXXXXXX       -> User_Profile lookup by mobile
  *               -- ?list=1[&district=..]    -> every App_Entry row, grouped
@@ -43,9 +47,9 @@
  *      once from the Apps Script editor FIRST (see its doc-comment above
  *      the function for the full safe procedure -- it builds a new
  *      App_Entry_Migrated tab and never touches your existing data).
- *   2. Growth_Log, Custom_Upazila, and Visitor_Log sheets are created
- *      automatically on first write (same pattern as User_Profile) -- no
- *      manual sheet setup needed for those.
+ *   2. Growth_Log, Custom_Upazila, Visitor_Log, and Validation_Task
+ *      sheets are created automatically on first write (same pattern as
+ *      User_Profile) -- no manual sheet setup needed for those.
  */
 
 var SHEET_NAME = 'App_Entry';
@@ -53,6 +57,13 @@ var PROFILE_SHEET_NAME = 'User_Profile';
 var GROWTH_SHEET_NAME = 'Growth_Log';
 var CUSTOM_UPAZILA_SHEET_NAME = 'Custom_Upazila';
 var VISITOR_SHEET_NAME = 'Visitor_Log';
+var VALIDATION_TASK_SHEET_NAME = 'Validation_Task';
+
+var VALIDATION_TASK_COLUMNS = [
+  'সময়', 'টাস্ক আইডি', 'জমা আইডি', 'সাইট আইডি', 'সিদ্ধান্ত',
+  'মন্তব্য', 'সিদ্ধান্তের সময়', 'এসএএও আইডি', 'এসএএও নাম',
+  'ব্যবহারকারী আইডি', 'ব্যবহারকারীর নাম'
+];
 
 var VISITOR_COLUMNS = [
   'সময়', 'ইমেইল', 'ধরন', 'ডিভাইস আইডি'
@@ -173,6 +184,17 @@ function getVisitorSheet_() {
   return sheet;
 }
 
+function getValidationTaskSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(VALIDATION_TASK_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(VALIDATION_TASK_SHEET_NAME);
+    sheet.appendRow(VALIDATION_TASK_COLUMNS);
+    sheet.getRange(1, 1, 1, VALIDATION_TASK_COLUMNS.length).setFontWeight('bold');
+  }
+  return sheet;
+}
+
 function jsonOut_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
@@ -238,6 +260,37 @@ function doPost(e) {
         raw.mode || '',
         raw.deviceId || ''
       ]);
+      return jsonOut_({ ok: true });
+    }
+
+    // Validation decision from /api/validation-tasks (tracker dashboard
+    // approve/reject). Upsert by taskId so re-deciding or retrying a
+    // failed sync updates the existing row instead of duplicating it.
+    if (!Array.isArray(raw) && raw.entryType === 'validation_task') {
+      if (!raw.taskId || !raw.submissionId || !raw.decision) {
+        return jsonOut_({ ok: false, error: 'taskId, submissionId, and decision are required' });
+      }
+      var vts = getValidationTaskSheet_();
+      var lockVT = LockService.getScriptLock();
+      lockVT.waitLock(30000);
+      try {
+        deleteValidationTaskRowsByTaskId_(vts, raw.taskId);
+        vts.appendRow([
+          new Date().toISOString(),
+          raw.taskId || '',
+          raw.submissionId || '',
+          raw.siteId || '',
+          raw.decision || '',
+          raw.remarks || '',
+          raw.decidedAt || '',
+          raw.saaoId || '',
+          raw.saaoName || '',
+          raw.userId || '',
+          raw.userName || ''
+        ]);
+      } finally {
+        lockVT.releaseLock();
+      }
       return jsonOut_({ ok: true });
     }
 
@@ -334,6 +387,18 @@ function deleteAppEntryRowsBySubmissionId_(sheet, submissionId) {
   for (var i = ids.length - 1; i >= 0; i--) {
     if (String(ids[i][0]) === String(submissionId)) {
       sheet.deleteRow(i + 2); // +2: 1-indexed sheet rows, offset past the header
+    }
+  }
+}
+
+/** Deletes any existing Validation_Task rows for a given taskId (column B). Bottom-up so row indices don't shift mid-loop. Called under a script lock. */
+function deleteValidationTaskRowsByTaskId_(sheet, taskId) {
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return;
+  var ids = sheet.getRange(2, 2, lastRow - 1, 1).getValues(); // column B, 'টাস্ক আইডি'
+  for (var i = ids.length - 1; i >= 0; i--) {
+    if (String(ids[i][0]) === String(taskId)) {
+      sheet.deleteRow(i + 2);
     }
   }
 }

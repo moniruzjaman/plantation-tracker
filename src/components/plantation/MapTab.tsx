@@ -11,8 +11,8 @@ import { isWithinUpazilaPolygon, findContainingUpazila } from '../../data/upazil
 import { canonicalizeUpazilaAgainstRegistry } from '../../data/canonicalizeUpazilaAgainstRegistry';
 import { useDistrictPolygons } from '../../data/useDistrictPolygons';
 import { useMapData } from '../../utils/useMapData';
+import { submitValidationDecision } from '../../utils/validationApi';
 import { countSeedlings } from '../../types/plantation';
-import { VALIDATION_TASKS_ENDPOINT } from '../../utils/apiBase';
 import NdviController from './NdviController';
 import GrowthTracker from './GrowthTracker';
 
@@ -319,24 +319,33 @@ export default function MapTab({ geoState, onMapReady }: MapTabProps) {
     try {
       const userRaw = localStorage.getItem('dae_user_profile');
       const user = userRaw ? JSON.parse(userRaw) : {};
-      await fetch(VALIDATION_TASKS_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          task_id: entryId,
-          submission_id: entryId,
-          decision,
-          remarks: decision === 'approved' ? 'SAAO-approved from dashboard' : 'Rejected from dashboard',
-          user_id: user.uid || user.mobile || 'dashboard_user',
-          user_name: user.name || 'ড্যাশবোর্ড ব্যবহারকারী',
-        }),
+      // The dashboard derives tasks from submissions, so synthesize the task
+      // record from the entry (task_id namespaced to avoid colliding with
+      // real wizard-assigned task ids on the same submission).
+      const task = {
+        task_id: `vt-${entryId}`,
+        submission_id: entryId,
+        site_id: entryId,
+        assigned_date: new Date().toISOString(),
+        decision: 'pending' as const,
+      };
+      const result = await submitValidationDecision(task, {
+        decision,
+        remarks: decision === 'approved' ? 'SAAO-approved from dashboard' : 'Rejected from dashboard',
+        user_id: user.uid || user.mobile || 'dashboard_user',
+        user_name: user.name || 'ড্যাশবোর্ড ব্যবহারকারী',
       });
+      if (!result.ok) {
+        console.error('Validation decision rejected by server:', result.error);
+      } else {
+        refresh();
+      }
     } catch (e) {
       console.error('Validation decision failed:', e);
     } finally {
       setter(null);
     }
-  }, []);
+  }, [refresh]);
 
   const tiles = getLayerTiles(activeLayer);
   const satelliteTiles = getLayerTiles('satellite');
