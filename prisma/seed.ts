@@ -33,16 +33,18 @@ async function main() {
   console.log(`  ✓ ${ADMIN_HIERARCHY.districts.length} districts`);
 
   // 3. Upazilas (batched for performance)
+  // NOTE: source data contains duplicate `id` values, so DB auto-increment ids are used
+  // and a map from the source id to the created DB row id is built for union linking.
   const BATCH = 100;
+  const srcIdToDbId = new Map<number, number>();
   for (let i = 0; i < ADMIN_HIERARCHY.upazilas.length; i += BATCH) {
     const chunk = ADMIN_HIERARCHY.upazilas.slice(i, i + BATCH);
-    await Promise.all(
+    const created = await Promise.all(
       chunk.map((u) =>
         prisma.upazila.upsert({
           where: { code: u.code },
           update: { districtId: u.districtId, nameBn: u.nameBn, nameEn: u.nameEn },
           create: {
-            id: u.id,
             districtId: u.districtId,
             code: u.code,
             nameBn: u.nameBn,
@@ -51,10 +53,16 @@ async function main() {
         })
       )
     );
+    for (let j = 0; j < chunk.length; j++) {
+      if (!srcIdToDbId.has(chunk[j].id)) {
+        srcIdToDbId.set(chunk[j].id, created[j].id);
+      }
+    }
   }
   console.log(`  ✓ ${ADMIN_HIERARCHY.upazilas.length} upazilas`);
 
   // 4. Unions (batched — 4564 records)
+  await prisma.union.deleteMany({});
   const UNION_BATCH = 200;
   for (let i = 0; i < ADMIN_HIERARCHY.unions.length; i += UNION_BATCH) {
     const chunk = ADMIN_HIERARCHY.unions.slice(i, i + UNION_BATCH);
@@ -62,11 +70,10 @@ async function main() {
       chunk.map((u) =>
         prisma.union.create({
           data: {
-            upazilaId: u.upazilaId,
+            upazilaId: srcIdToDbId.get(u.upazilaId)!,
             nameBn: u.nameBn,
             nameEn: u.nameEn,
           },
-          skipDuplicates: true,
         })
       )
     );
