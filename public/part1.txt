@@ -479,10 +479,55 @@ tbody tr{border-bottom:1px solid #e5e7eb}
   <span id="dashLiveBadge" class="hidden inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full" style="background:#dcfce7;color:#15803d" title="ড্যাশবোর্ড খোলা থাকা অবস্থায় প্রতি ৫ মিনিটে স্বয়ংক্রিয়ভাবে হালনাগাদ হয়"><span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> লাইভ</span>
 </div>
 
+<!-- ── Filters (applies to report card, KPIs, charts, table and Excel exports) ── -->
+<div class="bg-white rounded-xl shadow p-4 mb-6" style="border:1px solid #bbf7d0">
+  <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+    <p class="font-semibold text-gray-700 text-sm">🔍 ফিল্টার করুন <span class="text-xs text-gray-400 font-normal">(সাপ্তাহিক প্রতিবেদন, KPI, চার্ট, টেবিল ও Excel এক্সপোর্ট — সবখানে প্রযোজ্য)</span></p>
+    <div class="flex gap-2">
+      <button onclick="resetDashFilters()" class="text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer" style="background:#f3f4f6;color:#374151">রিসেট</button>
+      <button onclick="renderDashboard()" class="text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer" style="background:#15803d;color:#fff">প্রয়োগ করুন</button>
+    </div>
+  </div>
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+    <div>
+      <label class="block text-[10px] font-semibold text-gray-500 mb-1">তারিখ থেকে</label>
+      <input type="date" id="dashDateFrom" onchange="renderDashboard()" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+    </div>
+    <div>
+      <label class="block text-[10px] font-semibold text-gray-500 mb-1">তারিখ পর্যন্ত</label>
+      <input type="date" id="dashDateTo" onchange="renderDashboard()" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+    </div>
+    <div>
+      <label class="block text-[10px] font-semibold text-gray-500 mb-1">চারার উৎস</label>
+      <select id="dashSourceType" onchange="renderDashboard()" class="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+        <option value="">সব উৎস</option>
+        <option value="প্রদর্শনী">প্রদর্শনী</option>
+        <option value="প্রণোদনা">প্রণোদনা</option>
+        <option value="নিজস্ব">নিজস্ব</option>
+        <option value="অন্যান্য">অন্যান্য</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-[10px] font-semibold text-gray-500 mb-1">অঞ্চল</label>
+      <select id="dashRegion" onchange="onDashFilterChange()" class="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব অঞ্চল</option></select>
+    </div>
+    <div>
+      <label class="block text-[10px] font-semibold text-gray-500 mb-1">জেলা</label>
+      <select id="dashDistrict" onchange="onDashDistrictChange()" class="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব জেলা</option></select>
+    </div>
+    <div>
+      <label class="block text-[10px] font-semibold text-gray-500 mb-1">উপজেলা</label>
+      <select id="dashUpazila" onchange="renderDashboard()" class="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব উপজেলা</option></select>
+    </div>
+  </div>
+  <p id="dashFilterSummary" class="text-xs text-gray-500 mt-3" style="border-top:1px dashed #e5e7eb;padding-top:8px"></p>
+</div>
+
 <!-- ── Latest Official Weekly Report (verified checkpoint, reconciled from Tree_Plantation_Reporting_Workbook.xlsx) ── -->
 <div id="officialReportCard" class="rounded-xl shadow p-4 mb-6" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fde68a">
   <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
     <p class="font-bold text-sm flex items-center gap-1.5" style="color:#92400e">📑 সর্বশেষ যাচাইকৃত সাপ্তাহিক প্রতিবেদন <span id="officialReportDate" class="font-normal text-xs" style="color:#b45309">(11 August, 2026)</span></p>
+    <span id="officialReportFilterNote" class="hidden text-[10px] font-semibold px-2 py-0.5 rounded-full" style="background:#dbeafe;color:#1e40af;border:1px solid #93c5fd"></span>
     <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a">✔ ডাটা মান যাচাইকৃত (উভয় উৎস একত্রীকৃত)</span>
   </div>
   <div class="flex flex-wrap items-center gap-2 mb-3">
@@ -544,50 +589,6 @@ tbody tr{border-bottom:1px solid #e5e7eb}
     </ul>
     <p class="mt-2 text-[10.5px] italic" style="color:#a16207">এই সংখ্যাগুলো সরাসরি Tree_Plantation_Reporting_Workbook-এর মূল_ডাটা ও ১৭_কলাম_প্রতিবেদন শিট থেকে রিয়েল-টাইমে আপডেট হয়; অফলাইন হলে শেষ যাচাইকৃত সাপ্তাহিক স্ন্যাপশট দেখা যায়।</p>
   </div>
-</div>
-
-<!-- ── Filters (MOVED TO TOP — applies to KPIs, charts, table and Excel exports) ── -->
-<div class="bg-white rounded-xl shadow p-4 mb-6" style="border:1px solid #bbf7d0">
-  <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
-    <p class="font-semibold text-gray-700 text-sm">🔍 ফিল্টার করুন <span class="text-xs text-gray-400 font-normal">(KPI, চার্ট, টেবিল ও Excel এক্সপোর্ট — সবখানে প্রযোজ্য)</span></p>
-    <div class="flex gap-2">
-      <button onclick="resetDashFilters()" class="text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer" style="background:#f3f4f6;color:#374151">রিসেট</button>
-      <button onclick="renderDashboard()" class="text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer" style="background:#15803d;color:#fff">প্রয়োগ করুন</button>
-    </div>
-  </div>
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-    <div>
-      <label class="block text-[10px] font-semibold text-gray-500 mb-1">তারিখ থেকে</label>
-      <input type="date" id="dashDateFrom" onchange="renderDashboard()" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
-    </div>
-    <div>
-      <label class="block text-[10px] font-semibold text-gray-500 mb-1">তারিখ পর্যন্ত</label>
-      <input type="date" id="dashDateTo" onchange="renderDashboard()" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
-    </div>
-    <div>
-      <label class="block text-[10px] font-semibold text-gray-500 mb-1">চারার উৎস</label>
-      <select id="dashSourceType" onchange="renderDashboard()" class="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
-        <option value="">সব উৎস</option>
-        <option value="প্রদর্শনী">প্রদর্শনী</option>
-        <option value="প্রণোদনা">প্রণোদনা</option>
-        <option value="নিজস্ব">নিজস্ব</option>
-        <option value="অন্যান্য">অন্যান্য</option>
-      </select>
-    </div>
-    <div>
-      <label class="block text-[10px] font-semibold text-gray-500 mb-1">অঞ্চল</label>
-      <select id="dashRegion" onchange="onDashFilterChange()" class="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব অঞ্চল</option></select>
-    </div>
-    <div>
-      <label class="block text-[10px] font-semibold text-gray-500 mb-1">জেলা</label>
-      <select id="dashDistrict" onchange="onDashDistrictChange()" class="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব জেলা</option></select>
-    </div>
-    <div>
-      <label class="block text-[10px] font-semibold text-gray-500 mb-1">উপজেলা</label>
-      <select id="dashUpazila" onchange="renderDashboard()" class="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব উপজেলা</option></select>
-    </div>
-  </div>
-  <p id="dashFilterSummary" class="text-xs text-gray-500 mt-3" style="border-top:1px dashed #e5e7eb;padding-top:8px"></p>
 </div>
 
 <!-- ── KPI Cards ── -->
