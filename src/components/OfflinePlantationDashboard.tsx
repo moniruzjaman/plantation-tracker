@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useMapData } from '../utils/useMapData';
+import { build17ColRows, buildMinistryRows, COL17_HEADERS, MINISTRY_HEADERS, downloadGovCsv } from '../utils/ministryReport';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Database, 
@@ -428,6 +429,22 @@ export default function OfflinePlantationDashboard({ onStateChange }: OfflinePla
                   >
                     <Globe2 className="w-3 h-3 text-gray-400" />
                     {t.btnToggle}
+                  </button>
+                  <button
+                    id="dashExport17ColBtn"
+                    onClick={() => downloadGovCsv(COL17_HEADERS, build17ColRows(submissions), '17column_report')}
+                    className="px-2 py-1 rounded-lg border border-purple-200 hover:border-purple-300 active:bg-purple-50 text-[10px] bg-white font-semibold text-purple-700 transition-colors"
+                    title="১৭ কলাম সরকারি ছক (CSV) — DAE/MoA weekly proforma"
+                  >
+                    ১৭ কলাম
+                  </button>
+                  <button
+                    id="dashExportMinistryBtn"
+                    onClick={() => downloadGovCsv(MINISTRY_HEADERS, buildMinistryRows(submissions), 'ministry_report')}
+                    className="px-2 py-1 rounded-lg border border-sky-200 hover:border-sky-300 active:bg-sky-50 text-[10px] bg-white font-semibold text-sky-700 transition-colors"
+                    title="মন্ত্রণালয় ছক (CSV) — 9-column ministry format"
+                  >
+                    মন্ত্রণালয়
                   </button>
                   <button
                     id="dashExportBtn"
