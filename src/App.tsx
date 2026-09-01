@@ -12,7 +12,6 @@ import WelcomeModal from './components/WelcomeModal';
 import PWAInstaller from './components/PWAInstaller';
 import SyncToast from './components/SyncToast';
 import OfflinePlantationDashboard, { Submission } from './components/OfflinePlantationDashboard';
-import MobileControlCenter from './components/MobileControlCenter';
 import SyncStatusChip from './components/SyncStatusChip';
 
 const MapTab = lazy(() => import('./components/plantation/MapTab'));
@@ -39,11 +38,10 @@ export default function App() {
       <NetworkStatus onStateChange={setNetworkState} />
       <GeolocationIndicator onStateChange={setGeoState} />
       <OfflinePlantationDashboard onStateChange={setSubmissions} />
-      <MobileControlCenter
-        networkState={networkState}
-        geoState={geoState}
-        submissions={submissions}
-      />
+      {/* MobileControlCenter's portaled header pill was removed -- it had no
+          tap handler and only duplicated the (actually interactive) sync
+          chip below with near-identical status dots. SyncStatusChip is now
+          the single source of truth for online/sync status. */}
       <SyncStatusChip
         submissions={submissions}
         isOnline={networkState ? networkState.isOnline : true}
@@ -69,15 +67,21 @@ export default function App() {
         allow="geolocation"
       />
 
-      {/* Satellite/NDVI map — launched as a full-screen overlay so it never
-          shares layout space (or hidden-container timing issues) with the
-          iframe's own 5-tab UI, which stays completely untouched. */}
+      {/* This is NOT just an NDVI viewer -- it's a GPS-boundary validation +
+          duplicate-site detection + approve/reject QA workflow for submission
+          reviewers (with NDVI/EVI satellite imagery and per-site growth
+          tracking as supporting context). Launched as a full-screen overlay
+          so it never shares layout space with the iframe's own 5-tab UI. The
+          iframe's own Map tab separately gained a lightweight, purely-visual
+          NDVI/EVI toggle plus a growth-projection/GEE-script panel (see
+          public/part7.txt) for quick on-the-spot viewing -- this overlay
+          remains the deeper reviewer tool and was NOT removed. */}
       {!showSatelliteMap && (
         <button
           onClick={handleOpenSatelliteMap}
           className="fixed z-40 flex items-center gap-1.5 rounded-full shadow-lg px-3.5 py-2.5 text-xs font-bold text-white cursor-pointer active:scale-95 transition"
           style={{ bottom: '84px', right: '14px', background: '#006A4E' }}
-          title="স্যাটেলাইট NDVI/EVI মানচিত্র"
+          title="স্যাটেলাইট NDVI/EVI মানচিত্র ও যাচাই টুল"
         >
           <Satellite size={16} />
           <span className="hidden xs:inline">NDVI ম্যাপ</span>
