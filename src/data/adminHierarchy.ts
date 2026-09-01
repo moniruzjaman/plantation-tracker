@@ -5,9 +5,9 @@
  * Structure: Division → District → Upazila → Union
  * Counts:  8 divisions, 64 districts, 496 upazilas, 4564 unions.
  *
- * This file is database-seed-ready: the shape matches prisma/schema.prisma
- * models (Division, District, Upazila, Union) so seeding logic can
- * import and insert directly.
+ * This file's shape mirrors a normal relational schema (Division,
+ * District, Upazila, Union) so it could seed a real database later,
+ * though no ORM or DB is wired up today -- it's the sole data source.
  */
 
 // ─── Public Types ───────────────────────────────────────
