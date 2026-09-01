@@ -4,11 +4,14 @@
  * GET /api/admin/hierarchy?district=ঢাকা&upazila=ধামরাই
  *
  * Returns the administrative hierarchy data for dropdowns and validation.
- * Uses static data (no DB required) — always available, even offline.
- *
- * When Prisma + Neon is connected, this can optionally fall through to
- * the database for real-time data (e.g., custom upazilas added by users).
+ * Backed entirely by the static data in src/data/adminHierarchy.ts --
+ * no database is involved, so this should never do meaningful I/O.
+ * maxDuration is capped low so that if this ever does hang for an
+ * unexpected reason, it fails in seconds instead of riding out
+ * Vercel's 300s platform maximum.
  */
+
+export const config = { maxDuration: 10 };
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import {

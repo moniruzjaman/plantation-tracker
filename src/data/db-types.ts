@@ -1,8 +1,9 @@
 /**
- * Database model types — mirrors prisma/schema.prisma.
- * Use these in API routes, components, and utilities
- * instead of importing from @prisma/client directly
- * (keeps client code decoupled from the ORM).
+ * Plain TypeScript types for the admin hierarchy data model.
+ * Shaped to match a relational schema (divisions/districts/upazilas/
+ * unions) so a real database could be introduced later without
+ * reshaping this layer, but no ORM or DB is wired up today --
+ * everything here is backed by the static data in adminHierarchy.ts.
  */
 
 // ─── Admin Hierarchy ──────────────────────────────────────
