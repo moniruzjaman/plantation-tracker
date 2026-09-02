@@ -536,6 +536,7 @@ function doGet(e) {
     if (params.directory) return jsonOut_(getDirectory_(params.role, params.upazila));
     if (params.customUpazila) return jsonOut_(getCustomUpazilas_(params.district));
     if (params.officialSummary) return jsonOut_(getOfficialReportSummary_(params.upazila));
+    if (params.downloadReport) return getWeeklyReportDownload_(params.downloadReport, params.upazila);
     if (params.sendWeeklyReport) {
       // Dashboard's "🚀 রিপোর্ট পাঠান" button passes a comma-separated
       // email list via ?email=... -- fall back to REPORT_RECIPIENTS when
@@ -1176,6 +1177,57 @@ function sendWeeklyReport(optionalRecipients) {
 
   Logger.log('Weekly report sent to: ' + recipients.join(', '));
   return { ok: true, sentTo: recipients };
+}
+
+/**
+ * GET ?downloadReport=xlsx|html[&upazila=...]
+ *
+ * Powers the Dashboard's report-card download buttons directly -- no
+ * static file in the repo, no manual "save the emailed attachment and
+ * commit it" step. Every click regenerates from the live sheet data via
+ * the exact same functions the weekly email uses (getOfficialReportSummary_,
+ * exportSpreadsheetAsXlsxBlob_, buildWeeklyReportHtml_), so the download
+ * can never go stale the way a committed file could.
+ *
+ * doGet() can only return text (ContentService), not a raw binary
+ * response with a Content-Disposition header -- that part needs a real
+ * server, which is exactly what api/report-download.js (Vercel) is for:
+ * this returns base64 + a suggested filename as JSON, and that proxy
+ * decodes it into an actual downloadable file response.
+ */
+function getWeeklyReportDownload_(format, filterUpazila) {
+  var now = new Date();
+  var dateSlug = Utilities.formatDate(now, 'Asia/Dhaka', 'yyyy-MM-dd');
+
+  if (format === 'xlsx') {
+    var xlsxBlob;
+    try {
+      xlsxBlob = exportSpreadsheetAsXlsxBlob_();
+    } catch (e) {
+      return jsonOut_({ ok: false, error: 'xlsx export failed: ' + e });
+    }
+    return jsonOut_({
+      ok: true,
+      format: 'xlsx',
+      fileName: 'সাপ্তাহিক_বৃক্ষরোপণ_প্রতিবেদন_' + dateSlug + '.xlsx',
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      base64: Utilities.base64Encode(xlsxBlob.getBytes())
+    });
+  }
+
+  if (format === 'html') {
+    var summary = getOfficialReportSummary_(filterUpazila);
+    var stats = officialSummaryToWeeklyStats_(summary);
+    var html = buildWeeklyReportHtml_(stats, now, now);
+    return jsonOut_({
+      ok: true,
+      format: 'html',
+      fileName: 'weekly-report-' + dateSlug + '.html',
+      html: html
+    });
+  }
+
+  return jsonOut_({ ok: false, error: 'downloadReport must be "xlsx" or "html"' });
 }
 
 
