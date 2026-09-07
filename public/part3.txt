@@ -718,6 +718,12 @@ document.body.appendChild(a);a.click();document.body.removeChild(a);
 window.openGuideModal=function(){var m=document.getElementById("guideModal");if(m)m.classList.remove("hidden")};
 window.closeGuideModal=function(){var m=document.getElementById("guideModal");if(m)m.classList.add("hidden")};
 
+// ── More Apps modal ── opened from a permanent nav-bar button (not a
+// tab), so it never touches .tab-content/.nav-btn[data-tab] state and
+// cannot interfere with switchTab().
+window.openMoreAppsModal=function(){var m=document.getElementById("moreAppsModal");if(m)m.classList.remove("hidden")};
+window.closeMoreAppsModal=function(){var m=document.getElementById("moreAppsModal");if(m)m.classList.add("hidden")};
+
 // ── Dropdowns ──
 function populateDivisionDD(dd,selected){dd.innerHTML='<option value="">বিভাগ নির্বাচন করুন</option>';BD_DIVISIONS.forEach(function(d){var o=document.createElement("option");o.value=d;o.textContent=d;if(d===selected)o.selected=true;dd.appendChild(o)})}
 function populateRegionDD(dd,selected){dd.innerHTML='<option value="">নির্বাচন করুন</option>';Object.keys(BD).forEach(function(d){var o=document.createElement("option");o.value=d;o.textContent=d;if(d===selected)o.selected=true;dd.appendChild(o)})}

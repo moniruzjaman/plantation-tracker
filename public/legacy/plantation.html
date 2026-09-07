@@ -176,6 +176,9 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <span class="text-lg">👤</span>প্রোফাইল
 <div class="nav-dot"></div>
 </button>
+<button onclick="openMoreAppsModal()" class="nav-btn flex-1 py-3.5 text-sm font-semibold text-gray-500 hover:text-green-700 hover:bg-green-50 flex flex-col items-center gap-1">
+<span class="text-lg">🔗</span>আরও অ্যাপস
+</button>
 </div>
 </nav>
 
@@ -196,6 +199,9 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <button onclick="switchTab('storedData')" class="nav-btn flex-1 py-2.5 flex flex-col items-center gap-0.5 text-gray-400" data-tab="storedData">
 <span class="text-xl">👤</span><span class="text-xs font-semibold" style="font-size:10px">প্রোফাইল</span>
 <div class="nav-dot mt-0.5"></div>
+</button>
+<button onclick="openMoreAppsModal()" class="nav-btn flex-1 py-2.5 flex flex-col items-center gap-0.5 text-gray-400">
+<span class="text-xl">🔗</span><span class="text-xs font-semibold" style="font-size:10px">আরও অ্যাপস</span>
 </button>
 </nav>
 
@@ -465,24 +471,6 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 
 <!-- ========== TAB: DASHBOARD ========== -->
 <section id="tab-dashboard" class="tab-content hidden">
-
-<!-- ── More Apps: quick links to the wider KrishiAI/DAE tool suite ──
-     Plain static markup, no JS wiring, no shared IDs/classes with anything
-     else on this tab -- cannot interfere with renderDashboard(), filters,
-     or switchTab(). ── -->
-<div class="flex flex-col gap-1.5 mb-4" id="dashMoreApps">
-  <span class="text-[10px] font-bold text-gray-400 flex items-center gap-1 px-0.5">🔗 আরও অ্যাপস</span>
-  <div class="flex gap-2 overflow-x-auto pb-1" style="scrollbar-width:none">
-    <a href="https://krishiai.live/" target="_blank" rel="noopener noreferrer" class="flex-shrink-0 inline-flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-full pl-2.5 pr-2 py-1.5 whitespace-nowrap" style="text-decoration:none"><span class="text-[10.5px] font-semibold text-gray-700">কৃষি এআই</span> <span style="color:#059669">↗</span></a>
-    <a href="https://web.krishiai.live/" target="_blank" rel="noopener noreferrer" class="flex-shrink-0 inline-flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-full pl-2.5 pr-2 py-1.5 whitespace-nowrap" style="text-decoration:none"><span class="text-[10.5px] font-semibold text-gray-700">কৃষি এআই ওয়েব</span> <span style="color:#059669">↗</span></a>
-    <a href="https://cabi.krishiai.live/" target="_blank" rel="noopener noreferrer" class="flex-shrink-0 inline-flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-full pl-2.5 pr-2 py-1.5 whitespace-nowrap" style="text-decoration:none"><span class="text-[10.5px] font-semibold text-gray-700">উদ্ভিদ গোয়েন্দা</span> <span style="color:#059669">↗</span></a>
-    <a href="https://kurigram-nursery-2026.vercel.app/" target="_blank" rel="noopener noreferrer" class="flex-shrink-0 inline-flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-full pl-2.5 pr-2 py-1.5 whitespace-nowrap" style="text-decoration:none"><span class="text-[10.5px] font-semibold text-gray-700">নার্সারি ২০২৬</span> <span style="color:#059669">↗</span></a>
-    <a href="https://producer-register.vercel.app/" target="_blank" rel="noopener noreferrer" class="flex-shrink-0 inline-flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-full pl-2.5 pr-2 py-1.5 whitespace-nowrap" style="text-decoration:none"><span class="text-[10.5px] font-semibold text-gray-700">কৃষক নিবন্ধন</span> <span style="color:#059669">↗</span></a>
-    <a href="https://krishak-card.vercel.app/" target="_blank" rel="noopener noreferrer" class="flex-shrink-0 inline-flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-full pl-2.5 pr-2 py-1.5 whitespace-nowrap" style="text-decoration:none"><span class="text-[10.5px] font-semibold text-gray-700">কৃষক কার্ড</span> <span style="color:#059669">↗</span></a>
-    <a href="https://kurigram-nursery-registry.vercel.app/" target="_blank" rel="noopener noreferrer" class="flex-shrink-0 inline-flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-full pl-2.5 pr-2 py-1.5 whitespace-nowrap" style="text-decoration:none"><span class="text-[10.5px] font-semibold text-gray-700">নার্সারি রেজিস্ট্রি</span> <span style="color:#059669">↗</span></a>
-    <a href="https://drive.google.com/drive/folders/19H6X9JbmS83XhyJVHdxn_pvfwTH64_QR" target="_blank" rel="noopener noreferrer" class="flex-shrink-0 inline-flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-full pl-2.5 pr-2 py-1.5 whitespace-nowrap" style="text-decoration:none"><span class="text-[10.5px] font-semibold text-gray-700">শেয়ার্ড ড্রাইভ</span> <span style="color:#059669">↗</span></a>
-  </div>
-</div>
 
 <!-- ── Data source badge + last sync ── -->
 <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
@@ -1195,6 +1183,49 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 </div>
 
 <button onclick="closeGuideModal()" class="w-full text-white font-bold py-2.5 rounded-lg text-sm cursor-pointer mt-1" style="background:#15803d;border:none">বুঝেছি, শুরু করি</button>
+</div>
+</div>
+</div>
+
+<!-- ==================== MORE APPS MODAL ==================== -->
+<!-- Opened by a permanent nav-bar button (openMoreAppsModal), same pattern
+     as shareModal/guideModal above. Pure show/hide of its own div -- it
+     never touches .tab-content or .nav-btn[data-tab] state, so it cannot
+     interfere with switchTab(). -->
+<div id="moreAppsModal" class="hidden fixed inset-0 z-[70] flex items-center justify-center modal-bg p-4" style="background:rgba(0,0,0,.5)">
+<div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm max-h-[85vh] overflow-y-auto anim-in">
+<div class="px-5 py-4 sticky top-0" style="background:linear-gradient(135deg,#0f5132 0%,#166534 55%,#052e16 100%);z-index:2">
+<div class="flex items-center justify-between">
+<h3 class="text-base font-bold text-white flex items-center gap-2"><span>🔗</span> আরও অ্যাপস</h3>
+<button onclick="closeMoreAppsModal()" class="text-white cursor-pointer" style="background:transparent;border:none;font-size:20px;line-height:1;opacity:.85">&times;</button>
+</div>
+<p class="text-xs mt-1" style="color:#dcfce7">কৃষি এআই সিস্টেমের অন্যান্য অ্যাপ ও রিসোর্স</p>
+</div>
+<div class="p-4 flex flex-col gap-2">
+<a href="https://krishiai.live/" target="_blank" rel="noopener noreferrer" class="flex items-center justify-between gap-2 rounded-xl p-3" style="background:#f9fafb;border:1px solid #f3f4f6;text-decoration:none">
+<span class="text-xs font-bold" style="color:#111827">কৃষি এআই</span><span style="color:#059669">↗</span>
+</a>
+<a href="https://web.krishiai.live/" target="_blank" rel="noopener noreferrer" class="flex items-center justify-between gap-2 rounded-xl p-3" style="background:#f9fafb;border:1px solid #f3f4f6;text-decoration:none">
+<span class="text-xs font-bold" style="color:#111827">কৃষি এআই ওয়েব প্ল্যাটফর্ম</span><span style="color:#059669">↗</span>
+</a>
+<a href="https://cabi.krishiai.live/" target="_blank" rel="noopener noreferrer" class="flex items-center justify-between gap-2 rounded-xl p-3" style="background:#f9fafb;border:1px solid #f3f4f6;text-decoration:none">
+<span class="text-xs font-bold" style="color:#111827">উদ্ভিদ গোয়েন্দা</span><span style="color:#059669">↗</span>
+</a>
+<a href="https://kurigram-nursery-2026.vercel.app/" target="_blank" rel="noopener noreferrer" class="flex items-center justify-between gap-2 rounded-xl p-3" style="background:#f9fafb;border:1px solid #f3f4f6;text-decoration:none">
+<span class="text-xs font-bold" style="color:#111827">কুড়িগ্রাম নার্সারি ২০২৬</span><span style="color:#059669">↗</span>
+</a>
+<a href="https://producer-register.vercel.app/" target="_blank" rel="noopener noreferrer" class="flex items-center justify-between gap-2 rounded-xl p-3" style="background:#f9fafb;border:1px solid #f3f4f6;text-decoration:none">
+<span class="text-xs font-bold" style="color:#111827">কৃষক নিবন্ধন</span><span style="color:#059669">↗</span>
+</a>
+<a href="https://krishak-card.vercel.app/" target="_blank" rel="noopener noreferrer" class="flex items-center justify-between gap-2 rounded-xl p-3" style="background:#f9fafb;border:1px solid #f3f4f6;text-decoration:none">
+<span class="text-xs font-bold" style="color:#111827">কৃষক কার্ড</span><span style="color:#059669">↗</span>
+</a>
+<a href="https://kurigram-nursery-registry.vercel.app/" target="_blank" rel="noopener noreferrer" class="flex items-center justify-between gap-2 rounded-xl p-3" style="background:#f9fafb;border:1px solid #f3f4f6;text-decoration:none">
+<span class="text-xs font-bold" style="color:#111827">কুড়িগ্রাম নার্সারি রেজিস্ট্রি</span><span style="color:#059669">↗</span>
+</a>
+<a href="https://drive.google.com/drive/folders/19H6X9JbmS83XhyJVHdxn_pvfwTH64_QR" target="_blank" rel="noopener noreferrer" class="flex items-center justify-between gap-2 rounded-xl p-3" style="background:#f9fafb;border:1px solid #f3f4f6;text-decoration:none">
+<span class="text-xs font-bold" style="color:#111827">শেয়ার্ড ড্রাইভ</span><span style="color:#059669">↗</span>
+</a>
 </div>
 </div>
 </div>
@@ -2123,6 +2154,12 @@ document.body.appendChild(a);a.click();document.body.removeChild(a);
 // ── User guide modal ──
 window.openGuideModal=function(){var m=document.getElementById("guideModal");if(m)m.classList.remove("hidden")};
 window.closeGuideModal=function(){var m=document.getElementById("guideModal");if(m)m.classList.add("hidden")};
+
+// ── More Apps modal ── opened from a permanent nav-bar button (not a
+// tab), so it never touches .tab-content/.nav-btn[data-tab] state and
+// cannot interfere with switchTab().
+window.openMoreAppsModal=function(){var m=document.getElementById("moreAppsModal");if(m)m.classList.remove("hidden")};
+window.closeMoreAppsModal=function(){var m=document.getElementById("moreAppsModal");if(m)m.classList.add("hidden")};
 
 // ── Dropdowns ──
 function populateDivisionDD(dd,selected){dd.innerHTML='<option value="">বিভাগ নির্বাচন করুন</option>';BD_DIVISIONS.forEach(function(d){var o=document.createElement("option");o.value=d;o.textContent=d;if(d===selected)o.selected=true;dd.appendChild(o)})}
