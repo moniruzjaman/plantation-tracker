@@ -13,7 +13,6 @@ import PWAInstaller from './components/PWAInstaller';
 import SyncToast from './components/SyncToast';
 import OfflinePlantationDashboard, { Submission } from './components/OfflinePlantationDashboard';
 import SyncStatusChip from './components/SyncStatusChip';
-import MoreAppsButton from './components/MoreAppsButton';
 
 const MapTab = lazy(() => import('./components/plantation/MapTab'));
 
@@ -47,7 +46,6 @@ export default function App() {
         submissions={submissions}
         isOnline={networkState ? networkState.isOnline : true}
       />
-      <MoreAppsButton />
       <WelcomeModal />
       <PWAInstaller />
       <SyncToast />

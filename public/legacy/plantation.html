@@ -466,6 +466,24 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <!-- ========== TAB: DASHBOARD ========== -->
 <section id="tab-dashboard" class="tab-content hidden">
 
+<!-- ── More Apps: quick links to the wider KrishiAI/DAE tool suite ──
+     Plain static markup, no JS wiring, no shared IDs/classes with anything
+     else on this tab -- cannot interfere with renderDashboard(), filters,
+     or switchTab(). ── -->
+<div class="flex flex-col gap-1.5 mb-4" id="dashMoreApps">
+  <span class="text-[10px] font-bold text-gray-400 flex items-center gap-1 px-0.5">🔗 আরও অ্যাপস</span>
+  <div class="flex gap-2 overflow-x-auto pb-1" style="scrollbar-width:none">
+    <a href="https://krishiai.live/" target="_blank" rel="noopener noreferrer" class="flex-shrink-0 inline-flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-full pl-2.5 pr-2 py-1.5 whitespace-nowrap" style="text-decoration:none"><span class="text-[10.5px] font-semibold text-gray-700">কৃষি এআই</span> <span style="color:#059669">↗</span></a>
+    <a href="https://web.krishiai.live/" target="_blank" rel="noopener noreferrer" class="flex-shrink-0 inline-flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-full pl-2.5 pr-2 py-1.5 whitespace-nowrap" style="text-decoration:none"><span class="text-[10.5px] font-semibold text-gray-700">কৃষি এআই ওয়েব</span> <span style="color:#059669">↗</span></a>
+    <a href="https://cabi.krishiai.live/" target="_blank" rel="noopener noreferrer" class="flex-shrink-0 inline-flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-full pl-2.5 pr-2 py-1.5 whitespace-nowrap" style="text-decoration:none"><span class="text-[10.5px] font-semibold text-gray-700">উদ্ভিদ গোয়েন্দা</span> <span style="color:#059669">↗</span></a>
+    <a href="https://kurigram-nursery-2026.vercel.app/" target="_blank" rel="noopener noreferrer" class="flex-shrink-0 inline-flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-full pl-2.5 pr-2 py-1.5 whitespace-nowrap" style="text-decoration:none"><span class="text-[10.5px] font-semibold text-gray-700">নার্সারি ২০২৬</span> <span style="color:#059669">↗</span></a>
+    <a href="https://producer-register.vercel.app/" target="_blank" rel="noopener noreferrer" class="flex-shrink-0 inline-flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-full pl-2.5 pr-2 py-1.5 whitespace-nowrap" style="text-decoration:none"><span class="text-[10.5px] font-semibold text-gray-700">কৃষক নিবন্ধন</span> <span style="color:#059669">↗</span></a>
+    <a href="https://krishak-card.vercel.app/" target="_blank" rel="noopener noreferrer" class="flex-shrink-0 inline-flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-full pl-2.5 pr-2 py-1.5 whitespace-nowrap" style="text-decoration:none"><span class="text-[10.5px] font-semibold text-gray-700">কৃষক কার্ড</span> <span style="color:#059669">↗</span></a>
+    <a href="https://kurigram-nursery-registry.vercel.app/" target="_blank" rel="noopener noreferrer" class="flex-shrink-0 inline-flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-full pl-2.5 pr-2 py-1.5 whitespace-nowrap" style="text-decoration:none"><span class="text-[10.5px] font-semibold text-gray-700">নার্সারি রেজিস্ট্রি</span> <span style="color:#059669">↗</span></a>
+    <a href="https://drive.google.com/drive/folders/19H6X9JbmS83XhyJVHdxn_pvfwTH64_QR" target="_blank" rel="noopener noreferrer" class="flex-shrink-0 inline-flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-full pl-2.5 pr-2 py-1.5 whitespace-nowrap" style="text-decoration:none"><span class="text-[10.5px] font-semibold text-gray-700">শেয়ার্ড ড্রাইভ</span> <span style="color:#059669">↗</span></a>
+  </div>
+</div>
+
 <!-- ── Data source badge + last sync ── -->
 <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
   <div class="flex items-center gap-2">
