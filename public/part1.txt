@@ -176,6 +176,9 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <span class="text-lg">👤</span>প্রোফাইল
 <div class="nav-dot"></div>
 </button>
+<button onclick="openMoreAppsModal()" class="nav-btn flex-1 py-3.5 text-sm font-semibold text-gray-500 hover:text-green-700 hover:bg-green-50 flex flex-col items-center gap-1">
+<span class="text-lg">🔗</span>আরও অ্যাপস
+</button>
 </div>
 </nav>
 
@@ -196,6 +199,9 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <button onclick="switchTab('storedData')" class="nav-btn flex-1 py-2.5 flex flex-col items-center gap-0.5 text-gray-400" data-tab="storedData">
 <span class="text-xl">👤</span><span class="text-xs font-semibold" style="font-size:10px">প্রোফাইল</span>
 <div class="nav-dot mt-0.5"></div>
+</button>
+<button onclick="openMoreAppsModal()" class="nav-btn flex-1 py-2.5 flex flex-col items-center gap-0.5 text-gray-400">
+<span class="text-xl">🔗</span><span class="text-xs font-semibold" style="font-size:10px">আরও অ্যাপস</span>
 </button>
 </nav>
 
