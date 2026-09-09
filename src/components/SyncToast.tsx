@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, Database, X, Cloud } from 'lucide-react';
+import { haptics } from '../utils/haptics';
 
 interface ToastData {
   id: string;
@@ -19,6 +20,7 @@ export default function SyncToast() {
         
         // Add new toast to queue
         setToasts((prev) => [...prev, { id, count }]);
+        haptics.success();
 
         // Auto remove toast after 5 seconds
         setTimeout(() => {

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, type RefObject } from 'react';
-import { MapContainer, TileLayer, CircleMarker, Marker, Popup, Tooltip, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, CircleMarker, Popup, Tooltip, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import type { LatLngBounds, LatLngTuple, Map as LeafletMap } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -8,8 +8,11 @@ import type { JSX } from 'react';
 import type { GeoState } from '../GeolocationIndicator';
 import { type LayerId, getLayerTiles, NDVI_BANDS, isValidBdCoord, BD_CENTER, BD_ZOOM, toBnNum } from '../../utils/mapHelper';
 import { isWithinUpazilaPolygon, findContainingUpazila } from '../../data/upazilaPointInPolygon';
+import { canonicalizeUpazilaAgainstRegistry } from '../../data/canonicalizeUpazilaAgainstRegistry';
+import { detectDuplicateSites } from '../../utils/duplicateCheck';
 import { useDistrictPolygons } from '../../data/useDistrictPolygons';
 import { useMapData } from '../../utils/useMapData';
+import { submitValidationDecision } from '../../utils/validationApi';
 import { countSeedlings } from '../../types/plantation';
 import NdviController from './NdviController';
 import GrowthTracker from './GrowthTracker';
@@ -20,26 +23,6 @@ L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-});
-
-const appscriptIcon = L.divIcon({
-  // Square, not round, so national AppScript entries stay visually distinct
-  // from this device's local (round) submissions even without color vision.
-  html: '<div style="background:#2563eb;width:8px;height:8px;border-radius:2px;border:1px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3)"></div>',
-  className: 'appscript-tree-icon',
-  iconSize: [8, 8],
-  iconAnchor: [4, 4],
-});
-
-// Same square shape, but red — flags a national entry whose GPS point
-// doesn't fall inside its own declared upazila. Kept visible (not
-// dropped) so a reviewer can see and investigate it, rather than the
-// mismatch only surfacing in a backend report nobody opens.
-const appscriptMismatchIcon = L.divIcon({
-  html: '<div style="background:#dc2626;width:9px;height:9px;border-radius:2px;border:1.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>',
-  className: 'appscript-tree-icon-mismatch',
-  iconSize: [9, 9],
-  iconAnchor: [4.5, 4.5],
 });
 
 const LAYER_LABELS: Record<LayerId, string> = {
@@ -337,24 +320,33 @@ export default function MapTab({ geoState, onMapReady }: MapTabProps) {
     try {
       const userRaw = localStorage.getItem('dae_user_profile');
       const user = userRaw ? JSON.parse(userRaw) : {};
-      await fetch('/api/validation-tasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          task_id: entryId,
-          submission_id: entryId,
-          decision,
-          remarks: decision === 'approved' ? 'SAAO-approved from dashboard' : 'Rejected from dashboard',
-          user_id: user.uid || user.mobile || 'dashboard_user',
-          user_name: user.name || 'ড্যাশবোর্ড ব্যবহারকারী',
-        }),
+      // The dashboard derives tasks from submissions, so synthesize the task
+      // record from the entry (task_id namespaced to avoid colliding with
+      // real wizard-assigned task ids on the same submission).
+      const task = {
+        task_id: `vt-${entryId}`,
+        submission_id: entryId,
+        site_id: entryId,
+        assigned_date: new Date().toISOString(),
+        decision: 'pending' as const,
+      };
+      const result = await submitValidationDecision(task, {
+        decision,
+        remarks: decision === 'approved' ? 'SAAO-approved from dashboard' : 'Rejected from dashboard',
+        user_id: user.uid || user.mobile || 'dashboard_user',
+        user_name: user.name || 'ড্যাশবোর্ড ব্যবহারকারী',
       });
+      if (!result.ok) {
+        console.error('Validation decision rejected by server:', result.error);
+      } else {
+        refresh();
+      }
     } catch (e) {
       console.error('Validation decision failed:', e);
     } finally {
       setter(null);
     }
-  }, []);
+  }, [refresh]);
 
   const tiles = getLayerTiles(activeLayer);
   const satelliteTiles = getLayerTiles('satellite');
@@ -409,8 +401,8 @@ export default function MapTab({ geoState, onMapReady }: MapTabProps) {
   } = useDistrictPolygons();
 
   // Build the validated marker point list once per data change.
-  const localPoints: { pos: LatLngTuple; sub: (typeof localSubmissions)[number]; mismatched: boolean }[] = [];
-  localSubmissions.forEach((s) => {
+  const localPoints: { key: string; pos: LatLngTuple; sub: (typeof localSubmissions)[number]; mismatched: boolean }[] = [];
+  localSubmissions.forEach((s, idx) => {
     const raw = (s.coordinates || s.geoLocation || '').toString();
     if (!raw.includes(',')) return;
     const [lat, lng] = raw.split(',').map((v) => parseFloat(v));
@@ -421,20 +413,32 @@ export default function MapTab({ geoState, onMapReady }: MapTabProps) {
     // a name-only check can never catch. Unrecognized upazila names, or
     // upazilas in a district that hasn't been loaded yet, are left
     // unflagged (isWithinUpazilaPolygon returns true in both cases) —
-    // never a false positive from missing data.
-    const mismatched = !!s.upazila && !isWithinUpazilaPolygon(mergedPolygons, lat, lng, s.upazila);
-    localPoints.push({ pos: [lat, lng], sub: s, mismatched });
+    // never a false positive from missing data. Canonicalized first since
+    // this entry could have been written by plantation-tracker-app's
+    // Nominatim-sourced form, which doesn't guarantee canonical spelling.
+    const upazila = canonicalizeUpazilaAgainstRegistry(s.upazila, Object.keys(mergedPolygons));
+    const mismatched = !!upazila && !isWithinUpazilaPolygon(mergedPolygons, lat, lng, upazila);
+    localPoints.push({ key: `local-${s.id || s.submissionId || idx}`, pos: [lat, lng], sub: s, mismatched });
   });
 
-  const nationalPoints: { pos: LatLngTuple; entry: (typeof nationalEntries)[number]; mismatched: boolean }[] = [];
-  nationalEntries.forEach((s) => {
+  const nationalPoints: { key: string; pos: LatLngTuple; entry: (typeof nationalEntries)[number]; mismatched: boolean }[] = [];
+  nationalEntries.forEach((s, idx) => {
     const raw = (s.geoLocation || s.coordinates || '').toString().trim();
     if (!raw.includes(',')) return;
     const [lat, lng] = raw.split(',').map((v) => parseFloat(v));
     if (!isValidBdCoord(lat, lng)) return;
-    const mismatched = !!s.upazila && !isWithinUpazilaPolygon(mergedPolygons, lat, lng, s.upazila);
-    nationalPoints.push({ pos: [lat, lng], entry: s, mismatched });
+    const upazila = canonicalizeUpazilaAgainstRegistry(s.upazila, Object.keys(mergedPolygons));
+    const mismatched = !!upazila && !isWithinUpazilaPolygon(mergedPolygons, lat, lng, upazila);
+    nationalPoints.push({ key: `nat-${s.id || s.submissionId || idx}`, pos: [lat, lng], entry: s, mismatched });
   });
+
+  // Duplicate-proximity check: flags submissions whose GPS point lies within
+  // 50 m of another submission's — the same site reported twice. Real-data
+  // Haversine check, no simulation. Keys match the marker keys exactly.
+  const duplicateMap = detectDuplicateSites([
+    ...localPoints.map((p) => ({ key: p.key, lat: p.pos[0], lng: p.pos[1] })),
+    ...nationalPoints.map((p) => ({ key: p.key, lat: p.pos[0], lng: p.pos[1] })),
+  ]);
 
   const allPoints: LatLngTuple[] = [...localPoints.map((p) => p.pos), ...nationalPoints.map((p) => p.pos)];
   const totalTrees = localPoints.reduce((sum, { sub }) => {
@@ -521,14 +525,18 @@ export default function MapTab({ geoState, onMapReady }: MapTabProps) {
           const counts = countSeedlings(sub);
           const total = counts.fruit + counts.forest + counts.medicinal;
           const actualUpazila = mismatched ? findContainingUpazila(mergedPolygons, pos[0], pos[1]) : null;
+          const markerKey = `local-${sub.id || sub.submissionId || i}`;
+          const dup = duplicateMap.get(markerKey);
           return (
             <CircleMarker
-              key={`local-${sub.id || sub.submissionId || i}`}
+              key={markerKey}
               center={pos}
-              radius={mismatched ? 7 : 6}
+              radius={mismatched || dup ? 7 : 6}
               pathOptions={
                 mismatched
                   ? { color: '#b91c1c', fillColor: '#ef4444', fillOpacity: 0.85, weight: 2.5 }
+                  : dup
+                  ? { color: '#b45309', fillColor: '#f59e0b', fillOpacity: 0.8, weight: 2 }
                   : { color: '#047857', fillColor: '#10b981', fillOpacity: 0.8, weight: 2 }
               }
             >
@@ -537,6 +545,7 @@ export default function MapTab({ geoState, onMapReady }: MapTabProps) {
                   <div className="font-bold">{sub.village || sub.upazila || 'স্থানীয় এন্ট্রি'}</div>
                   <div className="text-slate-600">{toBnNum(total)} টি চারা</div>
                   {mismatched && <div className="text-red-600 font-semibold">⚠️ সীমানা অমিল</div>}
+                  {dup && <div className="text-amber-600 font-semibold">👥 নিকটবর্তী {dup.nearbyCount}টি এন্ট্রি</div>}
                 </div>
               </Tooltip>
               <Popup>
@@ -546,6 +555,11 @@ export default function MapTab({ geoState, onMapReady }: MapTabProps) {
                     <div><b>উপজেলা/জেলা:</b> {sub.upazila}, {sub.district}</div>
                     <div><b>ফলদ:</b> {toBnNum(counts.fruit)} · <b>বনজ:</b> {toBnNum(counts.forest)} · <b>ঔষধি:</b> {toBnNum(counts.medicinal)}</div>
                   </div>
+                  {dup && (
+                    <div className="mt-1.5 bg-amber-50 border border-amber-200 rounded px-1.5 py-1 text-[10px] text-amber-700">
+                      👥 সদৃশ সতর্কতা: {toBnNum(dup.nearbyCount)}টি এন্ট্রি {toBnNum(Math.round(dup.minDistanceM))} মিটারের মধ্যে — একই স্থান দ্বিতীয়বার জমা হয়ে থাকতে পারে
+                    </div>
+                  )}
                   {mismatched && (
                     <div className="mt-1.5 bg-red-50 border border-red-200 rounded px-1.5 py-1 text-[10px] text-red-700">
                       ⚠️ GPS অবস্থান {actualUpazila ? `"${actualUpazila}"-তে পড়ে` : 'ঘোষিত উপজেলার সীমানার বাইরে'}, কিন্তু "{sub.upazila}" হিসেবে দেওয়া আছে — যাচাই প্রয়োজন
@@ -582,16 +596,35 @@ export default function MapTab({ geoState, onMapReady }: MapTabProps) {
           );
         })}
 
-        {/* AppScript (Google Sheet) national entries */}
-        {nationalPoints.map(({ pos, entry, mismatched }, i) => {
+        {/* AppScript (Google Sheet) national entries -- CircleMarker, matching
+            plantation-tracker-app's marker style (radius 6, color-coded,
+            no separate icon shape) for visual consistency across both apps. */}
+        {nationalPoints.map(({ key, pos, entry, mismatched }, i) => {
           const actualUpazila = mismatched ? findContainingUpazila(mergedPolygons, pos[0], pos[1]) : null;
+          const dup = duplicateMap.get(key);
           return (
-            <Marker key={`nat-${entry.id || entry.submissionId || i}`} position={pos} icon={mismatched ? appscriptMismatchIcon : appscriptIcon}>
+            <CircleMarker
+              key={key}
+              center={pos}
+              radius={mismatched || dup ? 7 : 6}
+              pathOptions={
+                mismatched
+                  ? { color: '#b91c1c', fillColor: '#ef4444', fillOpacity: 0.85, weight: 2.5 }
+                  : dup
+                  ? { color: '#b45309', fillColor: '#f59e0b', fillOpacity: 0.75, weight: 2 }
+                  : { color: '#1d4ed8', fillColor: '#3b82f6', fillOpacity: 0.75, weight: 2 }
+              }
+            >
               <Popup>
                 <div className="text-xs min-w-[160px]">
                   <div className="font-bold text-blue-700 mb-1">{entry.farmerName || entry.nurseryName || entry.village || 'অজানা'}</div>
                   <div className="text-[11px] text-slate-700"><b>উপজেলা/জেলা:</b> {entry.upazila}, {entry.district}</div>
                   <div className="text-[10px] text-blue-600 mt-1">📡 AppScript তথ্য</div>
+                  {dup && (
+                    <div className="mt-1.5 bg-amber-50 border border-amber-200 rounded px-1.5 py-1 text-[10px] text-amber-700">
+                      👥 সদৃশ সতর্কতা: {toBnNum(dup.nearbyCount)}টি এন্ট্রি {toBnNum(Math.round(dup.minDistanceM))} মিটারের মধ্যে — একই স্থান দ্বিতীয়বার জমা হয়ে থাকতে পারে
+                    </div>
+                  )}
                   {mismatched && (
                     <div className="mt-1.5 bg-red-50 border border-red-200 rounded px-1.5 py-1 text-[10px] text-red-700">
                       ⚠️ GPS অবস্থান {actualUpazila ? `"${actualUpazila}"-তে পড়ে` : 'ঘোষিত উপজেলার সীমানার বাইরে'}, কিন্তু "{entry.upazila}" হিসেবে দেওয়া আছে — যাচাই প্রয়োজন
@@ -624,7 +657,7 @@ export default function MapTab({ geoState, onMapReady }: MapTabProps) {
                   </div>
                 </div>
               </Popup>
-            </Marker>
+            </CircleMarker>
           );
         })}
 

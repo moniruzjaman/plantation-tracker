@@ -6,6 +6,18 @@
 
 ---
 
+### ⚠️ Editing the legacy PWA (`public/legacy/plantation.html`)
+
+This file is what Vercel actually serves at `/` (see `vercel.json`). It's split into `public/part1.txt`–`part7.txt` for easier editing (GitHub web editor / mobile-friendly chunk sizes). **Never edit `public/legacy/plantation.html` directly** — edit the relevant `part*.txt` file, then run:
+
+```bash
+node map.js
+```
+
+This regenerates `public/legacy/plantation.html` from the parts. Commit **both** the `part*.txt` change and the regenerated `public/legacy/plantation.html` in the same commit. CI (`.github/workflows/check.yml`) runs `node map.js` and diffs the result against the committed file — the build fails if they don't match, so drift between the two gets caught immediately instead of silently accumulating.
+
+---
+
 ### 🌟 ইউনিক ফিচারসমূহ (Unique Features)
 
 | ফিচার | বিবরণ |

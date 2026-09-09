@@ -1,4 +1,4 @@
-/** Local device submission, matching plantation.html's localStorage shape (LS_KEY = "nursery_submissions"). */
+/** Local device submission, matching plantation.html's localStorage shape (LS_KEY = "plantation_submission"). */
 export interface LocalSubmission {
   id?: string;
   submissionId?: string;
@@ -32,6 +32,11 @@ export interface NationalEntry {
   division?: string;
   district?: string;
   upazila?: string;
+  seedlings?: {
+    speciesName?: string;
+    category?: string;
+    quantity?: number | string;
+  }[];
   _source?: 'appscript';
   [key: string]: unknown;
 }

@@ -6,6 +6,13 @@ import sharp from 'sharp';
 const SVG_URL = 'https://upload.wikimedia.org/wikipedia/commons/8/84/Government_Seal_of_Bangladesh.svg';
 const PUBLIC_DIR = path.resolve('public');
 const FALLBACK_DIR = path.resolve('assets/fallback-logos');
+// bd-logo.svg is the committed, canonical Government of Bangladesh seal used
+// for the header (bd-logo.png) and as the single source for every generated
+// icon below (favicons, apple-touch-icon, Android launcher icons via
+// generate-android-icons.js). Preferring this local file over the Wikimedia
+// download means icon generation no longer depends on network access and
+// always matches what's rendered in the app header.
+const LOCAL_SOURCE_SVG = path.join(PUBLIC_DIR, 'bd-logo.svg');
 
 // Retry configuration
 const MAX_RETRIES = 3;
@@ -176,7 +183,21 @@ async function run() {
     console.log('✨ All logo files already exist - skipping download and processing');
     return;
   }
-  
+
+  // 1. Prefer the committed bd-logo.svg (canonical seal used in the header).
+  //    No network dependency, always in sync with public/bd-logo.png.
+  if (fs.existsSync(LOCAL_SOURCE_SVG)) {
+    try {
+      console.log('🇧🇩 Using committed public/bd-logo.svg as icon source...');
+      const svgContent = fs.readFileSync(LOCAL_SOURCE_SVG, 'utf8');
+      await processIcons(svgContent);
+      return;
+    } catch (localErr) {
+      console.error('❌ Failed processing local bd-logo.svg:', localErr.message);
+      // fall through to network download below
+    }
+  }
+
   try {
     console.log('🌿 Downloading Bangladesh Government Seal SVG...');
     const svgContent = await fetchSvg(SVG_URL);

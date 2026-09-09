@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>বৃক্ষরোপণ তথ্য সংগ্রহ | কৃষি সম্প্রসারণ অধিদপ্তর</title>
+<title>বৃক্ষ রোপণে সাজাই দেশ, সবার আগে বাংলাদেশ | কৃষি সম্প্রসারণ অধিদপ্তর</title>
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-<meta name="description" content="মোবাইলে অফলাইনে সংগৃহীত বৃক্ষরোপণের তথ্য এবং সিঙ্ক সেন্টার। कृषि সম্প্রসারণ অধিদপ্তর।">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="description" content="৫ বছরে ২৫ কোটি বৃক্ষ রোপণের জাতীয় মহা উদ্দ্যোগ। বৃক্ষ রোপণের তথ্য ডিজিটাল নথিভূক্তকরণ, স্যাটেলাইট পর্যবেক্ষণ, অফিসিয়াল রিপোর্টিং।">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
 if(typeof tailwind!=='undefined'){
@@ -22,6 +22,7 @@ document.head.appendChild(s);
 </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -34,9 +35,22 @@ body{font-family:'Noto Sans Bengali','Kalpurush','SolaimanLipi',Arial,sans-serif
 .anim-in{animation:fadeIn .35s ease-out}.shake{animation:shake .35s ease-in-out}
 .nav-btn{transition:all .15s}.nav-btn.active{color:#15803d}
 .nav-btn.active .nav-dot{opacity:1;transform:scale(1)}
-.nav-dot{width:4px;height:4px;border-radius:50%;background:#15803d;opacity:0;transform:scale(0);transition:all .2s}
+.nav-dot{width:4px;height:4px;border-radius:50%;background:#dc2626;opacity:0;transform:scale(0);transition:all .2s}
 .card-stat{transition:transform .15s}.card-stat:hover{transform:translateY(-3px)}
 .modal-bg{background:rgba(0,0,0,.45)}
+.header-icon-plain{transition:all .15s ease;border-radius:6px}
+.header-icon-plain:hover{opacity:.75;transform:translateY(-1px)}
+.header-icon-plain:active{transform:translateY(0) scale(.95)}
+.share-tile{transition:all .15s ease}
+.share-tile:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(0,0,0,.12)}
+.guide-section{border-left:3px solid #15803d;transition:all .15s}
+.guide-section:hover{border-left-color:#dc2626;background:#fafafa}
+.premium-badge{background:linear-gradient(135deg,#dc2626,#991b1b);box-shadow:0 2px 8px rgba(220,38,38,.35)}
+details>summary{list-style:none}
+details>summary::-webkit-details-marker{display:none}
+details>summary:before{content:"▸";display:inline-block;margin-right:6px;color:#15803d;transition:transform .15s}
+details[open]>summary:before{transform:rotate(90deg)}
+#myProbableOutput{border-left:3px solid #dc2626}
 @media print{.no-print{display:none!important}body{padding-bottom:0}}
 @media(min-width:768px){body{padding-bottom:0}.mobile-nav{display:none!important}}
 fieldset{border:2px solid;padding:1rem;border-radius:0.75rem}
@@ -47,24 +61,104 @@ table{border-collapse:collapse;width:100%}
 th,td{padding:0.5rem;text-align:left}
 th{font-size:0.75rem}
 tbody tr{border-bottom:1px solid #e5e7eb}
+#profileModal{padding:max(12px,env(safe-area-inset-top))}
+#profileModal input,#profileModal select,#profileModal button{min-height:46px}
+#profileModal .overflow-y-auto{-webkit-overflow-scrolling:touch}
+@media(max-width:640px){#profileModal input,#profileModal select{font-size:16px}}
+
+/* ===== Outdoor / field readability pass =====
+   DAE field officers use this app in direct sunlight, often with gloves or
+   dusty/wet screens. Two concrete problems this fixes:
+   1) A lot of labels and the bottom-nav tab text were set at 10px, and
+      several used text-gray-400 (~2.6:1 contrast on white) or text-gray-500
+      (~4.0:1, borderline) -- both fail comfortably-readable-in-sunlight in
+      practice even where they technically scrape WCAG AA for large text.
+   2) Header icon buttons (নির্দেশিকা/শেয়ার) and the two banner dismiss
+      buttons had little to no padding, well under the ~44x44px minimum
+      recommended touch target -- easy to mis-tap with a fingertip in the
+      field, especially one-handed while holding a seedling or a clipboard.
+   Scoped to existing classes/ids so it can't regress unrelated layout. */
+.text-\[10px\]{font-size:12px!important}
+.nav-btn span[style*="font-size:10px"]{font-size:12px!important}
+.text-gray-400{color:#6b7280!important}
+.text-gray-500{color:#4b5563!important}
+.nav-btn{min-height:52px;min-width:44px}
+.nav-btn.text-gray-400{color:#4b5563!important}
+.nav-btn.active{color:#15803d!important}
+.header-icon-plain{min-height:40px;min-width:40px;padding:8px 10px!important}
+#pwaIframeBanner button,#pwaInstallBanner button{min-height:40px;padding:8px 14px!important}
+
+/* ===== Tab-transition animation =====
+   Tabs were an instant classList.add/remove("hidden") swap -- jarring on a
+   small screen. CSS animation on .tab-content replays automatically each
+   time the element goes from display:none back to visible (browsers restart
+   CSS animations on re-render), so no JS change is needed in switchTab().
+   Respects prefers-reduced-motion for users who've asked for less motion. */
+@media(prefers-reduced-motion:no-preference){
+.tab-content{animation:tabFadeIn .32s cubic-bezier(0.22,1,0.36,1)}
+}
+@keyframes tabFadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* ===== Onboarding coach-marks (first-visit tab tour) ===== */
+#coachmarkOverlay{position:fixed;inset:0;z-index:9999}
+#coachmarkScrim{position:fixed;inset:0;background:rgba(15,23,25,.55);opacity:0;transition:opacity .25s ease}
+#coachmarkScrim.visible{opacity:1}
+#coachmarkRing{position:fixed;border-radius:16px;box-shadow:0 0 0 4px #fff,0 0 0 8px #15803d,0 0 24px 4px rgba(0,0,0,.35);transition:top .3s cubic-bezier(0.22,1,0.36,1),left .3s cubic-bezier(0.22,1,0.36,1),width .3s cubic-bezier(0.22,1,0.36,1),height .3s cubic-bezier(0.22,1,0.36,1);pointer-events:none}
+#coachmarkTooltip{position:fixed;max-width:270px;background:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 10px 30px rgba(0,0,0,.3);transition:top .3s cubic-bezier(0.22,1,0.36,1),left .3s cubic-bezier(0.22,1,0.36,1);z-index:10000;font-family:inherit}
+@media(prefers-reduced-motion:reduce){
+#coachmarkRing,#coachmarkTooltip{transition:none}
+}
+
 </style>
+<!-- Open Graph tags for Messenger, WhatsApp and Facebook -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://plantation.krishiai.live/">
+<meta property="og:title" content="বৃক্ষ রোপণে সাজাই দেশ, সবার আগে বাংলাদেশ">
+<meta property="og:description" content="৫ বছরে ২৫ কোটি বৃক্ষরোপণ কর্মসূচি।">
+
+<!-- Single Open Graph image -->
+<!-- NOTE: bump ?v=N whenever og-share-large.png's content changes.
+     Social platforms cache link-preview images independently of Vercel
+     and of each other, often for days-to-weeks -- a new query string is
+     the only reliable way to force a fresh fetch everywhere at once. -->
+<meta property="og:image" content="https://plantation.krishiai.live/og-share-large.png?v=3">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:alt" content="বৃক্ষ রোপণে সাজাই দেশ, সবার আগে বাংলাদেশ">
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col">
 
 <!-- ==================== HEADER ==================== -->
-<header class="bg-gradient-to-r from-green-700 via-green-800 to-green-900 text-white py-5 px-4 shadow-lg no-print" style="background:linear-gradient(to right,#15803d,#166534,#14532d)">
-<div class="max-w-6xl mx-auto flex items-center gap-4">
-<img src="/logo.svg" alt="বাংলাদেশ সরকার" class="w-12 h-12 sm:w-14 sm:h-14 bg-white rounded-full p-1 shadow flex-shrink-0">
-<div class="text-center sm:text-left min-w-0">
-<p class="text-green-200 text-xs sm:text-sm" style="color:#bbf7d0">গণপ্রজাতন্ত্রী বাংলাদেশ সরকার</p>
-<h1 class="text-xs sm:text-sm md:text-base lg:text-lg font-bold leading-snug">“০৫ বছরে ২৫ কোটি বৃক্ষরোপণ” কর্মসূচির আওতাভুক্ত হওয়ার লক্ষ্যে বৃক্ষরোপণের তথ্য</h1>
-<p class="text-green-100 text-xs sm:text-sm mt-0.5 font-medium" style="color:#dcfce7">কৃষি সম্প্রসারণ অধিদপ্তর</p>
+<header class="text-white py-3 px-4 shadow-lg no-print" style="background:linear-gradient(135deg,#0f5132 0%,#166534 45%,#052e16 100%);position:relative;overflow:hidden">
+<div style="position:absolute;inset:0;background:radial-gradient(circle at 88% -20%,rgba(220,38,38,.38) 0%,rgba(220,38,38,0) 55%);pointer-events:none"></div>
+<div class="max-w-6xl mx-auto flex items-center gap-3" style="position:relative;z-index:1">
+<img src="/bd-logo.png" alt="বাংলাদেশ সরকার" class="w-11 h-11 sm:w-14 sm:h-14 bg-white rounded-full p-1 shadow flex-shrink-0">
+<div class="text-center sm:text-left min-w-0 flex-1">
+<p class="text-xs sm:text-sm" style="color:#bbf7d0">গণপ্রজাতন্ত্রী বাংলাদেশ সরকার</p>
+<h1 class="text-xs sm:text-sm md:text-base lg:text-lg font-bold leading-snug">"কৃষি সম্প্রসারণ অধিদপ্তর"</h1>
+<p class="text-xs sm:text-sm mt-0.5 font-medium" style="color:#dcfce7">বৃক্ষ রোপণে সাজাই দেশ, সবার আগে বাংলাদেশ</p>
+</div>
+<img src="/dae-logo.webp" onerror="this.onerror=null;this.src='/dae-logo.png'" alt="কৃষি সম্প্রসারণ অধিদপ্তর" class="w-11 h-11 sm:w-14 sm:h-14 bg-white rounded-full p-1 shadow flex-shrink-0">
+</div>
+<div style="height:3px;background:linear-gradient(to right,#166534,#dc2626 50%,#166534);margin-top:10px;border-radius:2px;opacity:.9;position:relative;z-index:1"></div>
+<div class="max-w-6xl mx-auto flex items-center justify-between" style="position:relative;z-index:1;margin-top:6px">
+<!-- React-portal slots: GPS Accuracy + Mobile Control -->
+<div id="header-react-slots" class="flex items-center gap-2" style="min-height:28px"></div>
+<!-- Instruction & Share buttons -->
+<div class="flex items-center gap-4">
+<button onclick="openGuideModal()" title="ব্যবহার নির্দেশিকা" aria-label="ব্যবহার নির্দেশিকা" class="header-icon-plain flex items-center gap-1 cursor-pointer" style="background:transparent;border:none;color:#dcfce7;padding:2px 4px">
+<span style="font-size:15px;line-height:1">📘</span><span class="text-[10px] font-semibold">নির্দেশিকা</span>
+</button>
+<button onclick="openShareModal()" title="অ্যাপ শেয়ার করুন" aria-label="অ্যাপ শেয়ার করুন" class="header-icon-plain flex items-center gap-1 cursor-pointer" style="background:transparent;border:none;color:#fecaca;padding:2px 4px">
+<span style="font-size:15px;line-height:1">📤</span><span class="text-[10px] font-semibold">শেয়ার</span>
+</button>
 </div>
 </div>
 </header>
 
 <!-- ==================== DESKTOP NAV ==================== -->
-<nav class="bg-white shadow-sm sticky top-0 z-40 no-print hidden md:block" style="position:sticky;top:0;z-index:40">
+<nav class="shadow-sm sticky top-0 z-40 no-print hidden md:block" style="position:sticky;top:0;z-index:40;background:rgba(255,255,255,.97);backdrop-filter:blur(6px)">
 <div class="max-w-6xl mx-auto flex" style="border-bottom:1px solid #dcfce7">
 <button onclick="switchTab('form')" class="nav-btn active flex-1 py-3.5 text-sm font-semibold text-gray-500 hover:text-green-700 hover:bg-green-50 flex flex-col items-center gap-1" data-tab="form">
 <span class="text-lg">📝</span>ফর্ম
@@ -79,11 +173,7 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <div class="nav-dot"></div>
 </button>
 <button onclick="switchTab('storedData')" class="nav-btn flex-1 py-3.5 text-sm font-semibold text-gray-500 hover:text-green-700 hover:bg-green-50 flex flex-col items-center gap-1" data-tab="storedData">
-<span class="text-lg">📂</span>రిపోర్ట్
-<div class="nav-dot"></div>
-</button>
-<button onclick="switchTab('admin')" class="nav-btn flex-1 py-3.5 text-sm font-semibold text-gray-500 hover:text-green-700 hover:bg-green-50 flex flex-col items-center gap-1" data-tab="admin">
-<span class="text-lg">🔐</span>এডমিন
+<span class="text-lg">👤</span>প্রোফাইল
 <div class="nav-dot"></div>
 </button>
 </div>
@@ -104,11 +194,524 @@ tbody tr{border-bottom:1px solid #e5e7eb}
 <div class="nav-dot mt-0.5"></div>
 </button>
 <button onclick="switchTab('storedData')" class="nav-btn flex-1 py-2.5 flex flex-col items-center gap-0.5 text-gray-400" data-tab="storedData">
-<span class="text-xl">📂</span><span class="text-xs font-semibold" style="font-size:10px">আমার তথ্য</span>
-<div class="nav-dot mt-0.5"></div>
-</button>
-<button onclick="switchTab('admin')" class="nav-btn flex-1 py-2.5 flex flex-col items-center gap-0.5 text-gray-400" data-tab="admin">
-<span class="text-xl">🔐</span><span class="text-xs font-semibold" style="font-size:10px">এডমিন</span>
+<span class="text-xl">👤</span><span class="text-xs font-semibold" style="font-size:10px">প্রোফাইল</span>
 <div class="nav-dot mt-0.5"></div>
 </button>
 </nav>
+
+<!-- ==================== PWA INSTALL BANNERS ==================== -->
+<div id="pwaIframeBanner" class="hidden bg-amber-50 border-b border-amber-200 text-amber-800 py-3 px-4 no-print shadow-sm" style="background:#fef3c7;border-bottom:1px solid #fde68a;color:#78350f">
+<div class="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs sm:text-sm">
+<div class="flex items-center gap-2">
+<span class="text-base">📲</span>
+<p class="font-medium">অ্যাপটি সম্পূর্ণ অফলাইনে ব্যবহার এবং সরাসরি মোবাইলে স্ক্রিনে হোম অ্যাপ হিসেবে ইন্সটল করার জন্য নতুন উইন্ডোতে ওপেন করুন।</p>
+</div>
+<div class="flex gap-2">
+<button onclick="window.open(window.location.href, '_blank')" class="bg-amber-600 hover:bg-amber-700 text-white font-semibold py-1.5 px-4 rounded transition text-xs shadow cursor-pointer border-none" style="background:#d97706;border:none;border-radius:4px;padding:6px 12px;color:white;font-weight:600">নতুন উইন্ডোতে ওপেন করুন</button>
+<button onclick="document.getElementById('pwaIframeBanner').classList.add('hidden')" class="text-amber-600 hover:text-amber-800 font-semibold text-xs border-none bg-transparent cursor-pointer" style="border:none;background:transparent;color:#b45309;font-weight:600">বন্ধ করুন</button>
+</div>
+</div>
+</div>
+
+<div id="pwaInstallBanner" class="hidden bg-emerald-50 border-b border-emerald-200 text-emerald-800 py-3.5 px-4 no-print shadow-sm" style="background:#ecfdf5;border-bottom:1px solid #a7f3d0;color:#065f46">
+<div class="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs sm:text-sm">
+<div class="flex items-center gap-2">
+<span class="text-lg">🌴</span>
+<div>
+<p class="font-semibold text-emerald-950" style="color:#022c22">“বৃক্ষরোপণ ট্র্যাকার” সরাসরি মোবাইলে ইনস্টল করুন!</p>
+<p class="text-xs text-emerald-700" style="color:#047857">কোনো ইন্টারনেট ছাড়াই অফলাইনে সম্পূর্ণ নিরাপদ তথ্য সংগ্রহ ও ট্র্যাকিং করুন।</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button onclick="window.triggerPWAInstall()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-5 rounded-lg transition text-xs sm:text-sm shadow-md cursor-pointer border-none" style="background:#059669;border:none;border-radius:8px;padding:8px 16px;color:white;font-weight:700">📲 সরাসরি অ্যাপ ডাউনলোড</button>
+<button onclick="document.getElementById('pwaInstallBanner').classList.add('hidden')" class="text-emerald-600 hover:text-emerald-800 font-semibold text-xs border-none bg-transparent cursor-pointer" style="border:none;background:transparent;color:#047857;font-weight:600">পরে হব</button>
+</div>
+</div>
+</div>
+
+<!-- ==================== BANNERS ==================== -->
+<div id="successBanner" class="hidden bg-green-600 text-white py-3 px-4 text-center anim-in no-print" style="background:#16a34a">
+<p class="font-semibold text-sm sm:text-base">✅ ধন্যবাদ! বৃক্ষরোপণের তথ্য সফলভাবে জমা হয়েছে।</p>
+</div>
+<div id="errorBanner" class="hidden bg-red-600 text-white py-3 px-4 text-center anim-in no-print" style="background:#dc2626">
+<p id="errorText" class="font-semibold text-sm sm:text-base"></p>
+</div>
+
+<!-- ==================== MAIN ==================== -->
+<main class="flex-1 w-full max-w-6xl mx-auto px-3 sm:px-4 py-5">
+
+<!-- ========== TAB: FORM (DEFAULT) ========== -->
+<section id="tab-form" class="tab-content">
+<div class="max-w-4xl mx-auto">
+<div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-4">
+<h2 class="text-lg font-bold text-green-700 mb-2" id="formTitle">📄 নতুন তথ্য জমা দিন</h2>
+<div id="profileBar" class="flex items-center justify-between rounded-lg px-3 py-2 mb-4" style="background:#f0fdf4;border:1px solid #bbf7d0">
+<span id="profileBarText" class="text-xs font-semibold text-green-800">👤 প্রোফাইল লোড হচ্ছে...</span>
+<button type="button" onclick="openProfileModal()" class="text-xs font-semibold" style="color:#15803d">পরিবর্তন</button>
+</div>
+<form id="nurseryForm" novalidate>
+<input type="hidden" id="editId" value="">
+<input type="hidden" id="fGeoFencePoints" value="">
+<input type="hidden" id="fGeoFenceAreaSqm" value="">
+<input type="hidden" id="fGeoAccuracy" value="">
+
+<!-- ===== 1. GENERAL INFO ===== -->
+<fieldset style="border-color:#86efac;background:#f9fafb" class="rounded-xl border-2 p-4 sm:p-5 mb-4">
+<legend class="px-3 py-1 rounded-lg text-white font-bold text-sm" style="background:#15803d">১. সাধারণ তথ্য</legend>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+
+<div>
+<label class="block text-xs font-semibold text-gray-700 mb-1">বিভাগ <span style="color:#ef4444">*</span></label>
+<select id="fDivision" onchange="onFormDivisionChange()" class="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">বিভাগ নির্বাচন করুন</option></select>
+<p class="text-xs mt-0.5 hidden" data-error="fDivision" style="color:#ef4444;font-size:0.75rem">বিভাগ আবশ্যক</p>
+</div>
+
+<div>
+<label class="block text-xs font-semibold text-gray-700 mb-1">অঞ্চল <span style="color:#ef4444">*</span></label>
+<select id="fRegion" onchange="onFormRegionChange()" class="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">অঞ্চল নির্বাচন করুন</option></select>
+<p class="text-xs mt-0.5 hidden" data-error="fRegion" style="color:#ef4444;font-size:0.75rem">অঞ্চল আবশ্যক</p>
+</div>
+
+<div>
+<label class="block text-xs font-semibold text-gray-700 mb-1">জেলা <span style="color:#ef4444">*</span></label>
+<select id="fDistrict" onchange="onFormDistrictChange()" class="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">জেলা নির্বাচন করুন</option></select>
+<p class="text-xs mt-0.5 hidden" data-error="fDistrict" style="color:#ef4444;font-size:0.75rem">জেলা আবশ্যক</p>
+</div>
+
+<div>
+<label class="block text-xs font-semibold text-gray-700 mb-1">উপজেলা <span style="color:#ef4444">*</span></label>
+<select id="fUpazila" data-district-source="fDistrict" onchange="handleUpazilaAddNew(this)" class="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">উপজেলা নির্বাচন করুন</option></select>
+<p class="text-xs mt-0.5 hidden" data-error="fUpazila" style="color:#ef4444;font-size:0.75rem">উপজেলা আবশ্যক</p>
+</div>
+
+<div>
+<label class="block text-xs font-semibold text-gray-700 mb-1">ইউনিয়ন</label>
+<input type="text" id="fUnion" placeholder="ইউনিয়নের নাম" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+</div>
+
+<div>
+<label class="block text-xs font-semibold text-gray-700 mb-1">গ্রাম</label>
+<input type="text" id="fVillage" placeholder="গ্রামের নাম" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+</div>
+
+<div>
+<label class="block text-xs font-semibold text-gray-700 mb-1">ব্লক <span class="text-gray-400 font-normal">(সরকারি প্রতিবেদনের জন্য)</span></label>
+<input type="text" id="fBlock" placeholder="ব্লকের নাম" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+</div>
+
+<div>
+<label class="block text-xs font-semibold text-gray-700 mb-1">রোপণকারীর নাম (কৃষক) <span style="color:#ef4444">*</span></label>
+<input type="text" id="fNursery" placeholder="কৃষকের নাম লিখুন" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+<p class="text-xs mt-0.5 hidden" data-error="fNursery" style="color:#ef4444;font-size:0.75rem">রোপণকারীর নাম আবশ্যক</p>
+</div>
+
+<div>
+<label class="block text-xs font-semibold text-gray-700 mb-1">কৃষকের মোবাইল নম্বর <span style="color:#ef4444">*</span></label>
+<input type="text" id="fMobile" maxlength="11" inputmode="numeric" placeholder="01XXXXXXXXX (১১ ডিজিট)" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+<p class="text-xs mt-0.5 hidden" data-error="fMobile" style="color:#ef4444;font-size:0.75rem"></p>
+</div>
+
+<div>
+<label class="block text-xs font-semibold text-gray-700 mb-1">SAAO-এর নাম</label>
+<input type="text" id="fSaaoName" list="saaoDatalist" placeholder="উপ-সহকারী কৃষি কর্মকর্তার নাম" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db" oninput="onDirectoryNameInput('saao',this.value)">
+<datalist id="saaoDatalist"></datalist>
+</div>
+
+<div>
+<label class="block text-xs font-semibold text-gray-700 mb-1">SAAO-এর মোবাইল নম্বর</label>
+<input type="text" id="fSaaoMobile" maxlength="11" inputmode="numeric" placeholder="01XXXXXXXXX" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+<p class="text-xs mt-0.5 hidden" data-error="fSaaoMobile" style="color:#ef4444;font-size:0.75rem"></p>
+</div>
+
+<div>
+<label class="block text-xs font-semibold text-gray-700 mb-1">মনিটরিং অফিসারের নাম</label>
+<input type="text" id="fOfficerName" list="officerDatalist" placeholder="মনিটরিং অফিসারের নাম" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db" oninput="onDirectoryNameInput('officer',this.value)">
+<datalist id="officerDatalist"></datalist>
+<p class="text-[10px] text-gray-400 mt-0.5">শুধুমাত্র উপজেলা কর্মকর্তা (AEO2/AAO/UAO) — জেলা/অঞ্চল পর্যায়ের কর্মকর্তা নয়</p>
+</div>
+
+<div>
+<label class="block text-xs font-semibold text-gray-700 mb-1">মনিটরিং অফিসারের মোবাইল নম্বর</label>
+<input type="text" id="fOfficerMobile" maxlength="11" inputmode="numeric" placeholder="01XXXXXXXXX" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+<p class="text-xs mt-0.5 hidden" data-error="fOfficerMobile" style="color:#ef4444;font-size:0.75rem"></p>
+</div>
+
+<div>
+<label class="block text-xs font-semibold text-gray-700 mb-1">রোপণের তারিখ</label>
+<input type="date" id="fPlantingDate" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+</div>
+
+<div>
+<label class="block text-xs font-semibold text-gray-700 mb-1">চারার উৎস</label>
+<select id="fSourceType" onchange="onSourceTypeChange()" class="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+<option value="">নির্বাচন করুন</option>
+<option value="প্রদর্শনী">প্রদর্শনী</option>
+<option value="প্রণোদনা">প্রণোদনা</option>
+<option value="নিজস্ব">নিজস্ব</option>
+<option value="অন্যান্য">অন্যান্য</option>
+</select>
+<input type="text" id="fSourceTypeCustom" placeholder="উৎসের নাম লিখুন" class="hidden w-full border rounded-md px-3 py-2 text-sm mt-2 focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+</div>
+
+<div>
+<label class="block text-xs font-semibold text-gray-700 mb-1">লোকেশন টাইপ</label>
+<select id="fLocationType" class="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+<option value="">নির্বাচন করুন</option>
+<option value="সড়কপার্শ্ব">সড়কপার্শ্ব</option>
+<option value="ক্ষেত্র/জমি">ক্ষেত্র/জমি</option>
+<option value="বাড়ি/আঙিনা">বাড়ি/আঙিনা</option>
+<option value="প্রাতিষ্ঠানিক">প্রাতিষ্ঠানিক</option>
+<option value="অন্যান্য">অন্যান্য</option>
+</select>
+</div>
+
+<div class="sm:col-span-2">
+<label class="block text-xs font-semibold text-gray-700 mb-1">জিও লোকেশন
+<button type="button" onclick="fetchGeoLocation()" id="geoBtn" class="ml-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full transition" style="font-size:10px;font-weight:500;color:#15803d;background:#f0fdf4;border:1px solid #bbf7d0" title="লোকেশন আপডেট করুন"><svg id="geoIcon" style="height:12px;width:12px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg><span id="geoBtnText">স্বয়ংক্রিয়</span></button>
+<button type="button" onclick="toggleGeoManualPanel()" id="geoManualToggleBtn" class="ml-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full transition" style="font-size:10px;font-weight:500;color:#1d4ed8;background:#eff6ff;border:1px solid #93c5fd" title="ম্যাপ দেখুন / নিজে কোঅর্ডিনেট লিখুন">🗺️ <span id="geoManualToggleText">ম্যাপ/ম্যানুয়াল</span></button>
+</label>
+<div class="flex gap-2">
+<input type="text" id="fGeo" placeholder="অক্ষাংশ, দ্রাঘিমাংশ" class="flex-1 border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db" onchange="if(window.onGeoLocationChange){window.onGeoLocationChange(this, 'fAddress')}">
+<span id="geoAccuracyDisplay" class="items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-full" style="color:#15803d;background:#f0fdf4;border:1px solid #bbf7d0;display:none"></span>
+</div>
+<p id="geoStatus" class="hidden mt-0.5" style="font-size:10px;color:#9ca3af"><span id="geoStatusText"></span></p>
+
+<!-- ===== Manual coordinate entry + OpenStreetMap + geofence walker ===== -->
+<div id="geoManualPanel" class="mt-2 p-3 rounded-lg border" style="background:#f8fafc;border-color:#dbeafe">
+
+  <div class="grid grid-cols-2 gap-2 mb-2">
+    <div>
+      <label class="block text-[10px] font-bold text-gray-500 mb-0.5">অক্ষাংশ (Latitude)</label>
+      <input type="text" inputmode="decimal" id="fGeoLatManual" placeholder="যেমন: 25.805417" class="w-full border rounded px-2 py-1.5 text-sm" style="border-color:#93c5fd">
+    </div>
+    <div>
+      <label class="block text-[10px] font-bold text-gray-500 mb-0.5">দ্রাঘিমাংশ (Longitude)</label>
+      <input type="text" inputmode="decimal" id="fGeoLngManual" placeholder="যেমন: 89.636861" class="w-full border rounded px-2 py-1.5 text-sm" style="border-color:#93c5fd">
+    </div>
+  </div>
+  <div class="flex gap-2 mb-2">
+    <button type="button" onclick="showManualGeoOnMap()" id="geoManualShowBtn" class="flex-1 text-white rounded-md py-1.5 text-xs font-semibold" style="background:#1d4ed8">📍 ম্যানুয়াল কোঅর্ডিনেট ম্যাপে দেখান</button>
+  </div>
+  <p id="geoManualStatus" class="hidden mb-2" style="font-size:10px;color:#9ca3af"></p>
+
+  <div id="fGeoMap" class="w-full rounded-lg border" style="height:240px;border-color:#93c5fd"></div>
+  <p style="font-size:10px;color:#6b7280" class="mt-1">মানচিত্রে ট্যাপ করুন অথবা মার্কার টেনে সঠিক অবস্থান নির্ধারণ করুন। ম্যানুয়াল ইনপুট ঘরে যা লিখবেন, মার্কার ঠিক সেই কোঅর্ডিনেটেই বসবে।</p>
+  <p id="geoOfflineNotice" class="hidden mt-1" style="font-size:10px;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:4px 6px">⚠️ আপনি এখন অফলাইনে আছেন — আগে দেখা এলাকার ম্যাপ ট্যাইল দেখা যাবে, কিন্তু নতুন/অদেখা এলাকার ট্যাইল লোড হবে না। জিপিএস অবস্থান নেওয়া ও সীমানা (জিও-ফেন্স) হাঁটা অফলাইনেও পুরোপুরি কাজ করবে।</p>
+
+  <!-- Geo-fencing: walk the boundary of a plant cluster to record its outline -->
+  <div class="mt-3 pt-3" style="border-top:1px dashed #bfdbfe">
+    <p class="text-xs font-bold text-gray-700 mb-1.5">🚶 জিও-ফেন্সিং (ক্লাস্টার/সারিবদ্ধ চারার সীমানা হাঁটার মাধ্যমে রেকর্ড করুন)</p>
+    <div class="flex gap-2 flex-wrap">
+      <button type="button" onclick="toggleGeoFenceWalk()" id="geoFenceWalkBtn" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-semibold text-white" style="background:#15803d">🚶 হাঁটা শুরু করুন</button>
+      <button type="button" onclick="clearGeoFence()" id="geoFenceClearBtn" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-semibold" style="background:#fee2e2;color:#b91c1c">✕ সীমানা মুছুন</button>
+    </div>
+    <p id="geoFenceInfo" class="mt-1.5" style="font-size:10px;color:#6b7280">এখনও কোনো সীমানা রেকর্ড করা হয়নি। হাঁটা শুরু করুন এবং ক্লাস্টারের চারপাশ ঘুরে আসুন।</p>
+  </div>
+</div>
+</div>
+
+<div class="sm:col-span-2">
+<label class="block text-xs font-semibold text-gray-700 mb-1">রোপণকৃত বৃক্ষের অবস্থান (সুনির্দিষ্ট ঠিকানা)</label>
+<textarea id="fAddress" rows="2" placeholder="রোপণকৃত বৃক্ষের অবস্থান লিখুন" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"></textarea>
+</div>
+
+<div>
+<label class="block text-xs font-semibold text-gray-700 mb-1">প্রাথমিক NDVI <button type="button" onclick="autoFillNdvi()" class="ml-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full transition" style="font-size:10px;font-weight:500;color:#2563eb;background:#eff6ff;border:1px solid #93c5fd" title="জিও লোকেশন থেকে NDVI গণনা করুন">↺ গণনা</button></label>
+<input type="text" id="fNdvi" placeholder="স্বয়ংক্রিয়ভাবে গণনা হবে" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db" readonly>
+</div>
+
+<div>
+<label class="block text-xs font-semibold text-gray-700 mb-1">মন্তব্য</label>
+<input type="text" id="fRemarks" placeholder="মন্তব্য (যদি থাকে)" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+</div>
+
+</div>
+</fieldset>
+
+<!-- ===== 2. SEEDLING REPEATER (one row per species) ===== -->
+<fieldset style="border-color:#86efac;background:#f9faff" class="rounded-xl border-2 p-4 sm:p-5 mb-4">
+<legend class="px-3 py-1 rounded-lg text-white font-bold text-sm" style="background:#15803d">২. চারার তথ্য <span style="color:#fde68a;font-weight:400;font-size:11px">(প্রতিটি চারার জন্য আলাদা রো — যেমন: আম ৩, + লেবু ২, + পেয়ারা ২)</span></legend>
+<datalist id="speciesList">
+<option value="আম"><option value="জাম"><option value="কাঁঠাল"><option value="লেবু"><option value="পেয়ারা"><option value="সফেদা"><option value="তরমুজ"><option value="আনারস"><option value="লিচু"><option value="কলা"><option value="পেঁপে"><option value="সেগুন"><option value="মেহগনি"><option value="আকাশমনি"><option value="নিম"><option value="তুলসী"><option value="বাসক"><option value="অশ্বগন্ধা"><option value="আমলকী"><option value="হারিতকী"><option value="অন্যান্য">
+</datalist>
+<div id="seedlingRows" class="space-y-2 mt-3"></div>
+<button type="button" onclick="addSeedlingRow()" class="w-full mt-3 border-2 border-dashed text-emerald-700 rounded-lg py-2 text-sm font-semibold transition" style="border-color:#86efac;background:#f0fdf4">+ আরেকটি চারা যোগ করুন</button>
+</fieldset>
+
+<!-- ===== 3. PHOTO ===== -->
+<fieldset style="border-color:#86efac;background:#f9fafb" class="rounded-xl border-2 p-4 sm:p-5 mb-4">
+<legend class="px-3 py-1 rounded-lg text-white font-bold text-sm" style="background:#15803d">৩. ছবি (ঐচ্ছিক কিন্তু সুপারিশকৃত)</legend>
+<div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
+<div>
+<label class="block text-xs font-semibold text-gray-700 mb-1">রোপণকৃত স্থানের ছবি দিন</label>
+<input type="file" id="fPhoto" accept="image/*" capture="environment" class="w-full border rounded-md px-3 py-2 text-xs focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+<p class="text-[10px] text-gray-500 mt-1">ছবি স্বয়ংক্রিয়ভাবে সংকুচিত হবে (সর্বোচ্চ ১০২৪px)। প্রতিটি রো এই ছবিটি গুগল ড্রাইভে সংরক্ষিত হবে এবং শিটে ইনলাইন প্রদর্শিত হবে।</p>
+</div>
+<div class="hidden" id="fPhotoPreviewWrap">
+<img id="fPhotoPreview" alt="preview" class="rounded-lg border" style="max-height:140px;border-color:#d1d5db">
+<button type="button" onclick="clearPhoto()" class="block mt-2 text-xs text-red-600 hover:underline">✕ ছবি সরান</button>
+</div>
+</div>
+</fieldset>
+
+<div class="flex gap-3 justify-center">
+<button type="submit" id="submitBtn" class="text-white px-8 py-3 rounded-lg shadow font-semibold text-sm transition" style="background:#15803d">তথ্য জমা দিন</button>
+<button type="button" id="cancelBtn" onclick="resetForm()" class="hidden text-white px-6 py-3 rounded-lg font-semibold text-sm transition" style="background:#9ca3af">বাতিল</button>
+</div>
+</form>
+</div>
+</div>
+</section>
+
+<!-- ========== TAB: DASHBOARD ========== -->
+<section id="tab-dashboard" class="tab-content hidden">
+
+<!-- ── Data source badge + last sync ── -->
+<div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+  <div class="flex items-center gap-2">
+    <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full" style="background:#ecfdf5;color:#047857">
+      <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+      App_Entry (সকল ডিভাইস)
+    </span>
+    <span id="dashDataSourceNote" class="text-xs text-gray-400">লোকাল + জাতীয় ডাটা মার্জ করা হয়েছে</span>
+  </div>
+  <button onclick="refreshDashNationalData()" class="text-xs font-semibold px-3 py-1.5 rounded-md border cursor-pointer hover:bg-gray-50 transition" style="border-color:#15803d;color:#15803d" id="dashRefreshBtn">🔄 রিফ্রেশ</button>
+  <span id="dashLiveBadge" class="hidden inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full" style="background:#dcfce7;color:#15803d" title="ড্যাশবোর্ড খোলা থাকা অবস্থায় প্রতি ৫ মিনিটে স্বয়ংক্রিয়ভাবে হালনাগাদ হয়"><span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> লাইভ</span>
+</div>
+
+<!-- ── Latest Official Weekly Report (verified checkpoint, reconciled from Tree_Plantation_Reporting_Workbook.xlsx) ── -->
+<div id="officialReportCard" class="rounded-xl shadow p-4 mb-6" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fde68a">
+  <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
+    <p class="font-bold text-sm flex items-center gap-1.5" style="color:#92400e">📑 সর্বশেষ যাচাইকৃত সাপ্তাহিক প্রতিবেদন <span id="officialReportDate" class="font-normal text-xs" style="color:#b45309">(11 August, 2026)</span></p>
+    <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a">✔ ডাটা মান যাচাইকৃত (উভয় উৎস একত্রীকৃত)</span>
+  </div>
+  <div class="flex flex-wrap items-center gap-2 mb-3">
+    <a href="/reports/weekly-report-2026-08-11.xlsx" download="সাপ্তাহিক_বৃক্ষরোপণ_প্রতিবেদন_২০২৬-০৮-১১.xlsx" class="text-[11px] font-semibold px-2.5 py-1.5 rounded-md inline-flex items-center gap-1" style="background:#166534;color:#fff">⬇️ সম্পূর্ণ প্রতিবেদন (Excel)</a>
+    <a href="/reports/weekly-report-2026-08-11.html" target="_blank" rel="noopener" class="text-[11px] font-semibold px-2.5 py-1.5 rounded-md inline-flex items-center gap-1" style="background:#fde68a;color:#78350f">📧 ইমেইল প্রিভিউ</a>
+    <div class="inline-flex items-center gap-1 bg-white rounded-md border border-amber-300 p-0.5 shadow-sm">
+      <span class="text-[11px] text-amber-800 font-semibold pl-1.5 hidden sm:inline">✉️</span>
+      <input type="text" id="reportRecipientEmail" value="moniruzjamanlearner@gmail.com" placeholder="প্রাপকের ইমেইল (কমা দিয়ে একাধিক)..." class="text-[11px] px-2 py-1 outline-none text-gray-700 w-44 sm:w-56 bg-transparent" title="প্রতিবেদন পাঠানোর ইমেইল ঠিকানা (কমা দিয়ে একাধিক লিখতে পারেন)" />
+      <button onclick="triggerWeeklyReportEmail(this)" class="text-[11px] font-semibold px-2.5 py-1 rounded-md inline-flex items-center gap-1 cursor-pointer shadow-sm hover:opacity-90 transition active:scale-95 text-white" style="background:#047857" id="btnSendWeeklyReport">🚀 রিপোর্ট পাঠান</button>
+    </div>
+  </div>
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-3">
+    <div class="rounded-lg p-2.5 text-center" style="background:#fff7ed;border:1px solid #fed7aa">
+      <p class="text-[10px] text-amber-700 font-semibold uppercase tracking-wide">মোট এন্ট্রি</p>
+      <p class="text-lg font-bold" style="color:#9a3412" id="repTotalEntries">২,২৭৫ টি</p>
+    </div>
+    <div class="rounded-lg p-2.5 text-center" style="background:#fff7ed;border:1px solid #fed7aa">
+      <p class="text-[10px] text-amber-700 font-semibold uppercase tracking-wide">মোট রোপণকৃত বৃক্ষ</p>
+      <p class="text-lg font-bold" style="color:#9a3412" id="repTotalTrees">১৫,৪১২ টি</p>
+    </div>
+    <div class="rounded-lg p-2.5 text-center" style="background:#fff7ed;border:1px solid #fed7aa">
+      <p class="text-[10px] text-amber-700 font-semibold uppercase tracking-wide">উপজেলা কভারেজ</p>
+      <p class="text-lg font-bold" style="color:#9a3412" id="repUpazilaCoverage">৯ / ৯</p>
+    </div>
+    <div class="rounded-lg p-2.5 text-center" style="background:#fff7ed;border:1px solid #fed7aa">
+      <p class="text-[10px] text-amber-700 font-semibold uppercase tracking-wide">যাচাই প্রয়োজন এন্ট্রি</p>
+      <p class="text-lg font-bold" style="color:#9a3412" id="repNeedsVerify">৮৪৬ টি (৬৩.৭%)</p>
+    </div>
+  </div>
+  <div class="flex items-center justify-between flex-wrap gap-2 text-[11px]" style="color:#92400e">
+    <p>উৎস: মূল_ডাটা (<span id="repMainDataEntries"></span>) + ১৭_কলাম_প্রতিবেদন (<span id="rep17ColEntries"></span>) — Tree_Plantation_Reporting_Workbook.xlsx থেকে ইউনিকোড-নরমালাইজড ও একত্রীকৃত।</p>
+    <button onclick="toggleOfficialReportDetail()" id="officialReportToggleBtn" class="text-[11px] font-semibold px-2.5 py-1 rounded-md cursor-pointer shrink-0" style="background:#fde68a;color:#78350f">বিস্তারিত দেখুন ▾</button>
+  </div>
+  <div id="officialReportDetail" class="hidden mt-3 pt-3 text-[11px]" style="border-top:1px solid #fde68a;color:#78350f">
+    <p class="font-semibold mb-1.5">উপজেলাভিত্তিক সম্মিলিত অগ্রগতি (গাছের সংখ্যা):</p>
+    <div id="repUpazilaList" class="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1 mb-2.5">
+      <span>ভুরুঙ্গামারী: <b>৪,৪৮৮</b></span>
+      <span>চর রাজিবপুর: <b>২,৬২৮</b></span>
+      <span>ফুলবাড়ী: <b>২,২৯৮</b></span>
+      <span>উলিপুর: <b>২,১২৩</b></span>
+      <span>রৌমারী: <b>৯৮৮</b></span>
+      <span>কুড়িগ্রাম সদর: <b>৬৮২</b></span>
+      <span>নাগেশ্বরী: <b>৫৯৮</b></span>
+      <span>রাজারহাট: <b>৫৫৩</b></span>
+      <span>চিলমারী: <b>১,০২৪</b></span>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3 bg-white rounded-lg p-2.5" style="border:1px solid #fde68a">
+      <div><canvas id="chartOfficialUpazila" height="200"></canvas></div>
+      <div><canvas id="chartOfficialCategory" height="200"></canvas></div>
+    </div>
+    <p class="font-semibold mb-1">ডাটা মান যাচাই (১৭_কলাম_প্রতিবেদন, মোট <span id="rep17ColCount">১,৩২৯</span> এন্ট্রি):</p>
+    <ul id="repDataList" class="list-disc pl-4 space-y-0.5">
+      <li>সিরিয়াল নম্বর অনুপস্থিত: ১৮টি (১.৩৫%)</li>
+      <li>উপজেলা ঘর খালি: ৪টি (০.৩০%)</li>
+      <li>কুড়িগ্রাম জেলার বাইরে: ২টি (০.১৫%)</li>
+      <li>জিও-কোঅর্ডিনেট ত্রুটিপূর্ণ: ১৬২টি (১২.১৯%)</li>
+      <li>রোপণের তারিখ খালি: ৬৬৪টি (৪৯.৯৬%)</li>
+      <li>মনিটরিং অফিসার খালি: ১৭১টি (১২.৮৭%)</li>
+    </ul>
+    <p class="mt-2 text-[10.5px] italic" style="color:#a16207">এই সংখ্যাগুলো সরাসরি Tree_Plantation_Reporting_Workbook-এর মূল_ডাটা ও ১৭_কলাম_প্রতিবেদন শিট থেকে রিয়েল-টাইমে আপডেট হয়; অফলাইন হলে শেষ যাচাইকৃত সাপ্তাহিক স্ন্যাপশট দেখা যায়।</p>
+  </div>
+</div>
+
+<!-- ── Filters (MOVED TO TOP — applies to KPIs, charts, table and Excel exports) ── -->
+<div class="bg-white rounded-xl shadow p-4 mb-6" style="border:1px solid #bbf7d0">
+  <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+    <p class="font-semibold text-gray-700 text-sm">🔍 ফিল্টার করুন <span class="text-xs text-gray-400 font-normal">(KPI, চার্ট, টেবিল ও Excel এক্সপোর্ট — সবখানে প্রযোজ্য)</span></p>
+    <div class="flex gap-2">
+      <button onclick="resetDashFilters()" class="text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer" style="background:#f3f4f6;color:#374151">রিসেট</button>
+      <button onclick="renderDashboard()" class="text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer" style="background:#15803d;color:#fff">প্রয়োগ করুন</button>
+    </div>
+  </div>
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+    <div>
+      <label class="block text-[10px] font-semibold text-gray-500 mb-1">তারিখ থেকে</label>
+      <input type="date" id="dashDateFrom" onchange="renderDashboard()" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+    </div>
+    <div>
+      <label class="block text-[10px] font-semibold text-gray-500 mb-1">তারিখ পর্যন্ত</label>
+      <input type="date" id="dashDateTo" onchange="renderDashboard()" class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+    </div>
+    <div>
+      <label class="block text-[10px] font-semibold text-gray-500 mb-1">চারার উৎস</label>
+      <select id="dashSourceType" onchange="renderDashboard()" class="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db">
+        <option value="">সব উৎস</option>
+        <option value="প্রদর্শনী">প্রদর্শনী</option>
+        <option value="প্রণোদনা">প্রণোদনা</option>
+        <option value="নিজস্ব">নিজস্ব</option>
+        <option value="অন্যান্য">অন্যান্য</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-[10px] font-semibold text-gray-500 mb-1">অঞ্চল</label>
+      <select id="dashRegion" onchange="onDashFilterChange()" class="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব অঞ্চল</option></select>
+    </div>
+    <div>
+      <label class="block text-[10px] font-semibold text-gray-500 mb-1">জেলা</label>
+      <select id="dashDistrict" onchange="onDashDistrictChange()" class="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব জেলা</option></select>
+    </div>
+    <div>
+      <label class="block text-[10px] font-semibold text-gray-500 mb-1">উপজেলা</label>
+      <select id="dashUpazila" onchange="renderDashboard()" class="w-full border rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none" style="border-color:#d1d5db"><option value="">সব উপজেলা</option></select>
+    </div>
+  </div>
+  <p id="dashFilterSummary" class="text-xs text-gray-500 mt-3" style="border-top:1px dashed #e5e7eb;padding-top:8px"></p>
+</div>
+
+<!-- ── KPI Cards ── -->
+<div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4 mb-6">
+  <div class="card-stat bg-white rounded-xl shadow p-4" style="border-left:4px solid #15803d">
+    <p class="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wide font-semibold">মোট এন্ট্রি</p>
+    <p id="statTotal" class="text-xl sm:text-2xl font-bold text-green-800 mt-1">০</p>
+    <p id="statTotalLocal" class="text-[10px] text-gray-400 mt-0.5"></p>
+  </div>
+  <div class="card-stat bg-white rounded-xl shadow p-4" style="border-left:4px solid #2563eb">
+    <p class="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wide font-semibold">রোপণকারী</p>
+    <p id="statNurseries" class="text-xl sm:text-2xl font-bold text-blue-800 mt-1">০</p>
+    <p id="statOfficers" class="text-[10px] text-gray-400 mt-0.5"></p>
+  </div>
+  <div class="card-stat bg-white rounded-xl shadow p-4" style="border-left:4px solid #ea580c">
+    <p class="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wide font-semibold">মোট চারা</p>
+    <p id="statSeedlings" class="text-xl sm:text-2xl font-bold text-orange-700 mt-1">০</p>
+    <p id="statCatBreakdown" class="text-[10px] text-gray-400 mt-0.5"></p>
+  </div>
+  <div class="card-stat bg-white rounded-xl shadow p-4" style="border-left:4px solid #7c3aed">
+    <p class="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wide font-semibold">প্রজাতি সংখ্যা</p>
+    <p id="statSpecies" class="text-xl sm:text-2xl font-bold text-purple-800 mt-1">০</p>
+    <p id="statTopSpecies" class="text-[10px] text-gray-400 mt-0.5 truncate"></p>
+  </div>
+  <div class="card-stat bg-white rounded-xl shadow p-4" style="border-left:4px solid #0891b2">
+    <p class="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wide font-semibold">কভারেজ</p>
+    <p id="statCoverage" class="text-xl sm:text-2xl font-bold text-cyan-800 mt-1">০ / ০</p>
+    <p id="statCoverageDetail" class="text-[10px] text-gray-400 mt-0.5"></p>
+  </div>
+  <div class="card-stat bg-white rounded-xl shadow p-4" style="border-left:4px solid #dc2626">
+    <p class="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wide font-semibold">গড় চারা/এন্ট্রি</p>
+    <p id="statAvg" class="text-xl sm:text-2xl font-bold text-red-700 mt-1">০</p>
+    <p id="statMaxEntry" class="text-[10px] text-gray-400 mt-0.5 truncate"></p>
+  </div>
+</div>
+
+<!-- ── Charts Row 1: Region bar + Category doughnut ── -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+  <div class="bg-white rounded-xl shadow p-4">
+    <p class="font-semibold text-gray-700 mb-3 text-sm">📊 অঞ্চল অনুযায়ী এন্ট্রি ও চারা</p>
+    <canvas id="chartDivision" height="220"></canvas>
+  </div>
+  <div class="bg-white rounded-xl shadow p-4">
+    <p class="font-semibold text-gray-700 mb-3 text-sm">🥧 চারার শ্রেণী অনুযায়ী</p>
+    <canvas id="chartCategory" height="220"></canvas>
+  </div>
+</div>
+
+<!-- ── Charts Row 2: District bar + Top 10 Species ── -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+  <div class="bg-white rounded-xl shadow p-4">
+    <p class="font-semibold text-gray-700 mb-3 text-sm">🏙️ জেলা অনুযায়ী চারা সংখ্যা</p>
+    <canvas id="chartDistrict" height="220"></canvas>
+  </div>
+  <div class="bg-white rounded-xl shadow p-4">
+    <p class="font-semibold text-gray-700 mb-3 text-sm">🌿 শীর্ষ ১০ প্রজাতি</p>
+    <canvas id="chartSpecies" height="220"></canvas>
+  </div>
+</div>
+
+<!-- ── Charts Row 3: Upazila + SAAO ── -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+  <div class="bg-white rounded-xl shadow p-4">
+    <p class="font-semibold text-gray-700 mb-3 text-sm">📍 উপজেলা অনুযায়ী চারা সংখ্যা</p>
+    <canvas id="chartUpazila" height="220"></canvas>
+  </div>
+  <div class="bg-white rounded-xl shadow p-4">
+    <p class="font-semibold text-gray-700 mb-3 text-sm">👤 SAAO অনুযায়ী এন্ট্রি ও চারা</p>
+    <canvas id="chartSaao" height="220"></canvas>
+  </div>
+</div>
+
+<!-- ── Charts Row 4: Officer ── -->
+<div class="grid grid-cols-1 gap-4 mb-6">
+  <div class="bg-white rounded-xl shadow p-4">
+    <p class="font-semibold text-gray-700 mb-3 text-sm">🛡️ মনিটরিং অফিসার অনুযায়ী কর্মক্ষমতা</p>
+    <canvas id="chartOfficer" height="220"></canvas>
+  </div>
+</div>
+
+<!-- ── Charts Row 5: Daily/Weekly/Monthly Trend ── -->
+<div class="bg-white rounded-xl shadow p-4 mb-6">
+  <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+    <p class="font-semibold text-gray-700 text-sm">📈 দিন/সপ্তাহ/মাস অনুযায়ী এন্ট্রি ও চারা প্রবণতা</p>
+    <div class="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5" id="trendPeriodToggle">
+      <button onclick="setTrendPeriod('daily')" id="btnTrendDaily" class="px-3 py-1 text-xs font-semibold rounded-md bg-white text-green-700 shadow-sm transition-all focus:outline-none cursor-pointer">দৈনিক</button>
+      <button onclick="setTrendPeriod('weekly')" id="btnTrendWeekly" class="px-3 py-1 text-xs font-semibold rounded-md text-gray-600 hover:text-green-700 transition-all focus:outline-none cursor-pointer">সাপ্তাহিক</button>
+      <button onclick="setTrendPeriod('monthly')" id="btnTrendMonthly" class="px-3 py-1 text-xs font-semibold rounded-md text-gray-600 hover:text-green-700 transition-all focus:outline-none cursor-pointer">মাসিক</button>
+    </div>
+  </div>
+  <canvas id="chartTrend" height="220"></canvas>
+</div>
+
+<!-- ── Data Table ── -->
+<div class="bg-white rounded-xl shadow p-4 mb-6 overflow-x-auto">
+<div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+<div class="flex items-center gap-2 flex-wrap">
+<p class="font-semibold text-gray-700 text-sm">📋 বিস্তারিত তথ্য</p>
+<div class="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5" id="viewModeToggle">
+<button onclick="setDashboardViewMode('gov')" id="btnViewGov" class="px-3 py-1 text-xs font-semibold rounded-md bg-white text-green-700 shadow-sm transition-all focus:outline-none cursor-pointer">🏛️ সরকারি ছক ভিউ</button>
+<button onclick="setDashboardViewMode('gen')" id="btnViewGen" class="px-3 py-1 text-xs font-semibold rounded-md text-gray-600 hover:text-green-700 transition-all focus:outline-none cursor-pointer">📦 সাধারণ ভিউ</button>
+</div>
+</div>
+<div class="flex gap-2">
+<button onclick="exportToGovExcel('dash')" class="text-white text-xs sm:text-sm px-4 py-2 rounded-lg shadow transition font-semibold hover:opacity-90 cursor-pointer" style="background:#0284c7">📥 সরকারি ছক (Official)</button>
+<button onclick="export17ColGovExcel('dash')" class="text-white text-xs sm:text-sm px-4 py-2 rounded-lg shadow transition font-semibold hover:opacity-90 cursor-pointer" style="background:#7c3aed">📥 ১৭ কলাম ছক</button>
+<button onclick="exportToExcel('dash')" class="text-white text-xs sm:text-sm px-4 py-2 rounded-lg shadow transition font-semibold hover:opacity-90 cursor-pointer" style="background:#15803d">📥 Excel</button>
+<button onclick="exportToCSV('dash')" class="text-white text-xs sm:text-sm px-4 py-2 rounded-lg shadow transition font-semibold hover:opacity-90 cursor-pointer" style="background:#4f46e5">📥 CSV</button>
+</div>
+</div>
+<div class="overflow-x-auto"><table class="w-full text-sm" id="dashTable">
+<thead id="dashTableHead"></thead>
+<tbody id="dashTableBody"></tbody>
+</table></div>
+<p id="dashNoData" class="hidden text-center text-gray-400 py-8">কোনো তথ্য পাওয়া যায়নি।</p>
+</div>
+
+<!-- === KOBO & SERVER SYNC CENTER === -->
+<div class="bg-white rounded-xl shadow p-5 mb-6">
+  <div class="flex items-center gap-3 mb-4">
+    <div class="p-2 bg-green-50 text-green-700 rounded-lg text-xl font-bold">🔄</div>
+    <div>
+      <h3 class="font-bold text-gray-800 text-sm sm:text-base">কোবো ও সার্ভার সিঙ্ক সেন্টার (KoBo & Server Sync)</h3>
+      <p class="text-xs text-gray-500">মোবাইলে অফলাইনে সংগৃহীত বৃক্ষরোপণের তথ্য কোবো টুলবক্স বা যেকোনো API সার্ভারে সিঙ্ক করুন</p>
+    </div>
+  </div>
+  

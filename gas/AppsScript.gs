@@ -19,6 +19,10 @@
  *                                              capture, for unique-visitor
  *                                              counting -- no profile
  *                                              form required)
+ *               -- entryType="validation_task" -> Validation_Task sheet
+ *                                              (upsert by taskId; approve/
+ *                                              reject decisions forwarded
+ *                                              from /api/validation-tasks)
  *               -- otherwise                  -> App_Entry sheet (seedling row)
  *   doGet(e)   -- ?mobile=01XXXXXXXXX       -> User_Profile lookup by mobile
  *               -- ?list=1[&district=..]    -> every App_Entry row, grouped
@@ -43,9 +47,9 @@
  *      once from the Apps Script editor FIRST (see its doc-comment above
  *      the function for the full safe procedure -- it builds a new
  *      App_Entry_Migrated tab and never touches your existing data).
- *   2. Growth_Log, Custom_Upazila, and Visitor_Log sheets are created
- *      automatically on first write (same pattern as User_Profile) -- no
- *      manual sheet setup needed for those.
+ *   2. Growth_Log, Custom_Upazila, Visitor_Log, and Validation_Task
+ *      sheets are created automatically on first write (same pattern as
+ *      User_Profile) -- no manual sheet setup needed for those.
  */
 
 var SHEET_NAME = 'App_Entry';
@@ -53,6 +57,13 @@ var PROFILE_SHEET_NAME = 'User_Profile';
 var GROWTH_SHEET_NAME = 'Growth_Log';
 var CUSTOM_UPAZILA_SHEET_NAME = 'Custom_Upazila';
 var VISITOR_SHEET_NAME = 'Visitor_Log';
+var VALIDATION_TASK_SHEET_NAME = 'Validation_Task';
+
+var VALIDATION_TASK_COLUMNS = [
+  'সময়', 'টাস্ক আইডি', 'জমা আইডি', 'সাইট আইডি', 'সিদ্ধান্ত',
+  'মন্তব্য', 'সিদ্ধান্তের সময়', 'এসএএও আইডি', 'এসএএও নাম',
+  'ব্যবহারকারী আইডি', 'ব্যবহারকারীর নাম'
+];
 
 var VISITOR_COLUMNS = [
   'সময়', 'ইমেইল', 'ধরন', 'ডিভাইস আইডি'
@@ -173,6 +184,17 @@ function getVisitorSheet_() {
   return sheet;
 }
 
+function getValidationTaskSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(VALIDATION_TASK_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(VALIDATION_TASK_SHEET_NAME);
+    sheet.appendRow(VALIDATION_TASK_COLUMNS);
+    sheet.getRange(1, 1, 1, VALIDATION_TASK_COLUMNS.length).setFontWeight('bold');
+  }
+  return sheet;
+}
+
 function jsonOut_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
@@ -238,6 +260,37 @@ function doPost(e) {
         raw.mode || '',
         raw.deviceId || ''
       ]);
+      return jsonOut_({ ok: true });
+    }
+
+    // Validation decision from /api/validation-tasks (tracker dashboard
+    // approve/reject). Upsert by taskId so re-deciding or retrying a
+    // failed sync updates the existing row instead of duplicating it.
+    if (!Array.isArray(raw) && raw.entryType === 'validation_task') {
+      if (!raw.taskId || !raw.submissionId || !raw.decision) {
+        return jsonOut_({ ok: false, error: 'taskId, submissionId, and decision are required' });
+      }
+      var vts = getValidationTaskSheet_();
+      var lockVT = LockService.getScriptLock();
+      lockVT.waitLock(30000);
+      try {
+        deleteValidationTaskRowsByTaskId_(vts, raw.taskId);
+        vts.appendRow([
+          new Date().toISOString(),
+          raw.taskId || '',
+          raw.submissionId || '',
+          raw.siteId || '',
+          raw.decision || '',
+          raw.remarks || '',
+          raw.decidedAt || '',
+          raw.saaoId || '',
+          raw.saaoName || '',
+          raw.userId || '',
+          raw.userName || ''
+        ]);
+      } finally {
+        lockVT.releaseLock();
+      }
       return jsonOut_({ ok: true });
     }
 
@@ -334,6 +387,18 @@ function deleteAppEntryRowsBySubmissionId_(sheet, submissionId) {
   for (var i = ids.length - 1; i >= 0; i--) {
     if (String(ids[i][0]) === String(submissionId)) {
       sheet.deleteRow(i + 2); // +2: 1-indexed sheet rows, offset past the header
+    }
+  }
+}
+
+/** Deletes any existing Validation_Task rows for a given taskId (column B). Bottom-up so row indices don't shift mid-loop. Called under a script lock. */
+function deleteValidationTaskRowsByTaskId_(sheet, taskId) {
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return;
+  var ids = sheet.getRange(2, 2, lastRow - 1, 1).getValues(); // column B, 'টাস্ক আইডি'
+  for (var i = ids.length - 1; i >= 0; i--) {
+    if (String(ids[i][0]) === String(taskId)) {
+      sheet.deleteRow(i + 2);
     }
   }
 }
@@ -470,7 +535,19 @@ function doGet(e) {
     if (params.mobile) return jsonOut_(lookupByMobile_(params.mobile));
     if (params.directory) return jsonOut_(getDirectory_(params.role, params.upazila));
     if (params.customUpazila) return jsonOut_(getCustomUpazilas_(params.district));
-    return jsonOut_({ ok: false, error: 'mobile, list, directory, or customUpazila query param required' });
+    if (params.officialSummary) return jsonOut_(getOfficialReportSummary_(params.upazila));
+    if (params.downloadReport) return getWeeklyReportDownload_(params.downloadReport, params.upazila);
+    if (params.sendWeeklyReport) {
+      // Dashboard's "🚀 রিপোর্ট পাঠান" button passes a comma-separated
+      // email list via ?email=... -- fall back to REPORT_RECIPIENTS when
+      // not provided (e.g. the Wednesday scheduled trigger).
+      var emailParam = params.email || params.emailId || params.to || '';
+      var overrideRecipients = emailParam
+        ? emailParam.split(',').map(function (s) { return s.trim(); }).filter(Boolean)
+        : null;
+      return jsonOut_(sendWeeklyReport(overrideRecipients));
+    }
+    return jsonOut_({ ok: false, error: 'mobile, list, directory, customUpazila, officialSummary, or sendWeeklyReport query param required' });
   } catch (err) {
     return jsonOut_({ ok: false, error: String(err) });
   }
@@ -685,4 +762,752 @@ function lookupByMobile_(mobile) {
   }
   if (!match) return { ok: false, found: false };
   return { ok: true, found: true, user: match };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  OFFICIAL WEEKLY REPORT — DATA LAYER (ministry_report + 17 column report)
+//
+//  Verified against the live "Tree_Plantation_Reporting_Workbook" Google Sheet
+//  via Drive, not guessed from memory. Powers both getOfficialReportSummary_()
+//  (the Dashboard tab's "Latest Official Weekly Report" card, via doGet's
+//  officialSummary param) and sendWeeklyReport() below, so the dashboard card
+//  and the emailed report always show the same numbers from the same source.
+// ═══════════════════════════════════════════════════════════════════════════
+
+var MINISTRY_REPORT_SHEET_NAME = 'ministry_report';
+var SEVENTEEN_COL_REPORT_SHEET_NAME = '17 column report';
+var REPORT_UPAZILAS = ['ভুরুঙ্গামারী','চর রাজিবপুর','ফুলবাড়ী','উলিপুর','চিলমারী','রৌমারী','কুড়িগ্রাম সদর','নাগেশ্বরী','রাজারহাট'];
+// 'মিশ্র প্যাকেজ' (mixed package) and 'একক প্রজাতি' (single species) were
+// in the original taxonomy but verified (grep across the entire live
+// workbook) to appear in zero cells anywhere -- they were likely
+// hand-classified once for the old static report by a human reviewer,
+// not something derivable from the current sheet structure. Dropped
+// rather than left as permanently-empty, confusing legend entries on the
+// category chart. If that distinction matters, it could be approximated
+// by counting commas in the species-name text (multiple species listed
+// = "mixed package"), but that's a design decision worth confirming
+// rather than silently guessing.
+var REPORT_CATEGORIES = ['ফলদ','ঔষধি','বনজ','অন্যান্য'];
+var OFFICIAL_REPORT_CACHE_SECONDS = 300;
+
+function asciiDigits_(s){
+  var bn='০১২৩৪৫৬৭৮৯';
+  s=String(s==null?'':s);
+  var out='';
+  for(var i=0;i<s.length;i++){var idx=bn.indexOf(s[i]);out+=idx>=0?String(idx):s[i];}
+  return out;
+}
+function num_(v){
+  if(v==null||v==='')return 0;
+  if(typeof v==='number')return v;
+  var s=asciiDigits_(String(v)).replace(/[^\d.\-]/g,'');
+  var n=parseFloat(s);return isNaN(n)?0:n;
+}
+function dateStr_(v){
+  if(v instanceof Date)return v.toISOString().slice(0,10);
+  if(v==null)return '';
+  var s=String(v).trim();
+  var m=s.match(/(\d{4})-(\d{2})-(\d{2})/);
+  return m?m[0]:s;
+}
+function geoLatLng_(v){
+  if(!v)return null;
+  var s=asciiDigits_(String(v).trim()).replace(/,/g,' ');
+  var nums=s.match(/-?\d+(?:\.\d+)?/g);
+  if(!nums||nums.length<2)return null;
+  var lat=parseFloat(nums[0]),lng=parseFloat(nums[1]);
+  if(isNaN(lat)||isNaN(lng))return null;
+  return {lat:lat,lng:lng};
+}
+function geoOk_(v){
+  var g=geoLatLng_(v);
+  if(!g)return false;
+  return g.lat>=20.5&&g.lat<=27.0&&g.lng>=88.0&&g.lng<=93.0;
+}
+/**
+ * Scans the first 10 rows for the one containing every string in
+ * mustContainAll, rather than assuming the header sits at a fixed row.
+ * Both government sheets have a few title/instruction rows above their
+ * real header -- ministry_report's real header is row 4 (rows 1-3 are a
+ * merged instructional paragraph), "17 column report"'s is row 3.
+ * Verified directly against the live sheet, not assumed.
+ */
+function findHeaderRowIndex_(values, mustContainAll) {
+  var maxScan = Math.min(values.length, 10);
+  for (var r = 0; r < maxScan; r++) {
+    var rowText = values[r].join('|');
+    var allFound = mustContainAll.every(function (needle) { return rowText.indexOf(needle) !== -1; });
+    if (allFound) return r;
+  }
+  return -1;
+}
+function readSheetByHeaders_(sheetName, headerMarkers){
+  var ss=SpreadsheetApp.getActiveSpreadsheet();
+  var sheet=ss.getSheetByName(sheetName);
+  if(!sheet)return null;
+  var values=sheet.getDataRange().getValues();
+  if(!values||values.length<2)return {header:[],rows:[]};
+  var headerRowIdx = headerMarkers ? findHeaderRowIndex_(values, headerMarkers) : 0;
+  if (headerRowIdx === -1) return {header:[],rows:[]};
+  var header=values[headerRowIdx].map(function(h){return String(h==null?'':h).trim();});
+  var rows=[];
+  var startRow = headerRowIdx + 1;
+  // Both government sheets have a decorative row of plain sequential
+  // numbers (১,২,৩.../1,2,3...) immediately under the real header --
+  // detected and skipped here so it isn't counted as a data row.
+  if (startRow < values.length) {
+    var probe = values[startRow];
+    var looksSequential = probe.length > 1 && Number(probe[0]) === 1 && Number(probe[1]) === 2;
+    if (looksSequential) startRow++;
+  }
+  for(var r=startRow;r<values.length;r++){
+    var v=values[r];
+    if(!v.join(''))continue;
+    var row={};
+    for(var c=0;c<header.length;c++){row[header[c]]=(v[c]==null?'':v[c]);}
+    rows.push(row);
+  }
+  return {header:header,rows:rows};
+}
+function exactCol_(header,name){
+  for(var i=0;i<header.length;i++){if(header[i]===name)return header[i];}
+  return null;
+}
+function colFor_(header,aliases){
+  for(var i=0;i<header.length;i++){for(var a=0;a<aliases.length;a++){if(header[i]===aliases[a])return header[i];}}
+  for(var i=0;i<header.length;i++){for(var a=0;a<aliases.length;a++){if(header[i].indexOf(aliases[a])!==-1)return header[i];}}
+  return null;
+}
+function pctNum_(count,total){if(!total)return 0;return Math.round((count*1000/total))/10;}
+function inUpazilas_(u){return u&&REPORT_UPAZILAS.indexOf(u)!==-1;}
+
+function getOfficialReportSummary_(filterUpazila){
+  filterUpazila=(filterUpazila||'').trim();
+  var isFiltered=filterUpazila&&REPORT_UPAZILAS.indexOf(filterUpazila)!==-1;
+  var COVERAGE=isFiltered?1:REPORT_UPAZILAS.length;
+  var main=readSheetByHeaders_(MINISTRY_REPORT_SHEET_NAME, ['ক্রঃ নং', 'রোপণকৃত বৃক্ষের সংখ্যা']);
+  var col17=readSheetByHeaders_(SEVENTEEN_COL_REPORT_SHEET_NAME, ['ক্র. নং', 'উপজেলা']);
+  var res={
+    ok:true,
+    reportDate:'',
+    appliedUpazilaFilter:isFiltered?filterUpazila:'',
+    summary:{
+      mainDataEntries:0,mainDataTrees:0,
+      seventeenColEntries:0,seventeenColTrees:0,
+      totalEntries:0,totalTrees:0,
+      upazilaCount:0,coverageTotal:COVERAGE,
+      needsVerifyCount:0,needsVerifyPct:0
+    },
+    upazilaTrees:REPORT_UPAZILAS.map(function(u){return {label:u,trees:0};}),
+    categories:REPORT_CATEGORIES.map(function(c){return {label:c,trees:0};}),
+    dataQuality:[
+      {label:'সিরিয়াল নম্বর অনুপস্থিত',count:0,pct:0},
+      {label:'উপজেলা ঘর খালি',count:0,pct:0},
+      {label:'কুড়িগ্রাম জেলার বাইরে',count:0,pct:0},
+      {label:'জিও-কোঅর্ডিনেট ত্রুটিপূর্ণ',count:0,pct:0},
+      {label:'রোপণের তারিখ খালি',count:0,pct:0},
+      {label:'মনিটরিং অফিসার খালি',count:0,pct:0}
+    ],
+    source:{mainDataSheet:MINISTRY_REPORT_SHEET_NAME,seventeenColSheet:SEVENTEEN_COL_REPORT_SHEET_NAME}
+  };
+
+  var upazilaMap={};REPORT_UPAZILAS.forEach(function(u){upazilaMap[u]=0;});
+  var upazilaEntryMap={};REPORT_UPAZILAS.forEach(function(u){upazilaEntryMap[u]=0;});
+  var saaoMap={};
+  var covered={};
+  var catMap={};REPORT_CATEGORIES.forEach(function(c){catMap[c]=0;});
+  var latestDate='';
+  // "(category) × qty" pattern verified against the live "17 column
+  // report" sheet -- ~78% of its 1,599 rows match this cleanly; the rest
+  // (multi-species rows with no per-row category tag, e.g. "আম, কাঠাল,
+  // জাম, নিম, মেহগনি") fall back to 'অন্যান্য' rather than being dropped.
+  var CATEGORY_PATTERN=/\(([^)]+)\)\s*[×xX]/;
+
+  function processSheet(sheetObj,entryField,treeField,isQuality){
+    if(!sheetObj)return;
+    var h=sheetObj.header,rows=sheetObj.rows;
+    var upzKey=exactCol_(h,'উপজেলা');
+    if(isFiltered){rows=rows.filter(function(row){return (row[upzKey]||'')===filterUpazila;});}
+    res.summary[entryField]=rows.length;
+    var countKey=colFor_(h,['রোপণকৃত বৃক্ষের চারার প্রজাতিভিত্তিক সংখ্যা','রোপণকৃত বৃক্ষের সংখ্যা','মোট চারার সংখ্যা','সংখ্যা','মোট গাছের সংখ্যা']);
+    var distKey=exactCol_(h,'জেলা');
+    var dateKey=colFor_(h,['রোপণের তারিখ','তারিখ']);
+    var speciesKey=colFor_(h,['রোপণকৃত বৃক্ষের প্রজাতির নাম','প্রজাতির নাম']);
+    var serialKey=colFor_(h,['ক্রঃ নং','ক্র. নং','ক্র']);
+    var geoKey=colFor_(h,['জিওগ্রাফিক্যাল','কো-অর্ডিনেট','কোঅর্ডিনেট','জিও']);
+    var offKey=colFor_(h,['মনিটরিং অফিসারের নাম','মনিটরিং অফিসার']);
+    var saaoKey=colFor_(h,['সংশ্লিষ্ট এসএএও এর নাম','সংশ্লিষ্ট এসএএও-এর নাম','এসএএও']);
+    var totalTrees=0;
+    rows.forEach(function(row){
+      var count=num_(row[countKey]);
+      totalTrees+=count;
+      var upz=row[upzKey]||'';
+      if(upz){
+        if(inUpazilas_(upz)){upazilaMap[upz]+=count;if(isQuality)upazilaEntryMap[upz]=(upazilaEntryMap[upz]||0)+1;}
+        covered[upz]=1;
+      }
+      // SAAO leaderboard is scoped to "17 column report" only, same reasoning
+      // as category breakdown -- ministry_report has no discrete SAAO column
+      // (name+phone are combined into one free-text field per row).
+      if(isQuality && saaoKey){
+        var saaoName=String(row[saaoKey]||'').trim();
+        if(saaoName){
+          if(!saaoMap[saaoName])saaoMap[saaoName]={entries:0,trees:0,upazila:upz};
+          saaoMap[saaoName].entries++;
+          saaoMap[saaoName].trees+=count;
+        }
+      }
+      // Category breakdown is only meaningful for "17 column report" --
+      // ministry_report's species column lists multiple species per row
+      // with no per-row category tag at all, so attempting to categorize
+      // it would just dump its entire total into 'অন্যান্য' and distort
+      // the chart with a misleading "mostly uncategorized" appearance.
+      if(isQuality && speciesKey){
+        var speciesText=String(row[speciesKey]||'');
+        var m=CATEGORY_PATTERN.exec(speciesText);
+        var cat=m?m[1].trim():'অন্যান্য';
+        if(catMap.hasOwnProperty(cat)){catMap[cat]+=count;}else{catMap['অন্যান্য']+=count;}
+      }
+      var d=dateStr_(row[dateKey]);
+      if(d&&(!latestDate||d>latestDate))latestDate=d;
+      if(isQuality){
+        var sMissing=serialKey&&!row[serialKey];
+        var uEmpty=!upz;
+        var dist_=distKey?row[distKey]:'';
+        var oOutside=distKey&&dist_&&dist_.trim()!=='কুড়িগ্রাম';
+        var geoBad=geoKey&&!geoOk_(row[geoKey]);
+        var dateEmpty=dateKey&&!dateStr_(row[dateKey]);
+        var offEmpty=offKey&&!(row[offKey]||'').trim();
+        if(sMissing)res.dataQuality[0].count++;
+        if(uEmpty)res.dataQuality[1].count++;
+        if(oOutside)res.dataQuality[2].count++;
+        if(geoBad)res.dataQuality[3].count++;
+        if(dateEmpty)res.dataQuality[4].count++;
+        if(offEmpty)res.dataQuality[5].count++;
+        if(sMissing||uEmpty||oOutside||geoBad||dateEmpty||offEmpty)needsVerify++;
+      }
+    });
+    res.summary[treeField]=totalTrees;
+  }
+  var needsVerify=0;
+  processSheet(main,'mainDataEntries','mainDataTrees',false);
+  processSheet(col17,'seventeenColEntries','seventeenColTrees',true);
+
+  res.summary.totalEntries=res.summary.mainDataEntries+res.summary.seventeenColEntries;
+  res.summary.totalTrees=res.summary.mainDataTrees+res.summary.seventeenColTrees;
+  res.summary.upazilaCount=REPORT_UPAZILAS.filter(function(u){return covered[u];}).length;
+  res.summary.upazilaCoverage=res.summary.upazilaCount+' / '+COVERAGE;
+  res.summary.needsVerifyCount=needsVerify;
+  res.summary.needsVerifyPct=pctNum_(needsVerify,res.summary.seventeenColEntries);
+
+  REPORT_UPAZILAS.forEach(function(u,i){
+    res.upazilaTrees[i].trees=Math.round(upazilaMap[u]||0);
+    res.upazilaTrees[i].entries=upazilaEntryMap[u]||0;
+  });
+  res.saaoList=Object.keys(saaoMap).map(function(n){
+    return {name:n,entries:saaoMap[n].entries,trees:Math.round(saaoMap[n].trees),upazila:saaoMap[n].upazila};
+  }).sort(function(a,b){return b.trees-a.trees;}).slice(0,5);
+  REPORT_CATEGORIES.forEach(function(c,i){res.categories[i].trees=Math.round(catMap[c]||0);});
+  res.dataQuality.forEach(function(d,i){d.pct=pctNum_(d.count,res.summary.seventeenColEntries);});
+  res.reportDate=latestDate||'';
+  return res;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  WEEKLY REPORT — EMAIL DELIVERY SYSTEM
+//
+//  How to deploy:
+//   1. Save & deploy this script (Extensions → Apps Script → Deploy).
+//   2. IMPORTANT: Go to Project Settings → Time zone → set to "Asia/Dhaka".
+//   3. Run setupWeeklyTrigger()  — installs a recurring Wednesday 08:00 trigger.
+//   4. Run setupOnceOffTrigger() — queues the first send for Thu 21 Aug 08:00 BDT.
+//   5. Run sendWeeklyReport()    — manual test / send-now at any time.
+//
+//  Report window: rolling 7 days ending at the moment the function runs.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── Configuration ─────────────────────────────────────────────────────────
+var REPORT_RECIPIENTS  = ['moniruzjamanlearner@gmail.com'];
+var REPORT_SENDER_NAME = 'DAE কুড়িগ্রাম — বৃক্ষরোপণ ট্র্যাকার';
+var REPORT_DISTRICT    = 'কুড়িগ্রাম';
+var REPORT_DEPT        = 'কৃষি সম্প্রসারণ অধিদপ্তর';
+
+// ── Entry point ───────────────────────────────────────────────────────────
+/**
+ * Generates a dynamic weekly plantation progress report and emails it to
+ * REPORT_RECIPIENTS. Safe to run manually; also called by the weekly trigger.
+ */
+var WEEKLY_SNAPSHOT_KEY = 'WEEKLY_REPORT_LAST_SNAPSHOT';
+
+function getLastWeeklySnapshot_() {
+  var raw = PropertiesService.getScriptProperties().getProperty(WEEKLY_SNAPSHOT_KEY);
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch (e) { return null; }
+}
+function saveWeeklySnapshot_(snapshot) {
+  PropertiesService.getScriptProperties().setProperty(WEEKLY_SNAPSHOT_KEY, JSON.stringify(snapshot));
+}
+
+/**
+ * Adapts getOfficialReportSummary_()'s output into the
+ * {thisWeek, cumul, upazilaList, catList, saaoList, entriesDelta,
+ * treesDelta} shape buildWeeklyReportHtml_() below expects.
+ *
+ * "Official" checkpoint data doesn't support reliable per-row week
+ * filtering the way live app submissions do -- ministry_report has no
+ * date column at all, and 17 column report's date field is empty on
+ * roughly half its rows (verified against the live sheet). So instead of
+ * filtering individual rows by date, "this week" here means "current
+ * official checkpoint totals," and the week-over-week delta compares
+ * against the totals saved the last time this report actually ran (via
+ * PropertiesService) -- which is a more honest measure of real progress
+ * for a bulk-updated government sheet than trusting a mostly-missing
+ * per-row date field would be.
+ */
+function officialSummaryToWeeklyStats_(summary) {
+  var s = summary.summary;
+  var prev = getLastWeeklySnapshot_();
+
+  var upazilaList = summary.upazilaTrees
+    .filter(function (u) { return u.trees > 0 || u.entries > 0; })
+    .map(function (u) { return { name: u.label, entries: u.entries || 0, trees: u.trees }; })
+    .sort(function (a, b) { return b.trees - a.trees; });
+
+  var catList = summary.categories
+    .filter(function (c) { return c.trees > 0; })
+    .map(function (c) { return { name: c.label, qty: c.trees }; })
+    .sort(function (a, b) { return b.qty - a.qty; });
+
+  return {
+    thisWeek: { entries: s.totalEntries, trees: s.totalTrees },
+    cumul: { entries: s.totalEntries, trees: s.totalTrees, upazilaCount: s.upazilaCount },
+    upazilaCoverage: s.upazilaCoverage,
+    needsVerifyPct: s.needsVerifyPct,
+    upazilaList: upazilaList,
+    catList: catList,
+    saaoList: summary.saaoList || [],
+    entriesDelta: prev ? (s.totalEntries - prev.totalEntries) : 0,
+    treesDelta: prev ? (s.totalTrees - prev.totalTrees) : 0
+  };
+}
+
+/**
+ * Exports ONLY the ministry_report and 17 column report sheets as an
+ * .xlsx Blob for email attachment -- not the full workbook. The other
+ * sheets (App_Entry, User_Profile, Growth_Log, Custom_Upazila,
+ * Visitor_Log) hold field officers' raw contact info and submission
+ * data, which has no business leaving the org over an emailed report.
+ *
+ * The Sheets export URL has no "export just these N sheets" parameter
+ * (its gid param only takes one sheet, and this needs exactly two), so
+ * this makes a short-lived Drive copy of the spreadsheet, deletes every
+ * sheet except the two report sheets from the copy, exports that, and
+ * always trashes the copy afterward -- even if the export itself fails.
+ */
+function exportSpreadsheetAsXlsxBlob_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var keepNames = [MINISTRY_REPORT_SHEET_NAME, SEVENTEEN_COL_REPORT_SHEET_NAME];
+  var tempFile = DriveApp.getFileById(ss.getId()).makeCopy(
+    'weekly-report-export-tmp-' + new Date().getTime());
+  var tempId = tempFile.getId();
+  try {
+    var tempSs = SpreadsheetApp.openById(tempId);
+    tempSs.getSheets().forEach(function (sheet) {
+      if (keepNames.indexOf(sheet.getName()) === -1) {
+        try { tempSs.deleteSheet(sheet); } catch (e) {
+          Logger.log('could not drop sheet "' + sheet.getName() + '" from report export: ' + e);
+        }
+      }
+    });
+    var url = 'https://docs.google.com/spreadsheets/d/' + tempId + '/export?format=xlsx';
+    var response = UrlFetchApp.fetch(url, {
+      headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() }
+    });
+    var fileName = 'সাপ্তাহিক_বৃক্ষরোপণ_প্রতিবেদন_' +
+      Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd') + '.xlsx';
+    return response.getBlob().setName(fileName);
+  } finally {
+    try { DriveApp.getFileById(tempId).setTrashed(true); } catch (e) {
+      Logger.log('could not trash temp report-export copy ' + tempId + ': ' + e);
+    }
+  }
+}
+
+/**
+ * Generates the official weekly report from ministry_report + 17 column
+ * report (via getOfficialReportSummary_(), the same data source powering
+ * the Dashboard tab's report card -- the two are always consistent) and
+ * emails it. optionalRecipients lets doGet's sendWeeklyReport route pass
+ * through a dynamic email address from the dashboard's "🚀 রিপোর্ট পাঠান"
+ * button; falls back to REPORT_RECIPIENTS when not provided.
+ */
+function sendWeeklyReport(optionalRecipients) {
+  var now = new Date();
+  var summary = getOfficialReportSummary_();
+  var stats = officialSummaryToWeeklyStats_(summary);
+  var html = buildWeeklyReportHtml_(stats, now, now);
+
+  var dateTag = Utilities.formatDate(now, 'Asia/Dhaka', 'dd MMM yyyy');
+  var subject = '\uD83C\uDF33 সাপ্তাহিক বৃক্ষরোপণ অগ্রগতি — ' + REPORT_DISTRICT + ' জেলা (' + dateTag + ')';
+  var recipients = (optionalRecipients && optionalRecipients.length) ? optionalRecipients : REPORT_RECIPIENTS;
+
+  var xlsxBlob = null;
+  try {
+    xlsxBlob = exportSpreadsheetAsXlsxBlob_();
+  } catch (e) {
+    // Export can fail on permission/quota edge cases -- the report itself
+    // (HTML body) is still valuable without the attachment, so send it
+    // regardless rather than blocking the whole report on this.
+    Logger.log('xlsx export failed, sending without attachment: ' + e);
+  }
+
+  MailApp.sendEmail({
+    to:          recipients.join(','),
+    name:        REPORT_SENDER_NAME,
+    subject:     subject,
+    htmlBody:    html,
+    attachments: xlsxBlob ? [xlsxBlob] : []
+  });
+
+  saveWeeklySnapshot_({
+    date: now.toISOString(),
+    totalEntries: summary.summary.totalEntries,
+    totalTrees: summary.summary.totalTrees
+  });
+
+  Logger.log('Weekly report sent to: ' + recipients.join(', '));
+  return { ok: true, sentTo: recipients };
+}
+
+/**
+ * GET ?downloadReport=xlsx|html[&upazila=...]
+ *
+ * Powers the Dashboard's report-card download buttons directly -- no
+ * static file in the repo, no manual "save the emailed attachment and
+ * commit it" step. Every click regenerates from the live sheet data via
+ * the exact same functions the weekly email uses (getOfficialReportSummary_,
+ * exportSpreadsheetAsXlsxBlob_, buildWeeklyReportHtml_), so the download
+ * can never go stale the way a committed file could.
+ *
+ * doGet() can only return text (ContentService), not a raw binary
+ * response with a Content-Disposition header -- that part needs a real
+ * server, which is exactly what api/report-download.js (Vercel) is for:
+ * this returns base64 + a suggested filename as JSON, and that proxy
+ * decodes it into an actual downloadable file response.
+ */
+function getWeeklyReportDownload_(format, filterUpazila) {
+  var now = new Date();
+  var dateSlug = Utilities.formatDate(now, 'Asia/Dhaka', 'yyyy-MM-dd');
+
+  if (format === 'xlsx') {
+    var xlsxBlob;
+    try {
+      xlsxBlob = exportSpreadsheetAsXlsxBlob_();
+    } catch (e) {
+      return jsonOut_({ ok: false, error: 'xlsx export failed: ' + e });
+    }
+    return jsonOut_({
+      ok: true,
+      format: 'xlsx',
+      fileName: 'সাপ্তাহিক_বৃক্ষরোপণ_প্রতিবেদন_' + dateSlug + '.xlsx',
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      base64: Utilities.base64Encode(xlsxBlob.getBytes())
+    });
+  }
+
+  if (format === 'html') {
+    var summary = getOfficialReportSummary_(filterUpazila);
+    var stats = officialSummaryToWeeklyStats_(summary);
+    var html = buildWeeklyReportHtml_(stats, now, now);
+    return jsonOut_({
+      ok: true,
+      format: 'html',
+      fileName: 'weekly-report-' + dateSlug + '.html',
+      html: html
+    });
+  }
+
+  return jsonOut_({ ok: false, error: 'downloadReport must be "xlsx" or "html"' });
+}
+
+
+// ── Bengali numeral helpers ───────────────────────────────────────────────
+function toBengaliNumber_(n) {
+  var map = ['\u09E6','\u09E7','\u09E8','\u09E9','\u09EA','\u09EB','\u09EC','\u09ED','\u09EE','\u09EF'];
+  var abs = Math.abs(Math.round(n));
+  var s   = abs.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  var bn  = s.split('').map(function(c) { return /\d/.test(c) ? map[parseInt(c, 10)] : c; }).join('');
+  return (n < 0 ? '\u2212' : '') + bn;
+}
+
+function fmtDelta_(n) {
+  if (n === 0) return '\u00b1\u09E6';
+  return (n > 0 ? '\u25B2' : '\u25BC') + toBengaliNumber_(Math.abs(n));
+}
+
+function deltaColor_(n) { return n >= 0 ? '#2E7D32' : '#C62828'; }
+
+// ── HTML email builder ────────────────────────────────────────────────────
+function buildWeeklyReportHtml_(stats, weekStart, weekEnd) {
+  var tw       = stats.thisWeek;
+  var cumul    = stats.cumul;
+  var upazilas = stats.upazilaList;
+  var cats     = stats.catList;
+  var saaoList = stats.saaoList;
+
+  function fmtDate(d) { return Utilities.formatDate(d, 'Asia/Dhaka', 'dd MMM yyyy'); }
+  var reportDate  = fmtDate(new Date());
+  var maxTrees    = upazilas.length ? upazilas[0].trees : 1;
+  var maxCat      = cats.length ? cats[0].qty : 1;
+
+  // Upazila rows
+  var uzRows = '';
+  upazilas.forEach(function(uz, i) {
+    var barPct   = Math.max(4, Math.round((uz.trees / maxTrees) * 100));
+    var barColor = barPct >= 60 ? '#2E7D32' : (barPct >= 30 ? '#66BB6A' : '#A5D6A7');
+    var bg       = i % 2 === 0 ? '#FFFFFF' : '#F1F8F1';
+    var pct      = tw.trees > 0 ? Math.round(uz.trees / tw.trees * 100) : 0;
+    uzRows +=
+      '<tr style="background-color:' + bg + ';">' +
+        '<td style="padding:6px 10px;font-size:12px;color:#212121;white-space:nowrap;">' + uz.name + '</td>' +
+        '<td style="padding:6px 10px;">' +
+          '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>' +
+            '<td><div style="background-color:' + barColor + ';height:10px;width:' + barPct + '%;min-width:4px;border-radius:3px;"></div></td>' +
+            '<td width="44" style="font-size:11px;color:#424242;padding-left:6px;white-space:nowrap;" align="right">' + toBengaliNumber_(uz.trees) + '</td>' +
+            '<td width="34" style="font-size:10px;color:#9E9E9E;white-space:nowrap;" align="right">' + toBengaliNumber_(pct) + '%</td>' +
+          '</tr></table>' +
+        '</td>' +
+        '<td style="padding:6px 10px;font-size:11px;color:#757575;" align="center">' + toBengaliNumber_(uz.entries) + '</td>' +
+      '</tr>';
+  });
+  if (!uzRows) uzRows = '<tr><td colspan="3" style="padding:12px;font-size:12px;color:#9E9E9E;text-align:center;">এই সপ্তাহে কোনো এন্ট্রি নেই</td></tr>';
+
+  // Category rows
+  var catRows = '';
+  cats.forEach(function(c, i) {
+    var barPct = Math.max(4, Math.round((c.qty / maxCat) * 100));
+    var bg     = i % 2 === 0 ? '#FFFFFF' : '#FFF3E0';
+    var pct    = tw.trees > 0 ? Math.round(c.qty / tw.trees * 100) : 0;
+    catRows +=
+      '<tr style="background-color:' + bg + ';">' +
+        '<td style="padding:5px 10px;font-size:12px;color:#212121;">' + c.name + '</td>' +
+        '<td style="padding:5px 10px;">' +
+          '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>' +
+            '<td><div style="background-color:#F9A825;height:9px;width:' + barPct + '%;min-width:4px;border-radius:3px;"></div></td>' +
+            '<td width="44" style="font-size:11px;color:#424242;padding-left:6px;white-space:nowrap;" align="right">' + toBengaliNumber_(c.qty) + '</td>' +
+            '<td width="34" style="font-size:10px;color:#9E9E9E;white-space:nowrap;" align="right">' + toBengaliNumber_(pct) + '%</td>' +
+          '</tr></table>' +
+        '</td>' +
+      '</tr>';
+  });
+  if (!catRows) catRows = '<tr><td colspan="2" style="padding:10px;font-size:12px;color:#9E9E9E;text-align:center;">\u09A4\u09A5\u09CD\u09AF \u09A8\u09C7\u0987</td></tr>';
+
+  // SAAO rows
+  var medals = ['\uD83E\uDD47','\uD83E\uDD48','\uD83E\uDD49','\u2464','\u2465'];
+  var saaoRows = '';
+  saaoList.forEach(function(s, i) {
+    var bg = i % 2 === 0 ? '#FFFFFF' : '#EFF3FF';
+    saaoRows +=
+      '<tr style="background-color:' + bg + ';">' +
+        '<td style="padding:5px 10px;font-size:12px;color:#212121;">' + medals[i] + ' ' + s.name + '</td>' +
+        '<td style="padding:5px 10px;font-size:11px;color:#616161;" align="center">' + (s.upazila || '\u2014') + '</td>' +
+        '<td style="padding:5px 10px;font-size:12px;font-weight:700;color:#2E7D32;" align="center">' + toBengaliNumber_(s.trees) + '</td>' +
+        '<td style="padding:5px 10px;font-size:11px;color:#757575;" align="center">' + toBengaliNumber_(s.entries) + '</td>' +
+      '</tr>';
+  });
+  if (!saaoRows) saaoRows = '<tr><td colspan="4" style="padding:10px;font-size:12px;color:#9E9E9E;text-align:center;">\u09A4\u09A5\u09CD\u09AF \u09A8\u09C7\u0987</td></tr>';
+
+  // Delta chip
+  function deltaChip(n, label) {
+    return '<span style="font-size:10px;font-weight:600;color:' + deltaColor_(n) + ';">' +
+      fmtDelta_(n) + ' ' + label + '</span>';
+  }
+
+  // ── Full HTML ──────────────────────────────────────────────────────────
+  return '<!DOCTYPE html>' +
+'<html lang="bn"><head><meta charset="UTF-8">' +
+'<meta name="viewport" content="width=device-width,initial-scale=1">' +
+'<title>\u09B8\u09BE\u09AA\u09CD\u09A4\u09BE\u09B9\u09BF\u0995 \u09AC\u09C3\u0995\u09CD\u09B7\u09B0\u09CB\u09AA\u09A3 \u09AA\u09CD\u09B0\u09A4\u09BF\u09AC\u09C7\u09A6\u09A8</title>' +
+'</head>' +
+'<body style="margin:0;padding:0;background-color:#EEF2ED;font-family:\'Noto Sans Bengali\',\'Segoe UI\',Arial,sans-serif;">' +
+
+// Preheader hidden text
+'<div style="display:none;max-height:0;overflow:hidden;opacity:0;">' +
+REPORT_DISTRICT + ' — \u098F\u0987 \u09B8\u09AA\u09CD\u09A4\u09BE\u09B9\u09C7 ' + toBengaliNumber_(tw.entries) + '\u099F\u09BF \u098F\u09A8\u09CD\u099F\u09CD\u09B0\u09BF\u09A4\u09C7 ' + toBengaliNumber_(tw.trees) + '\u099F\u09BF \u09AC\u09C3\u0995\u09CD\u09B7 \u09B0\u09CB\u09AA\u09A3 \u09B8\u09AE\u09CD\u09AA\u09A8\u09CD\u09A8\u0964' +
+'</div>' +
+
+// Wrapper
+'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#EEF2ED;padding:18px 0;">' +
+'<tr><td align="center">' +
+'<table role="presentation" width="620" cellpadding="0" cellspacing="0" style="background-color:#FFFFFF;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.10);">' +
+
+// HEADER
+'<tr><td style="background:linear-gradient(135deg,#1B5E20 0%,#33691E 100%);padding:22px 26px 18px;">' +
+  '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>' +
+    '<td>' +
+      '<div style="font-size:10px;letter-spacing:1.2px;color:#A5D6A7;text-transform:uppercase;padding-bottom:3px;">' +
+        REPORT_DEPT + '&nbsp;\u2022&nbsp;' + REPORT_DISTRICT + ' \u099C\u09C7\u09B2\u09BE' +
+      '</div>' +
+      '<div style="font-size:19px;font-weight:700;color:#FFFFFF;line-height:26px;">' +
+        '\u09B8\u09BE\u09AA\u09CD\u09A4\u09BE\u09B9\u09BF\u0995 \u09AC\u09C3\u0995\u09CD\u09B7\u09B0\u09CB\u09AA\u09A3 \u0995\u09B0\u09CD\u09AE\u09B8\u09C2\u099A\u09BF\u09B0 \u0985\u0997\u09CD\u09B0\u0997\u09A4\u09BF \u09AA\u09CD\u09B0\u09A4\u09BF\u09AC\u09C7\u09A6\u09A8' +
+      '</div>' +
+      '<div style="font-size:11px;color:#C8E6C9;padding-top:5px;">' +
+        '\u09AA\u09CD\u09B0\u09A4\u09BF\u09AC\u09C7\u09A6\u09A8\u09C7\u09B0 \u09A4\u09BE\u09B0\u09BF\u0996: <strong style="color:#E8F5E9;">' + reportDate + '</strong>' +
+      '</div>' +
+    '</td>' +
+    '<td width="52" align="right" style="font-size:34px;opacity:0.45;">\uD83C\uDF33</td>' +
+  '</tr></table>' +
+'</td></tr>' +
+
+// KPI CARDS
+'<tr><td style="padding:14px 22px 6px;">' +
+  '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>' +
+    // Card 1 — total official entries
+    '<td width="31%" align="center" style="background-color:#F1F8F1;border:1px solid #C8E6C9;border-radius:8px;padding:12px 6px;">' +
+      '<div style="font-size:9px;color:#388E3C;font-weight:700;letter-spacing:.6px;text-transform:uppercase;">সর্বমোট এন্ট্রি (সরকারি প্রতিবেদন)</div>' +
+      '<div style="font-size:26px;color:#1B5E20;font-weight:700;padding:3px 0 2px;">' + toBengaliNumber_(tw.entries) + '</div>' +
+      '<div>' + deltaChip(stats.entriesDelta, 'গত পাঠানো থেকে') + '</div>' +
+    '</td>' +
+    '<td width="3%"></td>' +
+    // Card 2 — total official trees
+    '<td width="31%" align="center" style="background-color:#2E7D32;border-radius:8px;padding:12px 6px;">' +
+      '<div style="font-size:9px;color:#A5D6A7;font-weight:700;letter-spacing:.6px;text-transform:uppercase;">সর্বমোট বৃক্ষ (সরকারি প্রতিবেদন)</div>' +
+      '<div style="font-size:26px;color:#FFFFFF;font-weight:700;padding:3px 0 2px;">' + toBengaliNumber_(tw.trees) + '</div>' +
+      '<div style="font-size:10px;color:#C8E6C9;">' + fmtDelta_(stats.treesDelta) + ' গত পাঠানো থেকে</div>' +
+    '</td>' +
+    '<td width="3%"></td>' +
+    // Card 3 — upazila coverage + data-quality flag rate
+    '<td width="31%" align="center" style="background-color:#1565C0;border-radius:8px;padding:12px 6px;">' +
+      '<div style="font-size:9px;color:#BBDEFB;font-weight:700;letter-spacing:.6px;text-transform:uppercase;">উপজেলা কভারেজ</div>' +
+      '<div style="font-size:26px;color:#FFFFFF;font-weight:700;padding:3px 0 2px;">' + (stats.upazilaCoverage || '—') + '</div>' +
+      '<div style="font-size:10px;color:#90CAF9;">যাচাই প্রয়োজন: ' + toBengaliNumber_(stats.needsVerifyPct || 0) + '%</div>' +
+    '</td>' +
+  '</tr></table>' +
+'</td></tr>' +
+
+// SECTION A — Upazila
+'<tr><td style="padding:14px 22px 0;">' +
+  '<div style="background-color:#2E7D32;color:#FFFFFF;font-size:12px;font-weight:700;padding:7px 12px;border-radius:6px 6px 0 0;">' +
+    '\u0995. \u0989\u09AA\u099C\u09C7\u09B2\u09BE\u09AD\u09BF\u09A4\u09CD\u09A4\u09BF\u0995 \u0985\u0997\u09CD\u09B0\u0997\u09A4\u09BF (\u09B8\u09B0\u0995\u09BE\u09B0\u09BF \u09AA\u09CD\u09B0\u09A4\u09BF\u09AC\u09C7\u09A6\u09A8)' +
+  '</div>' +
+  '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #C8E6C9;border-top:none;">' +
+    '<tr style="background-color:#1B5E20;">' +
+      '<td style="color:#fff;padding:6px 10px;font-size:11px;font-weight:600;width:26%;">\u0989\u09AA\u099C\u09C7\u09B2\u09BE</td>' +
+      '<td style="color:#fff;padding:6px 10px;font-size:11px;font-weight:600;">\u09AC\u09C3\u0995\u09CD\u09B7 (\u09AC\u09BE\u09B0 \u099A\u09BE\u09B0\u09CD\u099F)</td>' +
+      '<td style="color:#fff;padding:6px 10px;font-size:11px;font-weight:600;width:12%;" align="center">\u098F\u09A8\u09CD\u099F\u09CD\u09B0\u09BF</td>' +
+    '</tr>' +
+    uzRows +
+  '</table>' +
+'</td></tr>' +
+
+// SECTION B — Categories
+'<tr><td style="padding:12px 22px 0;">' +
+  '<div style="background-color:#E65100;color:#FFFFFF;font-size:12px;font-weight:700;padding:7px 12px;border-radius:6px 6px 0 0;">' +
+    '\u0996. \u09AA\u09CD\u09B0\u099C\u09BE\u09A4\u09BF \u0995\u09CD\u09AF\u09BE\u099F\u09BE\u0997\u09B0\u09BF (\u09B8\u09B0\u0995\u09BE\u09B0\u09BF \u09AA\u09CD\u09B0\u09A4\u09BF\u09AC\u09C7\u09A6\u09A8)' +
+  '</div>' +
+  '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #FFE0B2;border-top:none;">' +
+    '<tr style="background-color:#BF360C;">' +
+      '<td style="color:#fff;padding:6px 10px;font-size:11px;font-weight:600;width:34%;">\u0995\u09CD\u09AF\u09BE\u099F\u09BE\u0997\u09B0\u09BF</td>' +
+      '<td style="color:#fff;padding:6px 10px;font-size:11px;font-weight:600;">\u099A\u09BE\u09B0\u09BE\u09B0 \u09B8\u0982\u0996\u09CD\u09AF\u09BE</td>' +
+    '</tr>' +
+    catRows +
+  '</table>' +
+'</td></tr>' +
+
+// SECTION C — SAAO Leaderboard
+'<tr><td style="padding:12px 22px 0;">' +
+  '<div style="background-color:#1565C0;color:#FFFFFF;font-size:12px;font-weight:700;padding:7px 12px;border-radius:6px 6px 0 0;">' +
+    '\u0997. \u09B6\u09C0\u09B0\u09CD\u09B7 \u09B8\u0995\u09CD\u09B0\u09BF\u09AF\u09BC \u098F\u09B8\u098F\u098F\u0993 (\u09B8\u09B0\u0995\u09BE\u09B0\u09BF \u09AA\u09CD\u09B0\u09A4\u09BF\u09AC\u09C7\u09A6\u09A8)' +
+  '</div>' +
+  '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #BBDEFB;border-top:none;">' +
+    '<tr style="background-color:#0D47A1;">' +
+      '<td style="color:#fff;padding:6px 10px;font-size:11px;font-weight:600;">\u09A8\u09BE\u09AE</td>' +
+      '<td style="color:#fff;padding:6px 10px;font-size:11px;font-weight:600;" align="center">\u0989\u09AA\u099C\u09C7\u09B2\u09BE</td>' +
+      '<td style="color:#fff;padding:6px 10px;font-size:11px;font-weight:600;" align="center">\u09AC\u09C3\u0995\u09CD\u09B7</td>' +
+      '<td style="color:#fff;padding:6px 10px;font-size:11px;font-weight:600;" align="center">\u098F\u09A8\u09CD\u099F\u09CD\u09B0\u09BF</td>' +
+    '</tr>' +
+    saaoRows +
+  '</table>' +
+'</td></tr>' +
+
+// ATTACHMENT NOTE
+'<tr><td style="padding:12px 22px 0;">' +
+  '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#FFF8E1;border:1px solid #FFE082;border-radius:6px;">' +
+    '<tr><td style="padding:10px 14px;font-size:11px;color:#5D4037;line-height:17px;">' +
+      '\uD83D\uDCCE <strong>\u09B8\u0982\u09AF\u09C1\u0995\u09CD\u09A4\u09BF:</strong> ministry_report \u098F\u09AC\u0982 17 column report \u09B6\u09C0\u099F \u09A6\u09C1\u099F\u09BF \u098F\u0987 \u0987\u09AE\u09C7\u0987\u09B2\u09C7\u09B0 \u09B8\u09BE\u09A5\u09C7 Excel \u09AB\u09BE\u0987\u09B2 \u09B9\u09BF\u09B8\u09C7\u09AC\u09C7 \u09B8\u0982\u09AF\u09C1\u0995\u09CD\u09A4 \u0995\u09B0\u09BE \u09B9\u09AF\u09BC\u09C7\u099B\u09C7\u0964' +
+    '</td></tr>' +
+  '</table>' +
+'</td></tr>' +
+
+// CLOSING
+'<tr><td style="padding:14px 22px 20px;font-size:13px;line-height:20px;color:#212121;">' +
+  '\u09AA\u09CD\u09B0\u09A4\u09BF\u09AC\u09C7\u09A6\u09A8\u099F\u09BF \u0986\u09AA\u09A8\u09BE\u09B0 \u09B8\u09A6\u09AF\u09BC \u0985\u09AC\u0997\u09A4\u09BF \u0993 \u09AA\u09B0\u09AC\u09B0\u09CD\u09A4\u09C0 \u09AC\u09CD\u09AF\u09AC\u09B8\u09CD\u09A5\u09BE \u0997\u09CD\u09B0\u09B9\u09A3\u09C7\u09B0 \u099C\u09A8\u09CD\u09AF \u09AA\u09C7\u09B6 \u0995\u09B0\u09BE \u09B9\u09B2\u09CB\u0964<br><br>' +
+  '\u09A7\u09A8\u09CD\u09AF\u09AC\u09BE\u09A6\u09BE\u09A8\u09CD\u09A4\u09C7,<br>' +
+  '<strong>\u0989\u09AA\u09AA\u09B0\u09BF\u099A\u09BE\u09B2\u0995\u09C7\u09B0 \u0995\u09BE\u09B0\u09CD\u09AF\u09BE\u09B2\u09AF\u09BC</strong><br>' +
+  REPORT_DEPT + ', ' + REPORT_DISTRICT +
+'</td></tr>' +
+
+// FOOTER
+'<tr><td style="background-color:#F5F5F5;padding:10px 22px;border-top:1px solid #E0E0E0;">' +
+  '<div style="font-size:10px;color:#BDBDBD;line-height:15px;">' +
+    '\u09B8\u09CD\u09AC\u09AF\u09BC\u0982\u0995\u09CD\u09B0\u09BF\u09AF\u09BC \u09AA\u09CD\u09B0\u09A4\u09BF\u09AC\u09C7\u09A6\u09A8 \u2022 \u09A4\u09A5\u09CD\u09AF\u09B8\u09C2\u09A4\u09CD\u09B0: DAE ' + REPORT_DISTRICT + ' ministry_report + 17 column report (\u09B8\u09B0\u0995\u09BE\u09B0\u09BF \u09AA\u09CD\u09B0\u09A4\u09BF\u09AC\u09C7\u09A6\u09A8 \u09B6\u09BF\u099F) \u2022 \u09AA\u09CD\u09B0\u09A4\u09BF \u09AC\u09C1\u09A7\u09AC\u09BE\u09B0 \u09B8\u0995\u09BE\u09B2 \u09EE:\u09E6\u09E6\u09A4\u09C7 \u09AA\u09CD\u09B0\u09C7\u09B0\u09BF\u09A4' +
+  '</div>' +
+'</td></tr>' +
+
+'</table>' +
+'</td></tr>' +
+'</table>' +
+'</body></html>';
+}
+
+// ── Trigger setup ─────────────────────────────────────────────────────────
+
+/**
+ * Creates a recurring WEEKLY trigger: every Wednesday at ~08:00 BDT.
+ * Run ONCE from the Apps Script editor.
+ * Pre-req: Project Settings → Time zone must be set to "Asia/Dhaka".
+ */
+function setupWeeklyTrigger() {
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'sendWeeklyReport') {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+  ScriptApp.newTrigger('sendWeeklyReport')
+    .timeBased()
+    .onWeekDay(ScriptApp.WeekDay.WEDNESDAY)
+    .atHour(8)
+    .nearMinute(0)
+    .create();
+  Logger.log('Weekly trigger set: every Wednesday ~08:00 BDT.');
+}
+
+/**
+ * Queues a ONE-TIME send for Thu 21 Aug 2026 at 08:00 BDT (02:00 UTC).
+ * Run ONCE from the Apps Script editor.
+ * After firing the trigger self-destructs via sendWeeklyReportAndCleanup_.
+ */
+function setupOnceOffTrigger() {
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'sendWeeklyReportAndCleanup_') {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+  // Thu 21 Aug 2026 08:00 BDT = 02:00 UTC
+  ScriptApp.newTrigger('sendWeeklyReportAndCleanup_')
+    .timeBased()
+    .at(new Date('2026-08-21T02:00:00Z'))
+    .create();
+  Logger.log('One-off trigger set: Thu 21 Aug 2026 08:00 BDT.');
+}
+
+/** Fires once (Thu 21 Aug), sends report, then self-destructs. */
+function sendWeeklyReportAndCleanup_() {
+  sendWeeklyReport();
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'sendWeeklyReportAndCleanup_') {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+  Logger.log('One-off trigger self-cleaned after firing.');
 }

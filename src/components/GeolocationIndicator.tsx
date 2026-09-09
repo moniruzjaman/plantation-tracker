@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Geolocation as CapGeolocation } from '@capacitor/geolocation';
 import { Capacitor } from '@capacitor/core';
+import { haptics } from '../utils/haptics';
 import { 
   MapPin, 
   MapIcon, 
@@ -46,6 +47,29 @@ export default function GeolocationIndicator({ onStateChange }: GeolocationIndic
   }, [geo, onStateChange]);
   const [isExpanded, setIsExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
+  const hadLockRef = useRef(false);
+  const hadErrorRef = useRef(false);
+
+  // Fire a light tap the moment GPS first locks (or re-locks after an error)
+  // so field officers get a confirmation without having to watch the screen.
+  // A separate warning buzz fires once when a new error appears, so a lost
+  // signal is noticeable even with the phone in a pocket or under sunlight glare.
+  useEffect(() => {
+    if (geo.coords && !hadLockRef.current) {
+      hadLockRef.current = true;
+      haptics.light();
+    }
+    if (!geo.coords) {
+      hadLockRef.current = false;
+    }
+    if (geo.error && !hadErrorRef.current) {
+      hadErrorRef.current = true;
+      haptics.warning();
+    }
+    if (!geo.error) {
+      hadErrorRef.current = false;
+    }
+  }, [geo.coords, geo.error]);
 
   // Monitor coordinates and accuracy using watchPosition
   useEffect(() => {

@@ -83,9 +83,19 @@ async function generateIcon(density, size, iconType) {
     .png()
     .toFile(filepath);
   } else if (iconType === 'ic_launcher_foreground') {
-    // App logo on transparent background
-    await sharp(LOGO_SOURCE)
-      .resize(size, size, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    // Adaptive icon foreground layer. Android masks this into a circle,
+    // squircle, rounded-square, or teardrop depending on the launcher, so
+    // content must stay within the center ~66% safe zone (per Android's
+    // adaptive icon spec) or it gets clipped on non-circular masks.
+    const safeZoneSize = Math.round(size * 0.66);
+    const contentBuffer = await sharp(LOGO_SOURCE)
+      .resize(safeZoneSize, safeZoneSize, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .png()
+      .toBuffer();
+    await sharp({
+      create: { width: size, height: size, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } }
+    })
+      .composite([{ input: contentBuffer, gravity: 'center' }])
       .png()
       .toFile(filepath);
   } else {

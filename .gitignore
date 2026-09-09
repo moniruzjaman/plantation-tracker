@@ -11,3 +11,6 @@ coverage/
 *.keystore
 *.jks
 
+.vercel
+.next/
+*.patch

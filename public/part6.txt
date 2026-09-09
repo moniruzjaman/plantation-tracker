@@ -1,3 +1,208 @@
+        items.forEach(function(e){
+          rowsHtml.push('<tr class="border-b hover:bg-gray-50 transition" style="font-size:12px"><td class="px-2 py-2">' + rowIndex.toLocaleString("bn-BD") + '</td><td class="px-2 py-2">' + fullLocation + '</td><td class="px-2 py-2 font-semibold text-gray-800">' + e.name + (e.catLabel?' <span class="text-xs text-gray-400">('+e.catLabel+')</span>':'') + '</td><td class="px-2 py-2 font-bold text-green-700">' + e.count.toLocaleString("bn-BD") + '</td><td class="px-2 py-2">' + pD + '</td><td class="px-2 py-2 font-mono text-cyan-700">' + geoLoc + '</td><td class="px-2 py-2 font-semibold text-sky-800">' + caretakerInfo + '</td><td class="px-2 py-2 text-gray-500">' + remarks + '</td></tr>');
+          rowIndex++;
+        });
+      }
+    });
+    if (tb) tb.innerHTML = rowsHtml.join("");
+  } else {
+    if (th) {
+      th.innerHTML = '<tr style="background:#f0fdf4;color:#166534">' +
+        '<th class="px-2 py-2 text-left whitespace-nowrap">ক্রম</th>' +
+        '<th class="px-2 py-2 text-left whitespace-nowrap">অঞ্চল</th>' +
+        '<th class="px-2 py-2 text-left whitespace-nowrap">জেলা</th>' +
+        '<th class="px-2 py-2 text-left whitespace-nowrap">উপজেলা</th>' +
+        '<th class="px-2 py-2 text-left whitespace-nowrap">রোপণকারীর নাম</th>' +
+        '<th class="px-2 py-2 text-left whitespace-nowrap">মোবাইল</th>' +
+        '<th class="px-2 py-2 text-left whitespace-nowrap" style="color:#b45309">ফলদ</th>' +
+        '<th class="px-2 py-2 text-left whitespace-nowrap" style="color:#047857">বনজ</th>' +
+        '<th class="px-2 py-2 text-left whitespace-nowrap" style="color:#1d4ed8">ঔষধি</th>' +
+        '<th class="px-2 py-2 text-left whitespace-nowrap">মোট</th>' +
+        '<th class="px-2 py-2 text-left whitespace-nowrap">রোপণের তারিখ</th></tr>';
+    }
+    if (tb) {
+      tb.innerHTML=subs.map(function(s,i){
+        var c=countSeedlings(s);var t=c.fruit+c.forest+c.medicinal;
+        var pD = s.plantingDate ? new Date(s.plantingDate).toLocaleDateString("bn-BD") : (s.submittedAt ? new Date(s.submittedAt).toLocaleDateString("bn-BD") : "");
+        return '<tr class="border-b" style="font-size:12px"><td class="px-2 py-2">'+(i+1).toLocaleString("bn-BD")+'</td><td class="px-2 py-2">'+(s.region||"")+'</td><td class="px-2 py-2">'+(s.district||"")+'</td><td class="px-2 py-2">'+(s.upazila||"")+'</td><td class="px-2 py-2 font-semibold">'+(s.farmerName||s.nurseryName||"")+'</td><td class="px-2 py-2">'+(s.farmerMobile||s.mobile||"")+'</td><td class="px-2 py-2 font-semibold" style="color:#ea580c">'+c.fruit.toLocaleString("bn-BD")+'</td><td class="px-2 py-2 font-semibold" style="color:#047857">'+c.forest.toLocaleString("bn-BD")+'</td><td class="px-2 py-2 font-semibold" style="color:#1d4ed8">'+c.medicinal.toLocaleString("bn-BD")+'</td><td class="px-2 py-2 font-bold text-green-800">'+t.toLocaleString("bn-BD")+'</td><td class="px-2 py-2 text-gray-500">'+pD+'</td></tr>';
+      }).join("");
+    }
+  }
+}catch(err){console.error("Dashboard error:",err)}
+};
+
+// ── Additional Charts: Upazila, SAAO, Officer, Trend ──
+function renderUpazilaChart(subs){
+  if(typeof Chart==="undefined") return;
+  var el=function(id){return document.getElementById(id)};
+  var map={};
+  subs.forEach(function(s){var u=s.upazila;if(!u) return;if(!map[u]) map[u]={entries:0,seedlings:0};map[u].entries++;var c=countSeedlings(s);map[u].seedlings+=c.fruit+c.forest+c.medicinal});
+  var items=Object.keys(map).map(function(k){return {label:k,entries:map[k].entries,seedlings:map[k].seedlings}});
+  items.sort(function(a,b){return b.seedlings-a.seedlings});
+  var top=items.slice(0,15);
+  if(chartUpazila) chartUpazila.destroy();
+  var canvas=el("chartUpazila");
+  if(canvas){
+    chartUpazila=new Chart(canvas,{type:"bar",data:{labels:top.map(function(i){return i.label}),datasets:[{label:"চারা সংখ্যা",data:top.map(function(i){return i.seedlings}),backgroundColor:"rgba(37,99,235,0.6)",borderRadius:4}]},options:{indexAxis:"y",responsive:true,plugins:{legend:{display:false},title:{display:true,text:"উপজেলা (শীর্ষ ১৫)",font:{size:11}}},scales:{x:{beginAtZero:true,ticks:{precision:0}}},onClick:function(_,elements){
+      if(elements.length){
+        var idx=elements[0].index;
+        var label=top[idx].label;
+        var dd=document.getElementById("dashUpazila");
+        if(dd){dd.value=label;renderDashboard();}
+      }
+    }}});
+  }
+}
+
+function renderSaaoChart(subs){
+  if(typeof Chart==="undefined") return;
+  var el=function(id){return document.getElementById(id)};
+  var map={};
+  subs.forEach(function(s){var n=s.saaoName;if(!n) return;if(!map[n]) map[n]={entries:0,seedlings:0};map[n].entries++;var c=countSeedlings(s);map[n].seedlings+=c.fruit+c.forest+c.medicinal});
+  var items=Object.keys(map).map(function(k){return {label:k,entries:map[k].entries,seedlings:map[k].seedlings}});
+  items.sort(function(a,b){return b.entries-a.entries});
+  var top=items.slice(0,10);
+  if(chartSaao) chartSaao.destroy();
+  var canvas=el("chartSaao");
+  if(canvas){
+    chartSaao=new Chart(canvas,{type:"bar",data:{labels:top.map(function(i){return i.label}),datasets:[{label:"এন্ট্রি",data:top.map(function(i){return i.entries}),backgroundColor:"rgba(234,88,12,0.6)",borderRadius:4},{label:"চারা",data:top.map(function(i){return i.seedlings}),backgroundColor:"rgba(5,150,105,0.6)",borderRadius:4}]},options:{indexAxis:"y",responsive:true,plugins:{legend:{position:"bottom",labels:{font:{size:10}}}},scales:{x:{beginAtZero:true,ticks:{precision:0}}}}});
+  }
+}
+
+function renderOfficerChart(subs){
+  if(typeof Chart==="undefined") return;
+  var el=function(id){return document.getElementById(id)};
+  var map={};
+  subs.forEach(function(s){var n=s.officerName||s.caretakerName;if(!n) return;if(!map[n]) map[n]={entries:0,seedlings:0};map[n].entries++;var c=countSeedlings(s);map[n].seedlings+=c.fruit+c.forest+c.medicinal});
+  var items=Object.keys(map).map(function(k){return {label:k,entries:map[k].entries,seedlings:map[k].seedlings}});
+  items.sort(function(a,b){return b.entries-a.entries});
+  var top=items.slice(0,10);
+  if(chartOfficer) chartOfficer.destroy();
+  var canvas=el("chartOfficer");
+  if(canvas){
+    chartOfficer=new Chart(canvas,{type:"bar",data:{labels:top.map(function(i){return i.label}),datasets:[{label:"এন্ট্রি",data:top.map(function(i){return i.entries}),backgroundColor:"rgba(124,58,237,0.6)",borderRadius:4},{label:"চারা",data:top.map(function(i){return i.seedlings}),backgroundColor:"rgba(8,145,178,0.6)",borderRadius:4}]},options:{indexAxis:"y",responsive:true,plugins:{legend:{position:"bottom",labels:{font:{size:10}}}},scales:{x:{beginAtZero:true,ticks:{precision:0}}}}});
+  }
+}
+
+function renderTrendChart(subs){
+  if(typeof Chart==="undefined") return;
+  var el=function(id){return document.getElementById(id)};
+  var period=window.dashTrendPeriod||"daily";
+  var map={};
+  subs.forEach(function(s){
+    var d=s.plantingDate||(s.submittedAt?s.submittedAt.slice(0,10):"");
+    if(!d) return;
+    var key="";
+    if(period==="daily"){key=d;}
+    else if(period==="weekly"){
+      var dt=new Date(d+"T00:00:00");
+      var oneJan=new Date(dt.getFullYear(),0,1);
+      var week=Math.ceil((((dt.getTime()-oneJan.getTime())/(86400000))+oneJan.getDay()+1)/7);
+      key=dt.getFullYear()+"-W"+String(week).padStart(2,"0");
+    }else if(period==="monthly"){key=d.slice(0,7);}
+    if(!key) return;
+    if(!map[key]) map[key]={entries:0,seedlings:0};
+    map[key].entries++;
+    var c=countSeedlings(s);map[key].seedlings+=c.fruit+c.forest+c.medicinal;
+  });
+  var items=Object.keys(map).map(function(k){return {key:k,entries:map[k].entries,seedlings:map[k].seedlings}});
+  items.sort(function(a,b){return a.key<b.key?-1:1});
+  if(items.length>60 && period==="daily") items=items.slice(-30);
+  if(chartTrend) chartTrend.destroy();
+  var canvas=el("chartTrend");
+  if(canvas){
+    chartTrend=new Chart(canvas,{type:"line",data:{labels:items.map(function(i){return i.key}),datasets:[{label:"এন্ট্রি",data:items.map(function(i){return i.entries}),borderColor:"rgba(21,128,61,1)",backgroundColor:"rgba(21,128,61,0.1)",fill:true,tension:0.3,pointRadius:period==="daily"?2:4,borderWidth:2},{label:"চারা সংখ্যা",data:items.map(function(i){return i.seedlings}),borderColor:"rgba(234,88,12,1)",backgroundColor:"rgba(234,88,12,0.1)",fill:true,tension:0.3,pointRadius:period==="daily"?2:4,borderWidth:2}]},options:{responsive:true,interaction:{mode:"index",intersect:false},plugins:{legend:{position:"bottom",labels:{font:{size:11}}}},scales:{y:{beginAtZero:true,ticks:{precision:0}},x:{ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:period==="daily"?10:20}}}}});
+  }
+}
+
+// ── Excel Export ──
+window.exportToExcel=function(prefix){
+if(typeof XLSX==="undefined"){showBanner("errorBanner","Excel লাইব্রেরি লোড হয়নি। ইন্টারনেট সংযোগ নিশ্চিত করুন।");return}
+var subs=getFiltered(prefix||"dash");if(!subs.length){showBanner("errorBanner","রপ্তানি করার মতো তথ্য নেই।");return}
+var data = [];
+data.push(["ক্রম", "আইডি", "অঞ্চল", "জেলা", "উপজেলা", "রোপণকারীর নাম", "মোবাইল", "তদারককারীর নাম", "মোবাইল", "রোপণকৃত বৃক্ষের অবস্থান", "জিও লোকেশন", "রোপণের তারিখ", "চারার ধরন", "চারার নাম", "চারার বয়স", "চারা সংখ্যা", "কলম সংখ্যা"]);
+
+subs.forEach(function(s){
+  var pDate = s.plantingDate || (s.submittedAt ? s.submittedAt.slice(0, 10) : "");
+  var has=(s.fruitSeedlings&&s.fruitSeedlings.length||0)+(s.forestSeedlings&&s.forestSeedlings.length||0)+(s.medicinalSeedlings&&s.medicinalSeedlings.length||0);
+  if(!has) {
+    data.push([
+      data.length,
+      s.id || "",
+      s.region || "",
+      s.district || "",
+      s.upazila || "",
+      s.nurseryName || "",
+      s.mobile || "",
+      s.caretakerName || "",
+      s.caretakerMobile || "",
+      s.address || "",
+      s.geoLocation || "",
+      pDate,
+      "", "", "", "", ""
+    ]);
+  } else {
+    CATEGORIES.forEach(function(cat){
+      (s[cat.key] || []).forEach(function(e){
+        data.push([
+          data.length,
+          s.id || "",
+          s.region || "",
+          s.district || "",
+          s.upazila || "",
+          s.nurseryName || "",
+          s.mobile || "",
+          s.caretakerName || "",
+          s.caretakerMobile || "",
+          s.address || "",
+          s.geoLocation || "",
+          pDate,
+          cat.label || "",
+          e.name || "",
+          e.age || "",
+          parseInt(e.count)||0,
+          parseInt(e.graftingCount)||0
+        ]);
+      });
+    });
+  }
+});
+
+var ws=XLSX.utils.aoa_to_sheet(data);
+ws["!cols"]=[
+  {wch:6}, {wch:12}, {wch:12}, {wch:12}, {wch:12}, {wch:20}, {wch:14}, {wch:20}, {wch:14}, {wch:25}, {wch:18}, {wch:12}, {wch:12}, {wch:15}, {wch:12}, {wch:10}, {wch:10}
+];
+var wb=XLSX.utils.book_new();
+XLSX.utils.book_append_sheet(wb,ws,"বৃক্ষরোপণের তথ্য");
+XLSX.writeFile(wb,"বৃক্ষরোপণ_তথ্য_"+new Date().toISOString().slice(0,10)+".xlsx");
+};
+
+// ── Export to CSV ──
+window.exportToCSV = function(prefix) {
+  var subs = getFiltered(prefix || "dash");
+  if (!subs || !subs.length) {
+    showBanner("errorBanner", "রপ্তানি করার মতো তথ্য নেই।");
+    return;
+  }
+  
+  var rows = [];
+  rows.push(["ক্রম", "আইডি", "অঞ্চল", "জেলা", "উপজেলা", "রোপণকারীর নাম", "মোবাইল", "তদারককারীর নাম", "মোবাইল", "রোপণকৃত বৃক্ষের অবস্থান", "জিও লোকেশন", "রোপণের তারিখ", "চারার ধরন", "চারার নাম", "চারার বয়স", "চারা সংখ্যা", "কলম সংখ্যা", "সিঙ্ক স্ট্যাটাস"]);
+
+  subs.forEach(function(s) {
+    var pDate = s.plantingDate || (s.submittedAt ? s.submittedAt.slice(0, 10) : "");
+    var syncText = s.synced ? "সিঙ্কড (Synced)" : "অফলাইন (Offline)";
+    var has = (s.fruitSeedlings && s.fruitSeedlings.length || 0) + 
+              (s.forestSeedlings && s.forestSeedlings.length || 0) + 
+              (s.medicinalSeedlings && s.medicinalSeedlings.length || 0);
+    
+    if (!has) {
+      rows.push([
+        rows.length,
+        s.id || "",
+        s.region || "",
+        s.district || "",
+        s.upazila || "",
+        s.nurseryName || "",
         s.mobile || "",
         s.caretakerName || "",
         s.caretakerMobile || "",
@@ -420,6 +625,12 @@ function getGovReportSource_(prefix) {
   if (prefix === 'my') {
     return applyMyFilterSet(getMySubmissionsBase());
   }
+  if (prefix === 'map') {
+    // Use the Map tab's own merged+filtered entry set (local + national, deduped,
+    // region/district/upazila/date/source filtered) so map exports match the
+    // markers currently shown on screen.
+    return getMapEntries();
+  }
   var r = document.getElementById(prefix + 'Region') && document.getElementById(prefix + 'Region').value;
   var d = document.getElementById(prefix + 'District') && document.getElementById(prefix + 'District').value;
   return getDashEntries().filter(function(s) {
@@ -446,66 +657,3 @@ function exportGovXlsx_(kind, prefix) {
     colWidths = [6, 18, 12, 12, 12, 12, 18, 14, 12, 26, 16, 14, 16, 14, 16, 14, 20];
     sheetName = '১৭ কলাম প্রতিবেদন'; fileTag = '17column_report';
   } else {
-    titleRows = [
-      ['১৭. ০৫ বছরে ২৫ কোটি বৃক্ষরোপণ কর্মসূচির আওতাভুক্ত হওয়ার লক্ষ্যে সাপ্তাহিকভিত্তিতে বৃক্ষরোপণের তথ্য ই-মেইলযোগে admonitoring@dae.gov.bd / ddimplement@dae.gov.bd এ প্রেরণ করতে হবে। কৃষি মন্ত্রণালয়ে (E-mail-input2@moa.gov.bd ও moa.input2@gmail.com) আবশ্যিকভাবে প্রেরণ করতে হবে।']
-    ];
-    headers = MINISTRY_HEADERS;
-    numRow = headers.map(function(_, i) { return i + 1; });
-    bodyRows = buildMinistryRows_(subs);
-    colWidths = [6, 46, 22, 12, 26, 30, 30, 30, 22];
-    sheetName = 'মন্ত্রণালয় প্রতিবেদন'; fileTag = 'ministry_report';
-  }
-
-  var data = titleRows.concat([headers, numRow]).concat(bodyRows);
-  var ws = XLSX.utils.aoa_to_sheet(data);
-  ws['!cols'] = colWidths.map(function(w) { return { wch: w }; });
-  var wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, sheetName);
-  XLSX.writeFile(wb, fileTag + '_' + new Date().toISOString().slice(0, 10) + '.xlsx');
-  showBanner('successBanner', 'সরকারি ছকে এক্সেল সফলভাবে ডাউনলোড হয়েছে!');
-  setTimeout(function() { hideBanner('successBanner'); }, 3000);
-}
-
-function printGovReport_(kind, prefix) {
-  var subs = getGovReportSource_(prefix);
-  if (!subs.length) { showBanner('errorBanner', 'প্রিন্ট করার মতো কোনো ডাটা পাওয়া যায়নি।'); return; }
-  var headers, numRow, bodyRows, title;
-  if (kind === '17col') {
-    headers = COL17_HEADERS; numRow = headers.map(function(_, i) { return i + 1; });
-    bodyRows = build17ColRows_(subs);
-    title = '০৫ বছরে ২৫ কোটি বৃক্ষ রোপণ কর্মসূচির আওতায় রোপণকৃত চারার তথ্য';
-  } else {
-    headers = MINISTRY_HEADERS; numRow = headers.map(function(_, i) { return i + 1; });
-    bodyRows = buildMinistryRows_(subs);
-    title = 'সাপ্তাহিক বৃক্ষরোপণ কর্মসূচির অগ্রগতি প্রতিবেদন';
-  }
-  var esc = function(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;'); };
-  var thead = '<tr>' + headers.map(function(h) { return '<th>' + esc(h) + '</th>'; }).join('') + '</tr>' +
-              '<tr>' + numRow.map(function(n) { return '<th>' + n + '</th>'; }).join('') + '</tr>';
-  var tbody = bodyRows.map(function(r) { return '<tr>' + r.map(function(c) { return '<td>' + esc(c) + '</td>'; }).join('') + '</tr>'; }).join('');
-  var html = '<!DOCTYPE html><html lang="bn"><head><meta charset="utf-8"><title>' + esc(title) + '</title>' +
-    '<style>body{font-family:"Noto Sans Bengali",Arial,sans-serif;margin:16px}h1{font-size:14px;text-align:center}' +
-    'table{border-collapse:collapse;width:100%;font-size:10px}th,td{border:1px solid #333;padding:3px 5px;text-align:left}' +
-    'th{background:#f0fdf4}@media print{body{margin:6mm}}</style></head><body>' +
-    '<h1>' + esc(title) + '</h1><table><thead>' + thead + '</thead><tbody>' + tbody + '</tbody></table>' +
-    '<script>window.onload=function(){window.print();}<\/script></body></html>';
-  var w = window.open('', '_blank');
-  if (!w) { showBanner('errorBanner', 'পপ-আপ ব্লক করা হয়েছে। ব্রাউজার সেটিংসে পপ-আপ অনুমতি দিন।'); return; }
-  w.document.open(); w.document.write(html); w.document.close();
-}
-
-window.exportToGovExcel = function(prefix) { exportGovXlsx_('ministry', prefix); };
-window.export17ColGovExcel = function(prefix) { exportGovXlsx_('17col', prefix); };
-window.printGovReport = function(kind, prefix) { printGovReport_(kind, prefix); };
-
-
-// ── Admin ──
-window.adminLogin=function(){if(document.getElementById("adminPass").value===getAdminPw()){isAdmin=true;document.getElementById("adminLogin").classList.add("hidden");document.getElementById("adminPanel").classList.remove("hidden");document.getElementById("adminLoginErr").classList.add("hidden");renderAdminTable();populateRegionDD(document.getElementById("adminRegion"))}else document.getElementById("adminLoginErr").classList.remove("hidden")};
-window.adminLogout=function(){isAdmin=false;document.getElementById("adminLogin").classList.remove("hidden");document.getElementById("adminPanel").classList.add("hidden");document.getElementById("adminPass").value=""};
-window.changePassword=function(){var np=prompt("নতুন পাসওয়ার্ড দিন:");if(np&&np.trim().length>=4){setAdminPw(np.trim());showBanner("successBanner","পাসওয়ার্ড পরিবর্তন হয়েছে!");setTimeout(function(){hideBanner("successBanner")},3000)}else if(np)showBanner("errorBanner","পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে।")};
-window.renderAdminTable=function(){
-if(!isAdmin)return;var subs=getFiltered("admin"),tb=document.getElementById("adminTableBody"),nd=document.getElementById("adminNoData");
-if(!subs.length){tb.innerHTML="";nd.classList.remove("hidden");return}nd.classList.add("hidden");
-tb.innerHTML=subs.map(function(s,i){var c=countSeedlings(s),t=c.fruit+c.forest+c.medicinal;var pD = s.plantingDate ? new Date(s.plantingDate).toLocaleDateString("bn-BD") : (s.submittedAt?new Date(s.submittedAt).toLocaleDateString("bn-BD"):"");var sid=s.id||s.submissionId;var nm=s.farmerName||s.nurseryName||"";var mb=s.farmerMobile||s.mobile||"";var syncBadge=s.synced?'<span style="color:#047857;font-size:9px" title="সিঙ্কড">✓</span>':'<span style="color:#dc2626;font-size:9px" title="অফলাইন">○</span>';return '<tr class="border-b"><td class="px-2 py-2">'+(i+1).toLocaleString("bn-BD")+'</td><td class="px-2 py-2">'+(s.region||s.division||"")+'</td><td class="px-2 py-2">'+s.district+'</td><td class="px-2 py-2">'+s.upazila+'</td><td class="px-2 py-2">'+nm+' '+syncBadge+'</td><td class="px-2 py-2">'+mb+'</td><td class="px-2 py-2 font-semibold">'+t+'</td><td class="px-2 py-2 text-gray-500 text-xs">'+pD+'</td><td class="px-2 py-2 text-center whitespace-nowrap"><button onclick="adminEdit(\''+sid+'\')" style="background:#dbeafe;color:#1d4ed8;font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;border:none;cursor:pointer;margin-right:4px">✏️</button><button onclick="adminDelete(\''+sid+'\')" style="background:#fee2e2;color:#b91c1c;font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;border:none;cursor:pointer">🗑️</button></td></tr>'}).join("");
-};
-window.adminEdit=function(id){
