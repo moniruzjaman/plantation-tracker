@@ -1,6 +1,12 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useMapData } from '../utils/useMapData';
 import { build17ColRows, buildMinistryRows, COL17_HEADERS, MINISTRY_HEADERS, downloadGovCsv } from '../utils/ministryReport';
+import {
+  parseRecipients,
+  sendWeeklyReportEmail,
+  summarizeRecipients,
+  DEFAULT_RECIPIENT,
+} from '../utils/weeklyReportEmail';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Database, 
@@ -17,7 +23,12 @@ import {
   Download,
   Sprout,
   CalendarDays,
-  Award
+  Award,
+  Mail,
+  Send,
+  CheckCircle2,
+  AlertTriangle,
+  Loader2
 } from 'lucide-react';
 
 export interface Seedling {
@@ -171,6 +182,69 @@ export default function OfflinePlantationDashboard({ onStateChange }: OfflinePla
   const [language, setLanguage] = useState<'bn' | 'en'>('bn');
   const [lastUpdated, setLastUpdated] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'overview' | 'activity' | 'impact'>('overview');
+
+  // ── Weekly report email state ───────────────────────────────────────
+  // Mirrors the legacy `reportRecipientEmail` input + `triggerWeeklyReportEmail()`
+  // button in public/legacy/plantation.html so the React dashboard offers the
+  // same "send the official weekly report to any email address" workflow.
+  //
+  // We keep three pieces of UI state:
+  //   - the raw input string (kept verbatim so the user can paste/edit freely);
+  //   - a `sending` flag for the button's loading spinner;
+  //   - a structured `emailStatus` of {kind, text} for the toast under the bar.
+  const [recipientEmail, setRecipientEmail] = useState<string>(DEFAULT_RECIPIENT);
+  const [sendingReport, setSendingReport] = useState<boolean>(false);
+  const [emailStatus, setEmailStatus] = useState<{ kind: 'idle' | 'success' | 'error'; text: string }>({ kind: 'idle', text: '' });
+
+  // Auto-clear the status toast a few seconds after a finished send so the UI
+  // doesn't keep a stale "✅ sent" banner around forever. Mirrors the legacy
+  // alert() which the user just dismisses.
+  useEffect(() => {
+    if (emailStatus.kind === 'idle') return;
+    const t = setTimeout(() => setEmailStatus({ kind: 'idle', text: '' }), 6000);
+    return () => clearTimeout(t);
+  }, [emailStatus]);
+
+  const handleSendWeeklyReport = useCallback(async () => {
+    if (sendingReport) return; // double-click guard
+    const parsed = parseRecipients(recipientEmail);
+    if (parsed.emails.length === 0) {
+      setEmailStatus({
+        kind: 'error',
+        text: language === 'bn'
+          ? '⚠️ একটি বৈধ ইমেইল ঠিকানা লিখুন।'
+          : '⚠️ Please enter a valid email address.',
+      });
+      return;
+    }
+    const summary = summarizeRecipients(parsed);
+    const confirmMsg = language === 'bn'
+      ? `আপনি কি সাপ্তাহিক প্রতিবেদন নিচের ঠিকানায় প্রেরণ করতে চান?\n${summary}`
+      : `Send the weekly report to:\n${summary}`;
+    if (!window.confirm(confirmMsg)) return;
+
+    setSendingReport(true);
+    setEmailStatus({ kind: 'idle', text: '' });
+    const result = await sendWeeklyReportEmail(parsed.emails);
+    setSendingReport(false);
+
+    if (result.ok) {
+      const target = parsed.emails.join(', ');
+      setEmailStatus({
+        kind: 'success',
+        text: language === 'bn'
+          ? `✅ সাপ্তাহিক প্রতিবেদন প্রেরিত হয়েছে: ${target}${result.message ? `\n${result.message}` : ''}`
+          : `✅ Weekly report sent to: ${target}${result.message ? `\n${result.message}` : ''}`,
+      });
+    } else {
+      setEmailStatus({
+        kind: 'error',
+        text: language === 'bn'
+          ? `⚠️ ইমেইল প্রেরণে সমস্যা: ${result.error || 'সার্ভার রেসপন্স চেক করুন।'}`
+          : `⚠️ Failed to send report: ${result.error || 'Check the server response.'}`,
+      });
+    }
+  }, [recipientEmail, sendingReport, language]);
 
   useEffect(() => {
     if (onStateChange) {
@@ -462,6 +536,75 @@ export default function OfflinePlantationDashboard({ onStateChange }: OfflinePla
                     <X className="w-4 h-4" />
                   </button>
                 </div>
+              </div>
+
+              {/* ── Weekly report email row ────────────────────────────────────
+                 Adds the same "email input + send button" UX the legacy
+                 dashboard has, on top of the existing CSV export buttons
+                 above. The send button calls the existing
+                 /api/gas-sync?sendWeeklyReport=1&email=... Vercel proxy
+                 (see api/gas-sync.js + gas/AppsScript.gs sendWeeklyReport),
+                 so no new server endpoint or Apps Script change is needed
+                 and the existing scheduled-trigger / manual-trigger flows
+                 keep working untouched. */}
+              <div className="px-4 py-2 border-b border-gray-100 bg-gradient-to-r from-amber-50 to-yellow-50">
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <Mail className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                  <span className="text-[10px] font-semibold text-amber-800 uppercase tracking-wider">
+                    {language === 'bn' ? 'সাপ্তাহিক রিপোর্ট ইমেইল' : 'Weekly Report Email'}
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <div className="inline-flex items-center bg-white rounded-md border border-amber-300 p-0.5 shadow-sm flex-1 min-w-[10rem]">
+                    <span className="text-[11px] text-amber-800 font-semibold pl-1.5 hidden sm:inline">✉️</span>
+                    <input
+                      type="text"
+                      value={recipientEmail}
+                      onChange={(e) => setRecipientEmail(e.target.value)}
+                      placeholder={language === 'bn'
+                        ? 'প্রাপকের ইমেইল (কমা দিয়ে একাধিক)...'
+                        : 'Recipient email(s), comma-separated...'}
+                      title={language === 'bn'
+                        ? 'প্রতিবেদন পাঠানোর ইমেইল ঠিকানা (কমা দিয়ে একাধিক লিখতে পারেন)'
+                        : 'Recipient email address (multiple allowed, comma-separated)'}
+                      className="text-[11px] px-2 py-1 outline-none text-gray-700 flex-1 min-w-0 bg-transparent"
+                      aria-label={language === 'bn' ? 'প্রাপকের ইমেইল' : 'Recipient email'}
+                    />
+                    <button
+                      id="dashSendWeeklyReportBtn"
+                      onClick={handleSendWeeklyReport}
+                      disabled={sendingReport}
+                      className="text-[11px] font-semibold px-2.5 py-1 rounded-md inline-flex items-center gap-1 cursor-pointer shadow-sm hover:opacity-90 transition active:scale-95 text-white disabled:cursor-not-allowed disabled:opacity-60"
+                      style={{ background: '#047857' }}
+                      title={language === 'bn'
+                        ? 'সাপ্তাহিক প্রতিবেদন ও এক্সেল ফাইল ইমেইলে পাঠান'
+                        : 'Send weekly report & Excel file to the email above'}
+                    >
+                      {sendingReport
+                        ? <Loader2 className="w-3 h-3 animate-spin" data-testid="weekly-report-sending-spinner" />
+                        : <Send className="w-3 h-3" />}
+                      <span>{sendingReport
+                        ? (language === 'bn' ? 'পাঠানো হচ্ছে...' : 'Sending...')
+                        : (language === 'bn' ? 'রিপোর্ট পাঠান' : 'Send Report')}</span>
+                    </button>
+                  </div>
+                </div>
+                {emailStatus.kind !== 'idle' && (
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    className={`mt-1.5 flex items-start gap-1.5 text-[10.5px] leading-tight p-1.5 rounded-md ${
+                      emailStatus.kind === 'success'
+                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                        : 'bg-red-50 text-red-800 border border-red-200'
+                    }`}
+                  >
+                    {emailStatus.kind === 'success'
+                      ? <CheckCircle2 className="w-3 h-3 shrink-0 mt-0.5" />
+                      : <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" />}
+                    <span className="whitespace-pre-wrap break-words">{emailStatus.text}</span>
+                  </div>
+                )}
               </div>
 
               {/* Tab Navigation */}
