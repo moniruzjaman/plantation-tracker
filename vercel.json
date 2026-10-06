@@ -19,6 +19,12 @@
       "destination": "/api/$1"
     }
   ],
+  "crons": [
+    {
+      "path": "/api/regenerate-weekly-report",
+      "schedule": "0 3 * * 3"
+    }
+  ],
   "headers": [
     {
       "source": "/og-share-large.png",
