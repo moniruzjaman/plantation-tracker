@@ -567,6 +567,10 @@ tbody tr{border-bottom:1px solid #e5e7eb}
     <p>উৎস: মূল_ডাটা (<span id="repMainDataEntries"></span>) + ১৭_কলাম_প্রতিবেদন (<span id="rep17ColEntries"></span>) — Tree_Plantation_Reporting_Workbook.xlsx থেকে ইউনিকোড-নরমালাইজড ও একত্রীকৃত।</p>
     <button onclick="toggleOfficialReportDetail()" id="officialReportToggleBtn" class="text-[11px] font-semibold px-2.5 py-1 rounded-md cursor-pointer shrink-0" style="background:#fde68a;color:#78350f">বিস্তারিত দেখুন ▾</button>
   </div>
+  <div class="mt-2 text-[10.5px] flex items-center gap-1.5 flex-wrap" style="color:#b45309">
+    <span class="inline-flex items-center gap-1">⏰</span>
+    <span>স্বয়ংক্রিয় ক্রোন: প্রতি বুধবার ০৯:০০ (Asia/Dhaka) — পরবর্তী রান: <strong id="officialNextRun">—</strong></span>
+  </div>
   <div id="officialReportDetail" class="hidden mt-3 pt-3 text-[11px]" style="border-top:1px solid #fde68a;color:#78350f">
     <p class="font-semibold mb-1.5">উপজেলাভিত্তিক সম্মিলিত অগ্রগতি (গাছের সংখ্যা):</p>
     <div id="repUpazilaList" class="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1 mb-2.5">
@@ -3816,6 +3820,45 @@ function renderOfficialReportCharts(){
   var upazila=getReportUpazilaFilter();
   fetchOfficialReportSummary(false,upazila).then(function(data){if(data&&data.ok)applyOfficialReportSummary(data);});
 }
+// ── Next-Wednesday-9AM-BD countdown for the ⏰ line in officialReportCard ──
+// Bangladesh is UTC+6 year-round (no DST). Computes the next Wednesday
+// 09:00 Asia/Dhaka wall-clock and renders a Bengali countdown that
+// refreshes every 60 seconds while the dashboard tab is open.
+function _bnDigit(n){var b=["০","১","২","৩","৪","৫","৬","৭","৮","৯"];return String(n).replace(/[0-9]/g,function(d){return b[+d]});}
+function _nextWednesday9amDhaka(){
+  var nowUtc=new Date();
+  var nowDhakaMs=nowUtc.getTime()+6*3600*1000;
+  var d=new Date(nowDhakaMs);
+  var day=d.getUTCDay();
+  var daysToAdd=(3-day+7)%7;
+  var nextUtc=Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()+daysToAdd,3,0,0,0);
+  var todayWed09Utc=Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate(),3,0,0,0);
+  if(day===3 && nowDhakaMs < todayWed09Utc){nextUtc=todayWed09Utc;}
+  return {nextUtcMs:nextUtc, nowMs:nowDhakaMs};
+}
+function _bnCountdown(targetUtcMs, nowMs){
+  var diffMs=targetUtcMs-nowMs;
+  if(diffMs<0)return"এখনই চলছে…";
+  var days=Math.floor(diffMs/86400000);
+  var hours=Math.floor((diffMs%86400000)/3600000);
+  var mins=Math.floor((diffMs%3600000)/60000);
+  var parts=[];
+  if(days>0)parts.push(_bnDigit(days)+" দিন");
+  if(hours>0||days>0)parts.push(_bnDigit(hours)+" ঘণ্টা");
+  parts.push(_bnDigit(mins)+" মিনিট");
+  var dhakaDate=new Date(targetUtcMs+6*3600*1000);
+  var whenStr=dhakaDate.toLocaleDateString("bn-BD",{weekday:'long',day:'numeric',month:'long',timeZone:'UTC'});
+  var whenTime=dhakaDate.toLocaleTimeString("bn-BD",{hour:'2-digit',minute:'2-digit',hour12:true,timeZone:'UTC'});
+  return parts.join(" ")+" ("+whenStr+" "+whenTime+")";
+}
+function renderNextRunCountdown(){
+  var el=document.getElementById("officialNextRun");
+  if(!el)return;
+  try{
+    var r=_nextWednesday9amDhaka();
+    el.textContent=_bnCountdown(r.nextUtcMs, r.nowMs);
+  }catch(e){el.textContent="—";}
+}
 window.renderDashboard=function(){
 try{
   if(!_nationalEntries&&!_nationalEntriesLoading){fetchNationalEntries().then(function(){renderDashboard()})}
@@ -3823,6 +3866,11 @@ try{
   var subs=getDashEntries();
   renderDashFilterSummary(subs);
   refreshOfficialReportCard();
+  // Also refresh the Wednesday 9 AM BD countdown (start a 60s interval on first call)
+  renderNextRunCountdown();
+  if(!window._officialCountdownTimer){
+    window._officialCountdownTimer=setInterval(renderNextRunCountdown, 60000);
+  }
 
   var totalFruit=0,totalForest=0,totalMedicinal=0;
   var planters=new Set(), officers=new Set(), speciesMap={}, districtSet=new Set(), upazilaSet=new Set();

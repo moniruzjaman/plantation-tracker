@@ -1,0 +1,159 @@
+# Weekly Plantation Report — GitHub Actions cron
+#
+# Schedule: every Wednesday 09:00 Asia/Dhaka (= 03:00 UTC, Bangladesh has no DST)
+# Also runnable manually via the "Run workflow" button on the Actions tab.
+#
+# What it does:
+#   1. Checks out the repo
+#   2. Installs Python + openpyxl
+#   3. Runs scripts/cron_weekly_report.sh which:
+#      - Fetches live entries from $GAS_WEBHOOK_URL
+#      - Generates weekly-report.{html,xlsx,snapshot.json} as artifacts
+#      - Sends the report via SMTP if SMTP_* env vars are present
+#   4. Uploads the generated files as a 30-day downloadable artifact
+#      (for inspection / archive)
+#
+# NOTE: This workflow does NOT commit files back to the repo. The dashboard
+# tab in plantation.html fetches the live report on-demand via
+# /api/report-download (which calls GAS directly), so there's no need for
+# committed static report files. The artifacts are kept for archival and
+# debugging purposes.
+#
+# Required GitHub Secrets (Repo → Settings → Secrets and variables → Actions):
+#   GAS_WEBHOOK_URL   — your Apps Script /exec URL (real-time data source)
+#   SMTP_HOST         — e.g. smtp.gmail.com
+#   SMTP_PORT         — e.g. 587 (TLS) or 465 (SSL)
+#   SMTP_USER         — e.g. you@gmail.com
+#   SMTP_PASS         — Gmail App Password (NOT your account password)
+#   SMTP_FROM         — e.g. you@gmail.com
+#   SMTP_TO           — comma-separated recipient list
+#
+# NEVER commit a real .env file with secrets. The .env.example in the repo
+# is just a template with placeholders.
+
+name: Weekly Plantation Report
+
+on:
+  schedule:
+    # Wednesday 03:00 UTC = Wednesday 09:00 Asia/Dhaka (UTC+6, no DST)
+    - cron: '0 3 * * 3'
+  workflow_dispatch:
+    # Manual "Run workflow" button on the Actions tab — useful for testing
+    inputs:
+      report_date:
+        description: 'Report date (YYYY-MM-DD or "DD Month, YYYY"). Leave empty for today.'
+        required: false
+        default: ''
+      skip_email:
+        description: 'Skip sending email (just generate files + upload artifact)'
+        type: boolean
+        required: false
+        default: false
+
+# Only one weekly report run at a time — concurrent runs would conflict
+# on the same set of output files.
+concurrency:
+  group: weekly-report
+  cancel-in-progress: false
+
+# No contents:write permission needed — we don't commit anything back.
+# The dashboard fetches live reports via /api/report-download on demand.
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    name: Generate + email + upload artifact
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      TZ: Asia/Dhaka
+      # Secrets are NOT echoed in logs (GitHub masks them automatically)
+      GAS_WEBHOOK_URL: ${{ secrets.GAS_WEBHOOK_URL }}
+      SMTP_HOST: ${{ secrets.SMTP_HOST }}
+      SMTP_PORT: ${{ secrets.SMTP_PORT }}
+      SMTP_USER: ${{ secrets.SMTP_USER }}
+      SMTP_PASS: ${{ secrets.SMTP_PASS }}
+      SMTP_FROM: ${{ secrets.SMTP_FROM }}
+      SMTP_TO: ${{ secrets.SMTP_TO }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install openpyxl
+
+      - name: Show environment (without leaking secrets)
+        run: |
+          echo "📅 Current time (Asia/Dhaka): $(TZ=Asia/Dhaka date '+%Y-%m-%d %H:%M:%S %Z')"
+          echo "🐍 Python: $(python --version)"
+          echo "📦 openpyxl: $(python -c 'import openpyxl; print(openpyxl.__version__)')"
+          echo "🔑 GAS_WEBHOOK_URL: ${{ secrets.GAS_WEBHOOK_URL != '' && 'set ✓' || 'NOT SET ✗' }}"
+          echo "🔑 SMTP_HOST: ${{ secrets.SMTP_HOST != '' && 'set ✓' || 'NOT SET ✗' }}"
+          echo "🔑 SMTP_USER: ${{ secrets.SMTP_USER != '' && 'set ✓' || 'NOT SET ✗' }}"
+          echo "🔑 SMTP_PASS: ${{ secrets.SMTP_PASS != '' && 'set ✓' || 'NOT SET ✗' }}"
+          echo "🔑 SMTP_TO: ${{ secrets.SMTP_TO != '' && 'set ✓' || 'NOT SET ✗' }}"
+          echo "🎯 Report date override: ${INPUT_REPORT_DATE:-none (use today)}"
+          echo "📧 Skip email: ${INPUT_SKIP_EMAIL:-false}"
+
+      - name: Run weekly report generator
+        env:
+          INPUT_REPORT_DATE: ${{ github.event.inputs.report_date }}
+          INPUT_SKIP_EMAIL: ${{ github.event.inputs.skip_email }}
+        run: |
+          # If user clicked "Skip email" via workflow_dispatch, unset SMTP_* so
+          # the generator skips the email step
+          if [[ "$INPUT_SKIP_EMAIL" == "true" ]]; then
+            echo "⏭️  Skip email requested — unsetting SMTP_* for this run"
+            unset SMTP_HOST SMTP_PORT SMTP_USER SMTP_PASS SMTP_FROM SMTP_TO
+          fi
+          # Pass date override if provided
+          if [[ -n "$INPUT_REPORT_DATE" ]]; then
+            export REPORT_DATE="$INPUT_REPORT_DATE"
+          fi
+          # Run the cron wrapper (auto-detects source, generates files,
+          # sends email if SMTP_* present)
+          bash scripts/cron_weekly_report.sh
+
+      - name: Show generated files
+        run: |
+          echo "=== Generated files ==="
+          ls -lh public/reports/ 2>/dev/null | tail -20 || echo "(no files in public/reports/)"
+          echo ""
+          echo "=== Snapshot KPIs ==="
+          python -c "
+          import json
+          try:
+              with open('public/reports/weekly-report-snapshot.json') as f:
+                  s = json.load(f)
+              print(f\"  reportDate:      {s.get('reportDate','—')}\")
+              print(f\"  generatedAt:     {s.get('generatedAt','—')}\")
+              print(f\"  sourceKind:      {s.get('sourceKind','—')}\")
+              print(f\"  totalEntries:    {s['kpi']['totalEntries']}\")
+              print(f\"  totalSeedlings:  {s['kpi']['totalSeedlings']}\")
+              print(f\"  upazilaCoverage: {s['kpi']['upazilaCoverage']}/{s['kpi']['upazilaTotal']}\")
+          except Exception as e:
+              print(f'  (could not read snapshot: {e})')
+          " || true
+
+      - name: Upload artifact (for inspection / download)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-report-${{ github.run_id }}
+          path: |
+            public/reports/
+            cron_weekly_report.log
+          retention-days: 30
+          if-no-files-found: warn
