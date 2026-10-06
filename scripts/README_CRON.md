@@ -1,8 +1,8 @@
 # Weekly Plantation Report — Wednesday Cron Setup
 
 This document explains how to register the weekly Wednesday report generator
-as a recurring scheduled task in various environments, AND how to enable the
-**real-time "Email Report" button** on the dashboard tab.
+as a recurring scheduled task, AND how to enable the **real-time "Email
+Report" button** on the dashboard tab.
 
 ---
 
@@ -12,19 +12,78 @@ as a recurring scheduled task in various environments, AND how to enable the
 |-------------------------------------|------------------------------------------------------------------|
 | **Dynamic report generator**        | `scripts/generate_weekly_report.py`                              |
 | **Cron wrapper script**             | `scripts/cron_weekly_report.sh`                                  |
-| **Vercel serverless endpoint**      | `api/regenerate-weekly-report.ts`                                |
+| **Vercel serverless endpoint**      | `api/regenerate-weekly-report.ts` (for the dashboard button only) |
 | **Local dev API server**            | `scripts/local_api_server.mjs`                                   |
 | **Dashboard "Email Report" button** | inside `public/legacy/plantation.html` (officialReportCard)       |
-| **Vercel cron schedule**            | `vercel.json` → `crons[0].schedule = "0 3 * * 3"` (= Wed 09:00 Asia/Dhaka) |
+| **Wednesday 9 AM BD cron**          | `.github/workflows/weekly-report.yml` (recommended)              |
 
-The dashboard button calls `POST /api/regenerate-weekly-report` which spawns
-the Python generator with `--gas-url=$GAS_WEBHOOK_URL` (real-time data) and
-`--email` (SMTP send). The cron does the same thing automatically every
-Wednesday at 09:00 Asia/Dhaka.
+The dashboard button calls `POST /api/regenerate-weekly-report` (Vercel
+serverless) which spawns the Python generator with `--gas-url=$GAS_WEBHOOK_URL`
+(real-time data) and `--email` (SMTP send).
+
+For the **scheduled Wednesday 9 AM run**, we use **GitHub Actions** (not
+Vercel Cron) because:
+- ✅ Free for public AND private repos
+- ✅ No daily/hourly limits on schedule
+- ✅ Python pre-installed (no extra buildpack needed)
+- ✅ Commits the generated files back to the repo → Vercel auto-deploys
+- ✅ Full run logs + artifacts (30-day retention)
 
 ---
 
-## 1. What runs
+## 1. About `.env` files (READ THIS FIRST)
+
+**NEVER commit a real `.env` file with secrets to GitHub.** Anyone with
+read access to the repo would see your SMTP password and GAS endpoint URL.
+
+The `.env.example` file in the repo is just a **template** with placeholder
+values (`you@gmail.com`, `your-app-password-here`) — that's safe to commit.
+
+For GitHub Actions, you store secrets as **GitHub Secrets**:
+- Encrypted at rest
+- Never echoed in logs (GitHub masks them automatically as `***`)
+- Scoped per-repo or per-environment
+- Free, unlimited
+
+### Where to add them
+
+1. Go to your repo: https://github.com/moniruzjaman/plantation-tracker
+2. **Settings** → **Secrets and variables** → **Actions**
+3. Click **New repository secret**
+4. Add each secret by name + value (see list below)
+5. They're available in the workflow as `${{ secrets.SMTP_PASS }}` etc.
+
+### Required secrets
+
+| Secret name      | Example value                              | Required for            |
+|------------------|--------------------------------------------|-------------------------|
+| `GAS_WEBHOOK_URL`| `https://script.google.com/macros/s/.../exec` | Real-time data fetch |
+| `SMTP_HOST`      | `smtp.gmail.com`                           | Email delivery          |
+| `SMTP_PORT`      | `587`                                      | Email delivery          |
+| `SMTP_USER`      | `you@gmail.com`                            | Email delivery          |
+| `SMTP_PASS`      | your Gmail App Password (16 chars)         | Email delivery          |
+| `SMTP_FROM`      | `you@gmail.com`                            | Email delivery          |
+| `SMTP_TO`        | `dd-kurigram@dae.gov.bd,asst@dae.gov.bd`   | Email delivery          |
+
+### Optional secret
+
+| Secret name    | Purpose                                                  |
+|----------------|----------------------------------------------------------|
+| `DEPLOY_TOKEN` | A PAT (Personal Access Token) with `repo` scope. If set, the workflow uses it to push the generated report files back to main — and the push will then trigger an automatic Vercel rebuild. If not set, the workflow falls back to the default `GITHUB_TOKEN`, which commits but does NOT trigger downstream CI/Vercel builds. |
+
+> 💡 **Without `DEPLOY_TOKEN`**: the commit lands in the repo, but Vercel
+> won't auto-rebuild. You'd need to manually trigger a Vercel deploy OR
+> click the dashboard's ⚡ button once after the cron runs to regenerate
+> the live files on Vercel.
+
+> 💡 **To get a `DEPLOY_TOKEN`**: Go to https://github.com/settings/tokens
+> → **Generate new token (classic)** → scope: `repo` → copy the token →
+> add it as a GitHub Secret named `DEPLOY_TOKEN`. (For fine-grained PATs,
+> use "Contents: Read and write" + "Metadata: Read".)
+
+---
+
+## 2. What runs
 
 **Script**: `/home/z/my-project/scripts/cron_weekly_report.sh`
 **Generator**: `/home/z/my-project/scripts/generate_weekly_report.py`
@@ -96,7 +155,80 @@ the script falls back to plain SMTP on the same port.
 
 ## 4. Setup — pick your environment
 
-### 4a. Linux / macOS — system crontab
+> ⭐ **Recommended: GitHub Actions** (section 4a below). It's free, has Python
+> pre-installed, commits files back to the repo (so Vercel auto-deploys),
+> and has no daily/hourly limits. The workflow file is already in the repo
+> at `.github/workflows/weekly-report.yml` — you just need to add the
+> GitHub Secrets (see section 1).
+
+### 4a. GitHub Actions (recommended) ⭐
+
+The workflow file `.github/workflows/weekly-report.yml` is already in the
+repo. It runs every Wednesday 03:00 UTC = 09:00 Asia/Dhaka, and can also
+be triggered manually from the Actions tab.
+
+**What you need to do:**
+
+1. **Add the GitHub Secrets** listed in section 1 above (Repo → Settings →
+   Secrets and variables → Actions → New repository secret).
+2. **Optionally** add `DEPLOY_TOKEN` so the commit triggers a Vercel rebuild
+   (see section 1's "Optional secret" note).
+3. **Merge the PR** — the workflow becomes active immediately after merge.
+4. **Test it manually** before the first Wednesday: go to Repo → **Actions**
+   tab → **Weekly Plantation Report** workflow → **Run workflow** button.
+   You can pass an optional `report_date` and toggle `skip_email` for testing.
+
+**The workflow does:**
+
+```yaml
+name: Weekly Plantation Report
+on:
+  schedule:
+    - cron: '0 3 * * 3'  # Wednesday 03:00 UTC = 09:00 Asia/Dhaka
+  workflow_dispatch:
+    inputs:
+      report_date: { description: 'YYYY-MM-DD or empty for today', required: false, default: '' }
+      skip_email:  { description: 'Skip sending email', type: boolean, required: false, default: false }
+
+permissions:
+  contents: write  # to commit the generated files back to main
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Dhaka
+      GAS_WEBHOOK_URL: ${{ secrets.GAS_WEBHOOK_URL }}
+      SMTP_HOST: ${{ secrets.SMTP_HOST }}
+      # ... (all SMTP_* secrets)
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.DEPLOY_TOKEN || secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - run: pip install openpyxl
+      - run: bash scripts/cron_weekly_report.sh
+      - name: Commit + push generated reports
+        run: |
+          git config user.name "weekly-report-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add public/reports/
+          git commit -m "chore(reports): weekly report $(TZ=Asia/Dhaka date +%Y-%m-%d) [skip ci]" || true
+          git push
+      - uses: actions/upload-artifact@v4  # 30-day artifact retention
+        with: { name: weekly-report-${{ github.run_id }}, path: public/reports/ }
+```
+
+**Key behaviors:**
+
+- **`[skip ci]` in commit message** — prevents the bot's commit from re-triggering the type-check workflow, avoiding an infinite loop.
+- **Concurrency guard** — only one run at a time per `weekly-report` group; later runs wait for earlier ones.
+- **30-day artifact retention** — every run uploads the generated HTML/XLSX/JSON as a downloadable artifact, so you can inspect past reports even after they've been overwritten.
+- **Manual trigger** — the "Run workflow" button lets you test before Wednesday, or regenerate on-demand (e.g., if the GAS data was updated mid-week).
+- **Email skip toggle** — when triggering manually, you can check "Skip sending email" to test the generation without spamming recipients.
+
+### 4b. Linux / macOS — system crontab
 
 ```bash
 # Edit the crontab for whichever user owns /home/z/my-project
@@ -118,10 +250,11 @@ If your `crond` doesn't support per-entry `TZ`, run it in UTC instead
 0 3 * * 3 /home/z/my-project/scripts/cron_weekly_report.sh >> /home/z/my-project/cron_weekly_report.log 2>&1
 ```
 
-For SMTP email, put the env vars in a sourced file and reference them:
+For SMTP email, put the env vars in a sourced file (NEVER commit this file):
 
 ```cron
-# /home/z/my-project/.weekly-report.env  (chmod 600)
+# /home/z/my-project/.weekly-report.env  (chmod 600, gitignored)
+#   GAS_WEBHOOK_URL=https://script.google.com/macros/s/your-endpoint/exec
 #   SMTP_HOST=smtp.gmail.com
 #   SMTP_PORT=587
 #   SMTP_USER=you@gmail.com
@@ -133,10 +266,13 @@ For SMTP email, put the env vars in a sourced file and reference them:
 0 9 * * 3 TZ=Asia/Dhaka bash -c 'set -a; source /home/z/my-project/.weekly-report.env; set +a; /home/z/my-project/scripts/cron_weekly_report.sh >> /home/z/my-project/cron_weekly_report.log 2>&1'
 ```
 
-### 4b. Vercel Cron (recommended if the app is on Vercel)
+### 4c. Vercel Cron (alternative — has Hobby-tier limits)
 
-Vercel Cron runs the cron in the same environment as your Vercel functions,
-so it can reach `/api/gas-sync` directly. Add to `vercel.json`:
+> ⚠️ Vercel Hobby tier limits cron jobs to **2 per project** and runs them
+> once per day max. For Wednesday-only weekly runs this is fine, but GitHub
+> Actions is more flexible.
+
+Add to `vercel.json`:
 
 ```json
 {
@@ -152,49 +288,14 @@ so it can reach `/api/gas-sync` directly. Add to `vercel.json`:
 (Note: Vercel Cron uses **UTC** by default. `0 3 * * 3` = Wednesday 03:00 UTC
 = Wednesday 09:00 Asia/Dhaka.)
 
-Then create `/api/regenerate-weekly-report.ts` as a serverless function that
-spawns the Python generator (or re-implements the generation in TypeScript).
-Set the `SMTP_*` env vars in Vercel → Settings → Environment Variables.
+The `/api/regenerate-weekly-report.ts` endpoint (already in the repo) handles
+both GET (Vercel cron) and POST (dashboard button). Set the `SMTP_*` env
+vars in Vercel → Settings → Environment Variables.
 
-### 4c. GitHub Actions
-
-```yaml
-# .github/workflows/weekly-report.yml
-name: Weekly Plantation Report
-on:
-  schedule:
-    # Every Wednesday 09:00 Asia/Dhaka = 03:00 UTC
-    - cron: '0 3 * * 3'
-  workflow_dispatch:  # Manual trigger button in Actions UI
-
-permissions:
-  contents: write  # to commit the generated files back to the repo
-
-jobs:
-  generate:
-    runs-on: ubuntu-latest
-    env:
-      TZ: Asia/Dhaka
-      SMTP_HOST: ${{ secrets.SMTP_HOST }}
-      SMTP_PORT: ${{ secrets.SMTP_PORT }}
-      SMTP_USER: ${{ secrets.SMTP_USER }}
-      SMTP_PASS: ${{ secrets.SMTP_PASS }}
-      SMTP_FROM: ${{ secrets.SMTP_FROM }}
-      SMTP_TO: ${{ secrets.SMTP_TO }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: '3.11' }
-      - run: pip install openpyxl
-      - run: bash scripts/cron_weekly_report.sh
-      - name: Commit generated reports
-        run: |
-          git config user.name "weekly-report-bot"
-          git config user.email "bot@users.noreply.github.com"
-          git add plantation-tracker/public/reports/
-          git commit -m "chore: weekly report $(TZ=Asia/Dhaka date +%Y-%m-%d)" || true
-          git push
-```
+**Note**: Vercel's Node runtime doesn't include Python by default. If you
+go this route, you may need to either (a) re-implement the generator in
+TypeScript, or (b) bundle Python with a buildpack. **GitHub Actions avoids
+this problem entirely.**
 
 ### 4d. systemd timer (Linux, server-grade)
 
