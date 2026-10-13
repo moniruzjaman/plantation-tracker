@@ -63,7 +63,7 @@ For GitHub Actions, you store secrets as **GitHub Secrets**:
 | `SMTP_USER`      | `you@gmail.com`                            | Email delivery          |
 | `SMTP_PASS`      | your Gmail App Password (16 chars)         | Email delivery          |
 | `SMTP_FROM`      | `you@gmail.com`                            | Email delivery          |
-| `SMTP_TO`        | `dd-kurigram@dae.gov.bd,asst@dae.gov.bd`   | Email delivery          |
+| `SMTP_TO`        | `ddaekurigram@gmail.com,ddagrikuri@yahoo.com`   | Email delivery          |
 
 ### Optional secret
 
@@ -140,7 +140,7 @@ SMTP_PORT=587
 SMTP_USER=your-account@gmail.com
 SMTP_PASS=your-app-password      # Gmail: use App Password, not account password
 SMTP_FROM=your-account@gmail.com
-SMTP_TO=dd-kurigram@dae.gov.bd,assistant@dae.gov.bd
+SMTP_TO=ddaekurigram@gmail.com,ddagrikuri@yahoo.com
 ```
 
 For Gmail, generate an App Password at
@@ -260,7 +260,7 @@ For SMTP email, put the env vars in a sourced file (NEVER commit this file):
 #   SMTP_USER=you@gmail.com
 #   SMTP_PASS=xxxx xxxx xxxx xxxx
 #   SMTP_FROM=you@gmail.com
-#   SMTP_TO=dd-kurigram@dae.gov.bd
+#   SMTP_TO=ddaekurigram@gmail.com,ddagrikuri@yahoo.com
 
 # crontab
 0 9 * * 3 TZ=Asia/Dhaka bash -c 'set -a; source /home/z/my-project/.weekly-report.env; set +a; /home/z/my-project/scripts/cron_weekly_report.sh >> /home/z/my-project/cron_weekly_report.log 2>&1'
@@ -450,7 +450,7 @@ SMTP_PORT=587
 SMTP_USER=you@gmail.com
 SMTP_PASS=your-app-password       # Gmail: use an App Password, not account password
 SMTP_FROM=you@gmail.com
-SMTP_TO=dd-kurigram@dae.gov.bd,assistant@dae.gov.bd
+SMTP_TO=ddaekurigram@gmail.com,ddagrikuri@yahoo.com
 ```
 
 Without `GAS_WEBHOOK_URL`, the button returns:

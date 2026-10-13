@@ -203,7 +203,7 @@ server.listen(PORT, HOST, () => {
   console.log(`   SMTP_HOST=smtp.gmail.com SMTP_PORT=587 \\`);
   console.log(`   SMTP_USER=you@gmail.com SMTP_PASS=your-app-pass \\`);
   console.log(`   SMTP_FROM=you@gmail.com \\`);
-  console.log(`   SMTP_TO=dd-kurigram@dae.gov.bd \\`);
+  console.log(`   SMTP_TO=ddaekurigram@gmail.com,ddagrikuri@yahoo.com \\`);
   console.log(`   node scripts/local_api_server.mjs`);
   console.log(`\n💡 To use real-time GAS data (instead of upload/): set GAS_WEBHOOK_URL`);
   console.log(`   GAS_WEBHOOK_URL=https://script.google.com/macros/s/your-endpoint/exec \\`);
